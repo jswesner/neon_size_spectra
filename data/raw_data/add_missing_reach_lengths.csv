@@ -1,0 +1,22 @@
+reach_id,reach length sampled ,notes 
+SYCA.20190625.03,60.00,40  meters dry 
+KING.20180412.01,114.00,date in L0 a day earlier 
+KING.20171018.01,98.00,date in L0 a day earlier 
+WALK.20181107.04,98.00,"This should be 20181107.03, needs L0 change -98m long "
+ARIK.20180402.04,85.00,date in L0 a day earlier 
+MAYF.20210422.02,86.00,in fulcrum 
+KING.20201020.01,20.00,date in L0 a day earlier 
+MAYF.20210422.02,86.00,repeat
+MCRA.20191010.06,88.00,in l0
+MCRA.20191010.06,88.00,repeat
+MCRA.20191010.06,88.00,repeat
+BIGC.20180515.01,102.00,in l0
+BIGC.20180515.01,102.00,repeat
+BIGC.20180516.02,99.00,in l0
+BIGC.20180516.03,100.00,in l0
+BIGC.20180517.04,100.00,in l0
+BIGC.20180517.04,100.00,repeat
+BIGC.20180517.04,100.00,repeat
+BIGC.20180518.06,100.00,in l0
+BIGC.20180518.07,90.00,in l0
+BIGC.20180515.01,102.00,repeat
