@@ -11,7 +11,21 @@ source("code/stream_site_id.R")
 # saveRDS(fish, "data/raw_data/fish.rds")
 
 fish <- readRDS("data/raw_data/fish.rds")
-stream_widths <- readRDS("data/raw_data/stream_widths.rds") # code/fish/get_stream_widths.R
+stream_widths <- readRDS("data/raw_data/stream_widths.rds") %>% clean_names() # code/fish/get_stream_widths.R
+add_missing_reach_lengths <- read_csv("data/raw_data/add_missing_reach_lengths.csv") %>% clean_names()
+reach_lengths <- fish$fsh_fieldData %>% clean_names()
+
+# wrangle length and width sampled
+reach_lengths_to_add <- reach_lengths %>% ungroup() %>%  as_tibble() %>% distinct(reach_id, measured_reach_length) %>% 
+  filter(!is.na(measured_reach_length)) %>% 
+  bind_rows(add_missing_reach_lengths %>% dplyr::rename(measured_reach_length = reach_length_sampled) %>% select(-notes))
+
+stream_widths_to_add <- stream_widths %>% as_tibble() %>% 
+  mutate(year = year(collect_date),
+         month = month(collect_date)) %>% 
+  group_by(site_id) %>% 
+  summarize(mean_width_m = mean(wetted_width),
+            sd_width_m = sd(wetted_width))
 
 #keep only fixed reaches, which are sampled with 3 pass depletion twice each year.
 #delete random reaches. Those are sampled at different spots each year
@@ -53,9 +67,31 @@ all_fish <- left_join(perfish, bulk_countnodupes) %>%
   replace_na(list(bulk_fish_count = 0)) %>% 
   mutate(total_fish = n + bulk_fish_count) 
 
-stream_fish_only <- all_fish %>% 
+
+# limit to streams, add length and width sampled
+stream_fish_perm2 <- all_fish %>% 
   filter(site_id %in% streams) %>% 
-  filter(pass_number <= 3)
+  filter(pass_number <= 3) %>% 
+  as_tibble() %>% 
+  left_join(reach_lengths_to_add) %>% # add reach length
+  distinct() %>% 
+  mutate(year = year(date),
+         month = month(date)) %>% 
+  left_join(stream_widths_to_add) %>% # add reach width
+  filter(!is.na(measured_reach_length),
+         !is.na(mean_width_m)) %>% 
+  distinct() %>% 
+  mutate(area_m2 = measured_reach_length*mean_width_m,
+         total_fish_perm2 = total_fish/area_m2)
+
+saveRDS(stream_fish_perm2, file = "data/derived_data/stream_fish_perm2.rds")
+
+
+
+
+
+
+ # Old ---------------------------------------------------------------------
 
 
 stream_fish_torun <- stream_fish_only %>% 

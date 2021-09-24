@@ -8,9 +8,9 @@ Estimate fish abundance - JSW
   - Fish are split into two tables (fsh_perFish and fish_bulkCount)
   - fsh_perFish has individual lengths of the first 50 fish for each species in each bout
   - fsh_bulkCount has the number of fish for each species collected after the first 50
-  - To get total fish per pass, we need to add fsh_perFish + fsh_bulkCount, after subsetting to only the     fixed reaches using info in fsh_fieldData
+  - To get total fish per pass, we need to add fsh_perFish + fsh_bulkCount, after subsetting to only the fixed reaches using info in fsh_fieldData
   - fsh_fieldData also has the reach length in meters
-  - To get the reach wetted widths, use "code/fish/get_stream_widths.R". That contains a bunch of wetted     widths measured as part of "DP1.20190.001", rearation data. 
+  - To get the reach wetted widths, use "code/fish/get_stream_widths.R". That contains a bunch of wetted widths measured as part of "DP1.20190.001", rearation data. It does not have widths for each year/month combination. Therefore, we calculated a site-wide mean stream width and assumed that was the width during all fish samples.
 
 Need to decide whether to model fish abundance using 3-pass models, or just use the first pass to get # of fish per square meter. Leaning towards the second option as it is most similar to bug collections (which are also basically just one pass, not depletion).
   
