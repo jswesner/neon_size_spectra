@@ -29,11 +29,13 @@ stream_widths_to_add <- stream_widths %>% as_tibble() %>%
 
 #keep only fixed reaches, which are sampled with 3 pass depletion twice each year.
 #delete random reaches. Those are sampled at different spots each year
-fixed_random <- fish$fsh_fieldData %>% as_tibble() %>% 
+fixed_ids <- fish$fsh_fieldData %>% as_tibble() %>% 
   clean_names() %>% distinct(start_date, reach_id, named_location, fixed_random_reach, measured_reach_length) %>% 
   mutate(date = ymd(as.Date(start_date)),
          year = year(date)) %>% 
-  select(-start_date) 
+  select(-start_date) %>% 
+  filter(fixed_random_reach == "fixed") %>% 
+  distinct(reach_id)
 
 # fsh_perFish individual row for first 50 fish
 perfish <- fish$fsh_perFish %>% as_tibble() %>% clean_names() %>% 
@@ -46,7 +48,8 @@ perfish <- fish$fsh_perFish %>% as_tibble() %>% clean_names() %>%
            pass_number, event_id, date, year, named_location) %>% 
   tally() %>% 
   separate(event_id, c(NA, NA, "reach", NA, NA, NA), remove = F) %>% 
-  ungroup()
+  ungroup() %>% 
+  anti_join(fixed_ids)
 
 # bulk count of additional fish after the first 50 in fhs_perFish
 bulk_count <- fish$fsh_bulkCount %>% as_tibble() %>% clean_names() %>% 
@@ -54,7 +57,8 @@ bulk_count <- fish$fsh_bulkCount %>% as_tibble() %>% clean_names() %>%
          year = year(date)) %>%
   separate(event_id, c("site", "date2", "reach", NA, NA), 
            remove = F) %>% 
-  unite("reach_id", site:reach, sep = ".") 
+  unite("reach_id", site:reach, sep = ".") %>% 
+  anti_join(fixed_ids) 
 
 drop_these <- bulk_count %>% get_dupes(c(date, taxon_id, pass_number, reach_id)) %>% 
   distinct(site_id, date, reach_id)
@@ -69,7 +73,7 @@ all_fish <- left_join(perfish, bulk_countnodupes) %>%
 
 
 # limit to streams, add length and width sampled
-stream_fish_perm2 <- all_fish %>% 
+stream_fish_width_length_sampled <- all_fish %>% 
   filter(site_id %in% streams) %>% 
   filter(pass_number <= 3) %>% 
   as_tibble() %>% 
@@ -84,23 +88,17 @@ stream_fish_perm2 <- all_fish %>%
   mutate(area_m2 = measured_reach_length*mean_width_m,
          total_fish_perm2 = total_fish/area_m2)
 
-saveRDS(stream_fish_perm2, file = "data/derived_data/stream_fish_perm2.rds")
 
 
+ # 3-pass depletion model ---------------------------------------------------------------------
 
-
-
-
- # Old ---------------------------------------------------------------------
-
-
-stream_fish_torun <- stream_fish_only %>% 
-  # filter(site_id == "HOPB") %>% 
-  select(site_id, pass_number, taxon_id, total_fish, reach, date) %>% 
+stream_fish_torun <- stream_fish_width_length_sampled %>% 
+  select(site_id, pass_number, taxon_id, total_fish, reach, date, reach_id) %>% 
   arrange(reach, pass_number) %>%
-  complete(pass_number, nesting(site_id, taxon_id, reach, date), fill = list(total_fish = 0)) %>% #add zeros to fish with no data in a given pass
-  arrange(reach, taxon_id, date, pass_number) %>% 
-  distinct(pass_number, site_id, taxon_id, reach, date, .keep_all = T) %>% # remove duplicates
+  complete(pass_number, nesting(site_id, taxon_id, reach, reach_id, date), 
+           fill = list(total_fish = 0)) %>% #add zeros to fish with no data in a given pass
+  arrange(reach, taxon_id, date, pass_number, reach_id) %>% 
+  distinct(pass_number, site_id, taxon_id, reach, reach_id, date, .keep_all = T) %>% # remove duplicates
   pivot_wider(names_from = pass_number, values_from = total_fish) %>% 
   mutate(last_minus_first = `3`-`1`) %>% 
   pivot_longer(cols = c(`1`,`2`,`3`), names_to = "pass_number",
@@ -108,50 +106,45 @@ stream_fish_torun <- stream_fish_only %>%
   mutate(increased = case_when(last_minus_first <=0 ~ "no", TRUE ~ "yes")) %>% 
   unite("sample_id", c(site_id, taxon_id, reach, date), remove = F)
 
-
-write_csv(stream_fish_torun, file = "data/derived_data/stream_fish_torun.csv")
-
-# plot passes
-stream_fish_torun  %>% 
-  ggplot(aes(group = sample_id, x = pass_number, y = total_fish, color = increased)) +
-  geom_point() +
-  geom_line() +
-  scale_y_log10()
-
 # run 3 pass estimations
 stream_fish_abund <- stream_fish_torun %>% 
   select(-pass_number) %>%
-  group_by(site_id, taxon_id, reach, date) %>% 
+  group_by(site_id, taxon_id, reach, reach_id, date) %>% 
   mutate(total_collected = sum(total_fish)) %>% 
   ungroup() %>% 
-  nest_by(site_id, taxon_id, reach, date, total_collected, last_minus_first, increased, sample_id) %>% 
+  nest_by(site_id, taxon_id,reach_id, reach, date, total_collected, last_minus_first, increased, sample_id) %>% 
   mutate(pop = lapply(data, function(fish) removal(fish, just.ests = T, method = "CarleStrub"))) %>% 
   unnest_wider(pop) %>% 
   clean_names() %>% 
   mutate(date_fac = as.factor(date)) %>% 
-  mutate(increased = case_when(last_minus_first <=0 ~ "no", TRUE ~ "yes"))
+  mutate(increased = case_when(last_minus_first <=0 ~ "no", TRUE ~ "yes")) %>% 
+  glimpse()
+
+# add sample areas and sum across reaches. Results in the number of fish collected per m2 per site per date per species
+stream_fish_perm2 <- stream_fish_abund %>% 
+  left_join(reach_lengths_to_add) %>% # add reach length
+  distinct() %>% 
+  mutate(year = year(date),
+         month = month(date)) %>% 
+  left_join(stream_widths_to_add) %>% # add reach width
+  filter(!is.na(measured_reach_length),
+         !is.na(mean_width_m)) %>% 
+  distinct() %>% 
+  mutate(area_m2 = measured_reach_length*mean_width_m) %>% 
+  group_by(site_id, taxon_id, date, increased) %>% 
+  summarize(total_collected = sum(total_collected),
+            area_m2 = sum(area_m2),
+            no = sum(no)) %>% 
+  mutate(total_fish_perm2 = case_when(increased == "no" ~ total_collected,  # if fish increased in 3rd pass, then replace model estimate with total collected (sensu McGarvey et al. 2018)
+                                      TRUE ~ no/area_m2)) %>% 
+  left_join(all_fish %>% distinct(taxon_id, scientific_name))
+
+saveRDS(stream_fish_perm2, file = "data/derived_data/stream_fish_perm2.rds")
 
 
-stream_fish_abund %>% 
-  ggplot(aes(x = date, y = no, color = taxon_id)) + 
-  geom_point() + 
-  facet_wrap(~site_id) +
-  scale_y_log10() +
-  guides(color = "none")
-
-
-stream_fish_abund %>% 
-  left_join(stream_fish_torun %>% select(sample_id, pass_number, total_fish) %>% filter(pass_number == "1")) %>% 
-  ggplot(aes(x = total_collected, y = no, color = increased)) + 
+# sanity check
+ggplot(stream_fish_perm2 %>% group_by(site_id, date) %>% mutate(rank = rank(-total_fish_perm2)),
+       aes(x = rank, y = total_fish_perm2)) + 
   geom_point() +
-  scale_x_log10() + 
-  scale_y_log10()
-
-stream_fish_abund %>% 
-  left_join(stream_fish_torun %>% select(sample_id, pass_number, total_fish) %>% filter(pass_number == "1")) %>%
-  ggplot(aes(x = total_fish, y = no, color = increased)) + 
-  geom_point() +
-  labs(x = "fish on first pass") +
-  scale_x_log10() + 
-  scale_y_log10()
+  facet_wrap(~site_id)
 
