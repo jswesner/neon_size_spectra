@@ -3,8 +3,18 @@ library(janitor)
 library(lubridate)
 library(rfishbase)
 
-# load data
+# load or re-run with code below. total_lengths_with_parameters contains
+# estimates of fish mass, corrected for collection size. This file will be merged directly with 
+# macroinvertebrate size spectrum.
+total_lengths_with_parameters <- read_csv(file = "data/derived_data/total_lengths_with_parameters.csv")
+# 
+#
+#
+#
+# Recreate file above with code below
 
+
+# load data
 fishbase_families <- fishbase %>% as_tibble() %>% mutate(Species = paste(Genus, Species)) %>% 
   select(Species, Family) %>% 
   mutate(scientific_name = Species)
@@ -74,6 +84,8 @@ total_lengths_with_parameters <- total_lengths %>%
          b = case_when(is.na(species_b) ~ family_b, TRUE ~ species_b),
          fish_total_length_cm = fish_total_length/10,
          grams = a*fish_total_length_cm^b)
+
+write_csv(total_lengths_with_parameters, file = "data/derived_data/total_lengths_with_parameters.csv")
 
 total_lengths_with_parameters %>% 
   ggplot(aes(x = fish_total_length_cm, y = grams)) +
