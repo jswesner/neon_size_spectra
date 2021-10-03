@@ -6,8 +6,11 @@ library(rfishbase)
 # load or re-run with code below. total_lengths_with_parameters contains
 # estimates of fish mass, corrected for collection size. This file will be merged directly with 
 # macroinvertebrate size spectrum.
-total_lengths_with_parameters <- read_csv(file = "data/derived_data/total_lengths_with_parameters.csv")
-# 
+total_lengths_with_parameters <- read_csv(file = "data/derived_data/total_lengths_with_parameters.csv") %>% 
+  rename(wet_weight = grams) %>% 
+  mutate(wet_weight_units = "grams_wet",
+         dw = wet_weight*0.2,           # Conversion used by McGarvey and Kirk who cite Waters 1977. Secondary production in Inland Waters
+         dw_units = "grams_dry")
 #
 #
 #
@@ -83,11 +86,48 @@ total_lengths_with_parameters <- total_lengths %>%
   mutate(a = case_when(is.na(species_a) ~ family_a, TRUE ~ species_a),
          b = case_when(is.na(species_b) ~ family_b, TRUE ~ species_b),
          fish_total_length_cm = fish_total_length/10,
-         grams = a*fish_total_length_cm^b)
+         grams = a*fish_total_length_cm^b) %>% 
+  rename(wet_weight = grams) %>% 
+  mutate(wet_weight_units = "grams_wet",
+         dw = wet_weight*0.2,           # Conversion used by McGarvey and Kirk who cite Waters 1977. Secondary production in Inland Waters
+         dw_units = "grams_dry")
 
-write_csv(total_lengths_with_parameters, file = "data/derived_data/total_lengths_with_parameters.csv")
+write_csv(total_lengths_with_parameters , 
+          file = "data/derived_data/total_lengths_with_parameters.csv")
 
+#
 total_lengths_with_parameters %>% 
-  ggplot(aes(x = fish_total_length_cm, y = grams)) +
+  ggplot(aes(x = fish_total_length_cm*10, y = grams)) +
   geom_point()
 
+
+ggplot(fish$fsh_perFish, aes(x = fishTotalLength, y = fishWeight)) + 
+  geom_point()
+
+# sanity check. Compare modeled weights to measured weights
+
+modeled_weights = total_lengths_with_parameters %>% select(wet_weight) %>% mutate(source = "modeled")
+measured_weights = fish$fsh_perFish %>% select(fishWeight) %>% mutate(source = "measured") %>% rename(wet_weight = fishWeight)
+
+all_weights = bind_rows(modeled_weights, measured_weights)
+
+all_weights %>% 
+  ggplot(aes(x = wet_weight, fill = source)) +
+  geom_histogram(bins = 100) +
+  scale_x_log10()
+
+all_weights %>%
+  ggplot(aes(x = source, y = wet_weight + 0.01)) +
+  geom_point(position = position_jitter(width = 0.2), size = 0.1) + 
+  geom_violin() +
+  scale_y_log10()
+
+
+all_weights %>%
+  group_by(source) %>% 
+  mutate(rank = rank(-wet_weight)) %>% 
+  ggplot(aes(x = rank, y = wet_weight + 0.01, color = source)) +
+  geom_point(size = 0.1) + 
+  scale_y_log10() +
+  scale_x_log10() +
+  NULL
