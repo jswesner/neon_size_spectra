@@ -39,6 +39,8 @@ fixed_ids <- fish$fsh_fieldData %>% as_tibble() %>%
 
 # fsh_perFish individual row for first 50 fish
 perfish <- fish$fsh_perFish %>% as_tibble() %>% clean_names() %>% 
+  select(-identified_by, -fish_weight, -uid) %>% # remove these columns to allow removal of duplicates
+  distinct() %>%  # remove duplicates (duplicates confirmed via email with NEON on 2022-01-06)
   mutate(date = ymd(as.Date(pass_start_time)),
          year = year(date)) %>%
   separate(event_id, c("site", "date2", "reach", NA, NA), 
@@ -58,16 +60,18 @@ bulk_count <- fish$fsh_bulkCount %>% as_tibble() %>% clean_names() %>%
   separate(event_id, c("site", "date2", "reach", NA, NA), 
            remove = F) %>% 
   unite("reach_id", site:reach, sep = ".") %>% 
-  anti_join(fixed_ids) 
+  anti_join(fixed_ids) %>% 
+  select(-uid, -identified_by) %>%
+  distinct() # remove duplicates (confirmed that these were true duplicates on 2022-01-06 using get_dupes())
 
-drop_these <- bulk_count %>% get_dupes(c(date, taxon_id, pass_number, reach_id)) %>% 
-  distinct(site_id, date, reach_id)
-
-bulk_countnodupes <- bulk_count %>% anti_join(drop_these) %>% 
-  select(event_id, taxon_id, reach_id, bulk_fish_count)
+# drop_these <- bulk_count %>% get_dupes(c(date, taxon_id, pass_number, reach_id)) %>% 
+#   distinct(site_id, date, reach_id) # is this now redundant?
+# 
+# bulk_countnodupes <- bulk_count %>% anti_join(drop_these) %>% 
+#   select(event_id, taxon_id, reach_id, bulk_fish_count)
 
 # all fish - fsh_perFish PLUS fsh_bulkCount
-all_fish <- left_join(perfish, bulk_countnodupes) %>% 
+all_fish <- left_join(perfish, bulk_count) %>% 
   replace_na(list(bulk_fish_count = 0)) %>% 
   mutate(total_fish = n + bulk_fish_count) 
 
@@ -112,7 +116,8 @@ stream_fish_abund <- stream_fish_torun %>%
   group_by(site_id, taxon_id, reach, reach_id, date) %>% 
   mutate(total_collected = sum(total_fish)) %>% 
   ungroup() %>% 
-  nest_by(site_id, taxon_id,reach_id, reach, date, total_collected, last_minus_first, increased, sample_id) %>% 
+  nest_by(site_id, taxon_id,reach_id, reach, date, total_collected, 
+          last_minus_first, increased, sample_id) %>% 
   mutate(pop = lapply(data, function(fish) removal(fish, just.ests = T, method = "CarleStrub"))) %>% 
   unnest_wider(pop) %>% 
   clean_names() %>% 
@@ -135,8 +140,9 @@ stream_fish_perm2 <- stream_fish_abund %>%
   summarize(total_collected = sum(total_collected),
             area_m2 = sum(area_m2),
             no = sum(no)) %>% 
-  mutate(total_fish_perm2 = case_when(increased == "no" ~ total_collected,  # if fish increased in 3rd pass, then replace model estimate with total collected (sensu McGarvey et al. 2018)
-                                      TRUE ~ no/area_m2)) %>% 
+  mutate(no = case_when(increased == "yes" ~ total_collected,  # if fish increased in 3rd pass, then replace model estimate with total collected (sensu McGarvey et al. 2018)
+                          TRUE ~ no)) %>% 
+  mutate(total_fish_perm2 = no/area_m2) %>% 
   left_join(all_fish %>% distinct(taxon_id, scientific_name))
 
 saveRDS(stream_fish_perm2, file = "data/derived_data/stream_fish_perm2.rds")
