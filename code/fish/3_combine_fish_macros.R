@@ -48,12 +48,13 @@ macro_fish_dw <- bind_rows(macro_dw_short, fish_dw_short) %>%
 saveRDS(macro_fish_dw, file = "data/raw_data/macro_fish_dw.rds")
 
 macro_fish_dw %>% group_by(dw, animal_type) %>% summarize(no_m2 = sum(no_m2)) %>% 
-  ggplot(aes(y = no_m2, x = dw, color = animal_type)) + 
+  ggplot(aes(y = no_m2, x = dw, color = animal_type), shape = 21) + 
   geom_point() +
   scale_y_log10() + 
   scale_x_log10()
 
 macro_fish_dw %>% 
+  filter(year > 2017 & year < 2020) %>% 
   mutate(dw = round(dw, 1)) %>% 
   ggplot(aes(y = rank, x = dw, color = animal_type)) + 
   geom_point(shape = 21) +
@@ -61,3 +62,5 @@ macro_fish_dw %>%
   scale_x_log10() +
   facet_wrap(~site_id) +
   NULL
+
+

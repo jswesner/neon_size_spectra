@@ -7,7 +7,7 @@ library(rfishbase)
 # estimates of fish mass, corrected for collection size. This file will be merged directly with 
 # macroinvertebrate size spectrum.
 total_lengths_with_parameters <- read_csv(file = "data/derived_data/total_lengths_with_parameters.csv") %>% 
-  rename(wet_weight = grams) %>% 
+  # rename(wet_weight = grams) %>% 
   mutate(wet_weight_units = "grams_wet",
          dw = wet_weight*0.2,           # Conversion used by McGarvey and Kirk who cite Waters 1977. Secondary production in Inland Waters
          dw_units = "grams_dry")
@@ -80,26 +80,27 @@ total_lengths_with_parameters <- total_lengths %>%
   right_join(stream_fish_perm2 %>% select(-total_fish_perm2)) %>% 
   mutate(correction = no/total_fish_measured) %>% # no is the modeled population per reach. The correction provides an estimate of the total number of each length category per reach used below
   mutate(total_fish_per_size = total_fish_measured*correction, #correct for number measured versus collected !!!!
-         no_m2 = total_fish_per_size/area_m2) %>% # convert to areal estimate
+         no_m2 = total_fish_per_size/area_m2) %>% # convert per reach estimate to per m2
   left_join(fishbase_families) %>% 
   left_join(length_weights_by_species) %>% 
   left_join(length_weights_by_family) %>% 
   mutate(a = case_when(is.na(species_a) ~ family_a, TRUE ~ species_a),
          b = case_when(is.na(species_b) ~ family_b, TRUE ~ species_b),
          year = year(date),
-         fish_total_length_cm = case_when(site_id == "MAYF" & year == 2017 ~ fish_total_length,
+         fish_total_length_cm = case_when(site_id == "MAYF" & year == 2017 ~ fish_total_length, # Some samples were measured in cm instead of mm. Fix so all are cm.
                                           site_id == "REDB" & year == 2016 ~ fish_total_length,
-                                          TRUE ~ fish_total_length/10),
-         fish_total_length_cm = case_when(fish_total_length_cm <= 2 ~ 2, 
-                                          TRUE ~ fish_total_length_cm),
+                                          TRUE ~ fish_total_length/10), # All other samples are in mm. This converts those to cm.
          grams = a*fish_total_length_cm^b) %>% 
   rename(wet_weight = grams) %>% 
   mutate(wet_weight_units = "grams_wet",
          dw = wet_weight*0.2,           # Conversion used by McGarvey and Kirk who cite Waters 1977. Secondary production in Inland Waters
-         dw_units = "grams_dry")
+         dw_units = "grams_dry") %>% 
+  filter(fish_total_length_cm >= 1 & dw >= 0.001) # remove extremely small fish. This affects <0.1% of observations
 
 write_csv(total_lengths_with_parameters , 
           file = "data/derived_data/total_lengths_with_parameters.csv")
+
+total_lengths_with_parameters <- read_csv(file = "data/derived_data/total_lengths_with_parameters.csv")
 
 #
 total_lengths_with_parameters %>% 
