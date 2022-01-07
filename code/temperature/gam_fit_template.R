@@ -2,6 +2,7 @@ library(neonUtilities)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
+# neon store package?
 neon_token <- source("C:/Users/jfpom/Documents/Wesner/NEON documents/neon_token_source.R")$value
 source("code/stream_site_id.R")
 
@@ -50,18 +51,19 @@ prt <- loadByProduct(
 )$TSW_30min
 
 air <- air %>%
-  mutate(
-    date = as.Date(startDateTime)) %>%
+  mutate(date = 
+           as.Date(startDateTime)) %>%
   group_by(siteID, date) %>%
-  summarize(air_temp = mean(
-    tempSingleMean, na.rm = TRUE)) %>%
-  mutate(year = format(
-    date, format = "%Y"),
-         jdate = format(
-           date, format = "%j")) %>%
+  summarize(air_temp = 
+              mean(tempSingleMean,
+                   na.rm = TRUE)) %>%
+  mutate(year =
+           format(date, format = "%Y"),
+         jdate = format(date, format = "%j")) %>%
   select(siteID, air_temp, jdate)
 
 air <- ungroup(air)
+saveRDS(air, "code/temperature/temp_data/air_temp.RDS")
 
 prt <- prt %>%
   mutate(
@@ -76,7 +78,9 @@ prt <- prt %>%
   ungroup() %>%
   select(siteID, water_temp, jdate)
 
-
+# plot of air temp ~ water temp
+# shows pretty tight relationship
+# good evidence for using air temp to model water temp
 full_join(air, prt) %>%
   filter(!is.na(air_temp),
          !is.nan(air_temp),
@@ -85,41 +89,56 @@ full_join(air, prt) %>%
   filter(water_temp > -10,
          water_temp < 40) %>%
   ggplot(aes(x = air_temp,
-             y = water_temp,
-             color = siteID)) +
+             y = water_temp)) +
   geom_point(alpha = 0.2) +
   geom_smooth() +
   facet_wrap(.~siteID,
              scales = "free")
 
+# plot of water temp ~ julian date
 prt %>%
   mutate(jdate = as.numeric(jdate)) %>%
   ggplot(aes(x = jdate,
-           y = water_temp,
-           color = siteID)) +
+           y = water_temp)) +
   geom_point(alpha = 0.2) +
   geom_smooth() +
   facet_wrap(.~siteID,
              scales = "free")
+saveRDS(prt, "code/temperature/temp_data/prt_full.RDS")
 
 
-prt_small <- prt %>% filter(siteID %in% c("ARIK", "HOPB")) %>% 
+prt_small <- prt %>% 
+  filter(siteID %in% c("ARIK", "HOPB")) %>% 
   arrange(water_temp) %>% 
   mutate(jdate = as.numeric(jdate),
-         jdate_c = (jdate - mean(jdate))/sd(jdate),
-         water_temp_s = (water_temp - mean(water_temp))/sd(water_temp))
+         jdate_c = (jdate - mean(jdate))/
+           sd(jdate, na.rm = TRUE),
+         water_temp_s = 
+           (water_temp - mean(water_temp,
+                              na.rm = TRUE))/
+           sd(water_temp, na.rm = TRUE))
+saveRDS(prt_small, "code/temperature/temp_data/prt_small.RDS")
 
 library(brms)
 
 get_prior(water_temp ~ s(jdate, by = siteID),
-          family = gaussian(), data = prt_small)
+          family = gaussian(),
+          data = prt_small)
 
-brm_temp <- brm(water_temp ~ s(jdate, by = siteID) + (1|siteID),
-                family = gaussian(), data = prt_small,
-                prior = c(prior(normal(0, 1), class = "Intercept"),
-                          prior(normal(0, 1), class = "b"),
-                          prior(normal(0, 1), class = "sds"),
-                          prior(exponential(1), class = "sd")),
+brm_temp <- brm(water_temp ~ 
+                  s(jdate, by = siteID) +
+                  (1|siteID),
+                family = gaussian(),
+                data = prt_small,
+                prior = 
+                  c(prior(normal(0, 1),
+                          class = "Intercept"),
+                    prior(normal(0, 1),
+                          class = "b"),
+                    prior(normal(0, 1),
+                          class = "sds"),
+                    prior(exponential(1),
+                          class = "sd")),
                 iter = 1000, chains = 1)
 
 plot(conditional_effects(brm_temp, effects = "jdate:siteID", re_formula = NULL),
