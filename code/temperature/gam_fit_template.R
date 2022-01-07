@@ -2,7 +2,7 @@ library(neonUtilities)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
-neon_token <- source("C:/Users/jfpom/Documents/Wesner/NEON documents/neon_token_source.R")$value
+# neon_token <- source("C:/Users/jfpom/Documents/Wesner/NEON documents/neon_token_source.R")$value
 source("code/stream_site_id.R")
 
 # air temp
@@ -11,7 +11,6 @@ air_temp <- loadByProduct(
   site = streams,
   startdate = "2019-01",
   enddate = "2019-12",
-  token = neon_token,
   check.size = TRUE
 )
 
@@ -45,7 +44,7 @@ prt <- loadByProduct(
   package = "basic",
   startdate = "2019-01",
   enddate = "2019-12",
-  token = neon_token,
+  # token = neon_token,
   check.size = FALSE
 )$TSW_30min
 
