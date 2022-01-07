@@ -54,7 +54,7 @@ macro_dw_short %>%
   facet_wrap(~site_id)
 
 # create dataset for analysis
-macro_fish_dw <- bind_rows(macro_dw_short, 
+macro_fish_temp <- bind_rows(macro_dw_short, 
                            fish_dw_short %>% right_join(filtered_dates %>% distinct(fish_julian, month)) %>% 
                                                           rename(julian = fish_julian) # only fish dates that are within 30 days of a macro date
                            ) %>% 
@@ -62,13 +62,22 @@ macro_fish_dw <- bind_rows(macro_dw_short,
   mutate(rank = rank(-dw),
          year_month = paste0(year,"_", month)) 
 
+samples_with_macros_and_fish <- macro_fish_temp %>% ungroup() %>% distinct(animal_type, year_month, site_id) %>% 
+  group_by(site_id, year_month) %>% 
+  tally() %>%
+  filter(n > 1) %>% 
+  distinct(site_id, year_month) %>% 
+  mutate(id = as.numeric(as.factor(paste0(site_id, year_month))))
+
+
+macro_fish_dw <- macro_fish_temp %>% select(-id) %>% 
+  right_join(samples_with_macros_and_fish)
+
 saveRDS(macro_fish_dw, file = "data/derived_data/macro_fish_dw.rds")
 
 
 
-
-
-macro_fish_dw %>% group_by(dw, animal_type) %>% summarize(no_m2 = sum(no_m2)) %>% 
+macro_fish_dw %>% 
   ggplot(aes(y = no_m2, x = dw, color = animal_type), shape = 21) + 
   geom_point() +
   scale_y_log10() + 
@@ -77,19 +86,9 @@ macro_fish_dw %>% group_by(dw, animal_type) %>% summarize(no_m2 = sum(no_m2)) %>
 macro_fish_dw %>% 
   filter(year > 2017 & year < 2020) %>% 
   mutate(dw = round(dw, 1)) %>% 
-  ggplot(aes(y = rank, x = dw, fill = animal_type, color = year_month)) + 
-  geom_point(shape = 21) +
-  scale_fill_grey(start = 0, end = 1) +
-  scale_y_log10() + 
-  scale_x_log10() +
-  facet_wrap(~site_id) +
-  NULL
-
-macro_fish_dw %>% 
-  filter(year > 2017 & year < 2020) %>% 
-  mutate(dw = round(dw, 1)) %>% 
-  ggplot(aes(y = rank, x = dw, fill = animal_type, color = year_month)) + 
-  geom_point(shape = 21) +
+  ggplot(aes(y = rank, x = dw)) + 
+  # geom_point(shape = 21) +
+  geom_line(aes(group = id)) +
   scale_fill_grey(start = 0, end = 1) +
   scale_y_log10() + 
   scale_x_log10() +
