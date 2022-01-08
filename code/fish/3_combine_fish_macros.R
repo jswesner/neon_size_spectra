@@ -66,8 +66,7 @@ samples_with_macros_and_fish <- macro_fish_temp %>% ungroup() %>% distinct(anima
   group_by(site_id, year_month) %>% 
   tally() %>%
   filter(n > 1) %>% 
-  distinct(site_id, year_month) %>% 
-  mutate(id = as.numeric(as.factor(paste0(site_id, year_month))))
+  distinct(site_id, year_month) 
 
 
 macro_fish_dw <- macro_fish_temp %>% select(-id) %>% 
