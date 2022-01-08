@@ -21,18 +21,26 @@ dat <- dat %>%
   ungroup() %>%
   group_by(site_id, year_month) %>%
   mutate(ID = cur_group_id())
+names(dat)
 
 ### ~~~~~~~~ Jeff - Please read this ~~~~~~~ ###
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
-# Double check that this is right. some of the c(month, fish_month, year_month) combos don't seem right. This may be an issue in code/fish/3_combine_fish_macros.R ??
+# Double check that this is right. some of the c(month, fish_month, year_month) combos don't seem right. This may be an issue in code/fish/3_combine_fish_macros.R ?? or perhaps I have the ID code above (L20-23) entered wrong....
 # currently (1/8/22), there are 172 groups
 # But I think should be:
 # 24 sites * 2 fish collections * 2 years = 96 collections?
 # plus maybe a few extras when there were 3 fish samples in a year??
-names(dat)
 
+# here is an example where the unique ID is mathced to two different combos of month:fish_month
+dat %>% select(site_id, month, fish_month, ID) %>%
+  filter(site_id== "ARIK", 
+         ID == 3 | ID == 4) %>%
+  distinct()
+# I'm concerned that either the fish or macros data is being duplicated into 2 different "collections"
 
-# rename columns to be ocmpatible with sizeSpectra::eight.methods.count()
+# back to the main thread... ####
+
+# rename columns to be compatible with sizeSpectra::eight.methods.count()
 ### NOTE:
 # eight.methods.count() automatically produces a plot for each "collection". These will be found in the home directory of the R project. I recommend ***NOT*** pushing those figures to the REPO. 
 dat <- dat %>%
