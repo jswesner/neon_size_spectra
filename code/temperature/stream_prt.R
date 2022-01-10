@@ -1,6 +1,7 @@
 # temperature data
 library(neonUtilities)
 library(tidyverse)
+library(janitor)
 library(brms)
 library(lubridate)
 library(tidybayes)
@@ -213,3 +214,10 @@ water_posteriors %>%
   geom_density_ridges()
   
 
+# compare to air temps
+field_data <- read_csv("data/field_data.csv") %>% clean_names()
+
+mat_posts %>% clean_names %>% 
+  left_join(field_data) %>% 
+  ggplot(aes(x = mat_site, y = mat_c, xmin = mat_site - sdat_site, xmax = mat_site + sdat_site)) +
+  geom_pointrange()
