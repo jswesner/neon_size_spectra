@@ -217,7 +217,42 @@ water_posteriors %>%
 # compare to air temps
 field_data <- read_csv("data/field_data.csv") %>% clean_names()
 
-mat_posts %>% clean_names %>% 
+field_data_water <- mat_posts %>% clean_names %>% 
   left_join(field_data) %>% 
-  ggplot(aes(x = mat_site, y = mat_c, xmin = mat_site - sdat_site, xmax = mat_site + sdat_site)) +
-  geom_pointrange()
+  rename(mat_water_c = mat_site,
+         mat_water_sd = sdat_site)
+
+saveRDS(field_data_water, file = "data/derived_data/field_data_water.rds")
+
+field_data_water %>% 
+  ggplot(aes(x = mat_water_c, y = mat_c, 
+             xmin = mat_water_c - mat_water_sd, 
+             xmax = mat_water_c + mat_water_sd)) +
+  geom_pointrange() +
+  labs(x = "Water - Mean Annual Temperature C +/- sd",
+       y = "Air - Mean Annual Temperature C") +
+  # geom_abline() +
+  xlim(-5, 30)  +
+  ylim(-5, 30) 
+
+
+water_lat <- field_data_water %>% 
+  ggplot(aes(x = mat_water_c, y = latitude, 
+             xmin = mat_water_c - mat_water_sd, 
+             xmax = mat_water_c + mat_water_sd)) +
+  geom_pointrange() +
+  labs(x = "Water - Mean Annual Temperature C",
+       y = "Latitude") + 
+  coord_flip() +
+  NULL
+
+air_lat <- field_data_water %>% 
+  ggplot(aes(x = mat_c, y = latitude)) +
+  geom_point() +
+  labs(x = "Air - Mean Annual Temperature C",
+       y = "Latitude") + 
+  coord_flip() +
+  NULL
+
+library(cowplot)
+plot_grid(water_lat, air_lat, ncol = )
