@@ -5,7 +5,7 @@ library(rfishbase)
 library(here)
 
 # Final dataset - use for size spectra anaylsis:
-macro_fish_dw <- readRDS(file = "data/raw_data/macro_fish_dw.rds")
+macro_fish_dw <- readRDS(file = "data/derived_data/macro_fish_dw.rds")
 
 # code to create macro_fish_dw
 macro_dw <- readRDS(here("data/derived_data/macro_dw.RDS")) %>% 
@@ -55,22 +55,30 @@ macro_dw_short %>%
 
 # create dataset for analysis
 macro_fish_temp <- bind_rows(macro_dw_short, 
-                           fish_dw_short %>% right_join(filtered_dates %>% distinct(fish_julian, month)) %>% 
-                                                          rename(julian = fish_julian) # only fish dates that are within 30 days of a macro date
+                           fish_dw_short %>% 
+                             right_join(
+                               filtered_dates %>% 
+                                 distinct(fish_julian, month)) %>% 
+                             rename(julian = fish_julian) # only fish dates that are within 30 days of a macro date
                            ) %>% 
   group_by(site_id, year, month) %>% 
   mutate(rank = rank(-dw),
          year_month = paste0(year,"_", month)) 
 
-samples_with_macros_and_fish <- macro_fish_temp %>% ungroup() %>% distinct(animal_type, year_month, site_id) %>% 
+samples_with_macros_and_fish <- macro_fish_temp %>% 
+  ungroup() %>% 
+  distinct(animal_type, year_month, site_id) %>% 
   group_by(site_id, year_month) %>% 
   tally() %>%
   filter(n > 1) %>% 
   distinct(site_id, year_month) 
 
 
-macro_fish_dw <- macro_fish_temp %>% select(-id) %>% 
-  right_join(samples_with_macros_and_fish)
+macro_fish_dw <- macro_fish_temp %>% select(-id) %>%
+  mutate(year_month = paste0(year, "_", month)) %>% 
+  right_join(samples_with_macros_and_fish) %>%
+  group_by(site_id, year_month) %>%
+  mutate(ID = cur_group_id()) # add an identifier for each macro_fish combination
 
 saveRDS(macro_fish_dw, file = "data/derived_data/macro_fish_dw.rds")
 
@@ -85,9 +93,9 @@ macro_fish_dw %>%
 macro_fish_dw %>% 
   filter(year > 2017 & year < 2020) %>% 
   mutate(dw = round(dw, 1)) %>% 
-  ggplot(aes(y = rank, x = dw)) + 
-  # geom_point(shape = 21) +
-  geom_line(aes(group = id)) +
+  ggplot(aes(y = rank, x = dw, color = animal_type)) + 
+  geom_point(shape = 21) +
+  # geom_line(aes(group = ID)) +
   scale_fill_grey(start = 0, end = 1) +
   scale_y_log10() + 
   scale_x_log10() +

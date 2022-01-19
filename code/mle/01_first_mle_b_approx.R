@@ -14,14 +14,14 @@ mat_c <- mat_c %>%
 
 # check names of fish-dw data
 names(dat)
-
-# add "ID" column
-# this is for giving each "collection" a unique identifier
-dat <- dat %>%
-  ungroup() %>%
-  group_by(site_id, year_month) %>%
-  mutate(ID = cur_group_id())
-names(dat)
+### JUSTIN - Delete this step. The ID is now added in the main macro_fish_dw using this same code.
+# # add "ID" column
+# # this is for giving each "collection" a unique identifier
+# dat <- dat %>%
+#   ungroup() %>%
+#   group_by(site_id, year_month) %>%
+#   mutate(ID = cur_group_id())
+# names(dat)
 
 ### ~~~~~~~~ Jeff - Please read this ~~~~~~~ ###
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
