@@ -1,4 +1,4 @@
-# INverterate data download script.
+# INvertebrate data download script.
 
 # Load packages and helper functions --------
 # devtools::install_github("cboettig/neonstore")
@@ -7,6 +7,8 @@ library(neonstore)
 library(tidyverse)
 library(DBI)
 
+source("./code/update_data_products.R")
+update_data_products(products = 'resources')
 # Load stream names
 streams = readRDS(file = "./data/derived_data/streams.rds")
 
@@ -15,7 +17,7 @@ products <- neonstore::neon_products()
 ### Download invertebrate data
 library(codyn)
 neonstore::neon_download("DP1.20120.001")
-neonstore::neon_store("inv_fieldData")
+neonstore::neon_store("inv_fieldData-basic")
 neonstore::neon_store("inv_taxonomyProcessed")
 
 ### Check out field data
@@ -23,7 +25,7 @@ invert_fieldData = neonstore::neon_table(table = "inv_fieldData")
 
 ### Get annual density estimates
 invert_tab = neonstore::neon_table(table = "inv_taxonomyProcessed") %>%
-  dplyr::filter(siteID %in% streams) #%>%
+  dplyr::filter(siteID %in% streams) %>%
   dplyr::select(siteID, collectDate, acceptedTaxonID, scientificName, estimatedTotalCount) %>%
   dplyr::mutate(date = as.Date(collectDate, format = "%y-%m-%d HH:MM:SS"),
                 year = as.character(lubridate::year(date))) %>%
@@ -49,7 +51,18 @@ invert_tab %>%
   theme_minimal()+
   facet_wrap(~siteID)
 
-invert_rankShift = invert_tab %>%
-  group_by(siteID, year) %>%
-  junkR::named_group_split(siteID, year) %>%
-  purrr::map(~codyn::mean_rank_shift)
+invert_yearList = invert_tab %>%
+  dplyr::mutate(year = as.numeric(year)) %>%
+  dplyr::filter(relAbun > 0) %>%
+  na.omit %>%
+  junkR::named_group_split(siteID) 
+
+debugonce(codyn::rank_shift)
+codyn::rank_shift(invert_yearList[[22]], time.var = 'year', species.var = 'acceptedTaxonID', abundance.var = 'estimatedTotalCount')
+
+invert_rankShift = invert_yearList[c(1:21,23:24)] %>%
+  purrr::map(~codyn::rank_shift(.x, time.var = 'year', species.var = 'acceptedTaxonID', abundance.var = 'estimatedTotalCount'))
+
+invert_rankSumm = invert_rankShift %>%
+  purrr::map(~mean(.x$MRS)) %>% bind_rows(.id = siteID) %>%
+  pivot_longer(everything(),names_to = 'siteID', values_to = 'MRS_mean')

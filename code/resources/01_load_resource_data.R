@@ -1,39 +1,134 @@
 # GPP data download script.
-
+'%ni%' = Negate('%in%')
 # Load packages and helper functions --------
 # devtools::install_github("cboettig/neonstore")
 library(neonUtilities)
 library(neonstore)
 library(tidyverse)
 library(DBI)
-
+source("./code/update_data_products.R")
 # Load stream names
 streams = readRDS(file = "./data/derived_data/streams.rds")
-
+latlong = read_csv(file = "./data/site_latlong.csv")
+# Resource code for diferent resource types ----
 # GPP products ----
 ## download the products
+update_data_products(products = "resources")
+# the neonstore db has been really slow and 
+# taking a lot of memory
+streams_mod = streams[streams %ni% c("POSE")]
+for(i in seq_along(streams_mod)){
+  
+  fileName = paste0("./ignore/site-gpp-data/",streams_mod[i],"_30min_DO.rds")
+  # load, stack, munge, and save DO files
+  waq_df = neonstore::neon_read(table = 'waq_instantaneous-basic',
+                                product = 'DP1.20288.001',
+                                site = streams_mod[i],
+                                altrep = FALSE
+  ) %>%
+    dplyr::select(siteID, startDateTime, matches("dissolvedOxygen.*|.*DOSat")) %>%
+    dplyr::mutate(timePeriod = cut(startDateTime, breaks = "15 min")) %>%
+    group_by(timePeriod) %>%
+    dplyr::summarise(across(where(is.numeric), ~mean(.x, na.rm = TRUE))) %>%
+    saveRDS(., file = fileName)
+  # clean up the mess to clear memory
+  rm(waq_df);gc()
+  
+}
+
+for(i in seq_along(streams)){
+  fileName = paste0("./ignore/site-gpp-data/",streams[i],"_30min_depthZ.rds")
+  # load, stack, munge, and save depth files
+  neonstore::neon_read(product = "DP1.20016.001",
+                                table = "EOS_30_min-basic",
+                                site = streams[i],
+                                altrep = FALSE
+  ) %>%
+    dplyr::select(siteID, startDateTime, surfacewaterElevMean, sWatElevFinalQF) %>%
+    saveRDS(., file = fileName)
+  # clean up the mess to clear memory
+  gc()
+}
+
+for(i in seq_along(streams)){
+  fileName = paste0("./ignore/site-gpp-data/",streams[i],"_1hr_dischargeQ.rds")
+  # load, stack, munge, and save depth files
+  neonstore::neon_read(product = "DP4.00130.001",
+                       table = "csd_continuousDischarge-basic",
+                       site = streams[i],
+                       altrep = FALSE
+  ) %>%
+    dplyr::select(siteID, endDate, calibratedPressure, equivalentStage, maxpostDischarge) %>%
+    dplyr::mutate(timePeriod = cut(endDate, breaks = "1 hour")) %>%
+    group_by(timePeriod, endDate) %>%
+    dplyr::summarise(across(where(is.numeric), ~mean(.x, na.rm = TRUE))) %>%
+    saveRDS(., file = fileName)
+  # clean up the mess to clear memory
+  gc()
+}
+
+streams_mod = streams[streams %ni% c("POSE")]
+
+for(i in seq_along(streams_mod[4:length(streams_mod)])){
+  fileName = paste0("./ignore/site-gpp-data/",streams[i],"_30min_airPressure.rds")
+  # load, stack, munge, and save depth files
+  neonstore::neon_read(product = "DP1.00004.001",
+                       table = "BP_30min-basic",
+                       site = streams_mod[i],
+                       altrep = FALSE
+  ) %>%
+    saveRDS(., file = fileName)
+  # clean up the mess to clear memory
+  gc()
+}
+
 
 products <- neonstore::neon_products()
-### Download water quality data
-neonstore::neon_download("DP1.20288.001")
-### Download discharge data
-neonstore::neon_download("DP1.20288.001")
-### Download depth data
-neonstore::neon_download("DP4.00130.001")
+neonstore::neon_download("DP1.00024.001",
+                         site = streams)
 
+neonstore::neon_index("DP1.00024.001") %>% View()
 
+x = neonstore::neon_read(product = "DP1.00004.001",
+                     table = "BP_30min-basic",
+                     site = "BLDE",
+                     altrep = FALSE
+)
+### Check index of  water quality data
+ ## These data are too large to subset locally, must subset on Larry
+x = neonstore::neon_index("DP1.00004.001")
+### Index discharge data
+ ## These data are too large to subset locally must subset on Larry
+neonstore::neon_index("DP4.00130.001") -> Q
+### Index depth data
+neonstore::neon_index(product = "DP1.20016.001",
+                      table = "EOS_30_min-basic",
+                      )
+### Index Temp data
+ ## Data have been subset to each stream
+ neonstore::neon_index("DP1.20053.001")
+### Index rearation data
+ ## currently need to assess if this is needed
+View(neonstore::neon_index("DP1.20190.001"))
 
 # download the water quality data
-neon_store(product = "DP1.20288.001",
-  table = "waq_instantaneous-basic")
+neon_store(table = 'waq_instantaneous-basic', site = "BLDE")
+for(i in 1:length(streams)){
+  x = neonstore::neon_table(table = 'waq_instantaneous-basic', site = streams[i])
+  saveRDS(x, file = paste0("./ignore/site-gpp-data/",streams[i],"_waq.rds"))
+}
 
-discharge <- neonstore::neon_index("DP4.00130.001")
+for(i in 1:length(streams)){
+  x = neonstore::neon_table(table = "TSW_30min-basic", site = streams[i])
+  saveRDS(x, file = paste0("./ignore/site-gpp-data/",streams[i],"_30min_temp.rds"))
+}
 
-# download the depth data
-neon_download("DP4.00130.001",
-  site = "BLDE", start_date = "2018-01-01",
-  type = "basic", unique = TRUE
-)
+for(i in 1:length(streams)){
+  x = neonstore::neon_table(table = "", site = streams[i])
+  saveRDS(x, file = paste0("./ignore/site-gpp-data/",streams[i],"_continuousZ.rds"))
+}
+
+
 
 # Allochthonous products -----
 ## organic matter data
@@ -99,31 +194,35 @@ neonstore::neon_read(
 
 # EPILITHON ----
 ## Download the epilithon files
+## Check for updates if needed, Don't need to do this 
 neonstore::neon_download("DP1.20166.001")
+## Check the tables already downloaded
 epilithon_tables = neonstore::neon_index("DP1.20166.001")
 
 ## read in Field data if needed
 neonstore::neon_store(table = "alg_fieldData-basic")
 epi_field_tab = neonstore::neon_table(table = "alg_fieldData-basic")
 
-## read
+## read in and clean epilithon AFDM
 epi_bio_tab = neonstore::neon_table(table = "alg_biomass-basic") %>%
   dplyr::filter(analysisType == "AFDM" & siteID %in% streams) %>%
   dplyr::select(siteID, collectDate, AFDM_g = "adjAshFreeDryMass") %>%
   dplyr::filter(AFDM_g < 1) %>%
-  dplyr::mutate(Date = as.Date(collectDate, format = "%y-%m-%d HH:MM:SS"))
+  dplyr::mutate(AFDM_mg = AFDM_g*1000,
+                Date = as.Date(collectDate, format = "%y-%m-%d HH:MM:SS"))
 
 epi_bio_summ = epi_bio_tab %>%
   group_by(siteID, Date) %>%
-  dplyr::summarise(across(AFDM_g, list(mean = ~mean(.x, na.rm = TRUE),
+  dplyr::summarise(across(AFDM_mg, list(mean = ~mean(.x, na.rm = TRUE),
                                        quant2.5 = ~quantile(.x, 0.025, na.rm= TRUE),
                                        quant97.5 = ~quantile(.x, 0.975, na.rm = TRUE))))
 
 epi_bio_summ %>%
   ggplot()+
-  # geom_ribbon(aes(x = Date, ymin= AFDM_g_quant2.5, ymax = AFDM_g_quant97.5))+
-  geom_line(aes(x = Date, y = log(AFDM_g_mean)))+
-  geom_point(aes(x = Date, y = log(AFDM_g_mean)), size = 3)+
+  # geom_ribbon(aes(x = Date, ymin= AFDM_mg_quant2.5, ymax = AFDM_mg_quant97.5))+
+  geom_line(aes(x = Date, y = log(AFDM_mg_mean)))+
+  geom_point(aes(x = Date, y = log(AFDM_mg_mean)), size = 3)+
+  theme_minimal()+
   facet_wrap(~siteID)
 
 # - DOM flux
