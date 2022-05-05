@@ -73,6 +73,7 @@ test_temp_data <- bind_rows(test_temp, test_temp_oksr_cari) %>%
          water_c_10 = (surfWaterTempMean - mean_water)/10) %>%
   ungroup() 
 
+saveRDS(test_temp_data, file = "code/temperature/temp_data.rds")
 
 test_temp_data %>% 
   ggplot(aes(x = jday_c_100, y = water_c_10, color = year_f)) + 

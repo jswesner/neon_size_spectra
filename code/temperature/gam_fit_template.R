@@ -41,14 +41,18 @@ air %>%
   #geom_smooth() +
   facet_wrap(.~siteID)
 
-prt <- loadByProduct(
-  "DP1.20053.001",
-  package = "basic",
-  startdate = "2019-01",
-  enddate = "2019-12",
-  token = neon_token,
-  check.size = FALSE
-)$TSW_30min
+# prt <- loadByProduct(
+#   "DP1.20053.001",
+#   package = "basic",
+#   startdate = "2019-01",
+#   enddate = "2019-12",
+#   token = neon_token,
+#   timeIndex = 30,
+#   check.size = FALSE
+# )
+
+#stream temps measured every 30 minutes
+prt <- readRDS("data/raw_data/prt.rds")
 
 air <- air %>%
   mutate(date = 
@@ -65,18 +69,26 @@ air <- air %>%
 air <- ungroup(air)
 saveRDS(air, "code/temperature/temp_data/air_temp.RDS")
 
-prt <- prt %>%
+
+# reduce size of stream temps
+prt_short <- prt %>%
   mutate(
-    date = as.Date(startDateTime)) %>%
-  group_by(siteID, date) %>%
-  summarize(water_temp = mean(
-    surfWaterTempMean, na.rm = TRUE)) %>%
-  mutate(year = format(
-    date, format = "%Y"),
-    jdate = format(
-      date, format = "%j")) %>%
-  ungroup() %>%
-  select(siteID, water_temp, jdate)
+    date = as.Date(startDateTime),
+    hour = hour(startDateTime),
+    day = day(date),
+    jdate = julian(date)) %>% 
+  filter(hour %in% c(0, 4, 8, 12, 16, 20)) %>% # limit to one measure every 4 hours 
+  slice(which(row_number() %% 5 == 1)) %>% # limit to every 5 days
+  distinct(siteID, surfWaterTempMean, startDateTime, day, hour, date, jdate) # remove duplicates
+  # group_by(siteID, date) %>%
+  # summarize(water_temp = mean(
+  #   surfWaterTempMean, na.rm = TRUE)) %>%
+  # mutate(year = format(
+  #   date, format = "%Y"),
+  #   jdate = format(
+  #     date, format = "%j")) %>%
+  # ungroup() %>%
+  # select(siteID, water_temp, jdate)
 
 # plot of air temp ~ water temp
 # shows pretty tight relationship
