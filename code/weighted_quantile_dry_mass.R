@@ -15,6 +15,8 @@ library(tidyverse)
 
 # macros + fish dry mass estimates and abundances
 dw <- readRDS(file = "data/derived_data/macro_fish_dw.rds")
+dw <- dw %>%
+  filter(dw >= 0.0026)
 # mean and sd or temperature posterior distirbution
 temp <- readRDS("code/temperature/posteriors/mat_posts.rds")
 
@@ -133,50 +135,166 @@ summary(lm(wq50~mat_site, data = dw_wq))
 summary(lm(wq95~mat_site, data = dw_wq))
 summary(lm(wq99~mat_site, data = dw_wq))
 
-### Fitted values
-
-# sequence min to max temperature values
-x <- seq(min(dw$mat_site), max(dw$mat_site))
-# calculate fitted values at different quantiles
-y05 = 2.9e-3 + 1.7e-5 * x
-y50 = 0.025 + -0.0002 * x
-y95 = 0.32 + 0.007 * x
-y999 = 1.23 + 0.058 * x
-
-as_tibble(data.frame(x = x, 
-                     y05 = y05, 
-                     y50 = y50,
-                     y95 = y95,
-                     y999 = y999)) %>%
-  pivot_longer(2:5) %>%
-  ggplot(aes(x = x, y = value, color = name)) +
-  geom_line(size = 1) +
-  scale_y_log10() +
-  theme_bw()
+# ### Fitted values
+# 
+# # sequence min to max temperature values
+# x <- seq(min(dw$mat_site), max(dw$mat_site))
+# # calculate fitted values at different quantiles
+# y05 = 2.9e-3 + 1.7e-5 * x
+# y50 = 0.025 + -0.0002 * x
+# y95 = 0.32 + 0.007 * x
+# y999 = 1.23 + 0.058 * x
+# 
+# as_tibble(data.frame(x = x, 
+#                      y05 = y05, 
+#                      y50 = y50,
+#                      y95 = y95,
+#                      y999 = y999)) %>%
+#   pivot_longer(2:5) %>%
+#   ggplot(aes(x = x, y = value, color = name)) +
+#   geom_line(size = 1) +
+#   scale_y_log10() +
+#   theme_bw()
 
 
 # Unweighted quantile regressions -----------------------------------------
 
-# pretty sure this is not right becasue we need to "scale" 
-dw_q <- dw %>%
+# pretty sure this is not right becasue we need to "scale" the body size estimates by the number of observations
+
+# dw_q <- dw %>%
+#   group_by(ID) %>%
+#   summarize(mat_site = unique(mat_site),
+#             q05 = quantile(dw, probs = 0.05),
+#             q50 = quantile(dw, probs = 0.5),
+#             q95 = quantile(dw, probs = 0.95),
+#             q99 = quantile(dw, probs = 0.99))
+# 
+# dw_q %>%
+#   pivot_longer(cols = 3:6) %>%
+#   ggplot(aes(x = mat_site,
+#              y = value, 
+#              group = name,
+#              linetype = name,
+#              color = name,
+#              shape = name,
+#              fill = name))+
+#   geom_point() +
+#   scale_y_log10() +
+#   stat_smooth(method = "lm") +
+#   theme_bw() +
+#   NULL
+
+# mean body size ----------------------------------------------------------
+names(dw)
+
+dw %>% 
   group_by(ID) %>%
   summarize(mat_site = unique(mat_site),
-            q05 = quantile(dw, probs = 0.05),
-            q50 = quantile(dw, probs = 0.5),
-            q95 = quantile(dw, probs = 0.95),
-            q99 = quantile(dw, probs = 0.99))
-
-dw_q %>%
-  pivot_longer(cols = 3:6) %>%
+            u_dw = weighted.mean(
+              dw, no_m2) #,
+            #sd_dw = 
+              #matrixStats::weightedSd(
+               # dw, no_m2
+            ) %>%
   ggplot(aes(x = mat_site,
-             y = value, 
-             group = name,
-             linetype = name,
-             color = name,
-             shape = name,
-             fill = name))+
+             y = u_dw,
+             color = mat_site)) +
   geom_point() +
   scale_y_log10() +
-  stat_smooth(method = "lm") +
+  scale_color_viridis_c(option = "plasma") +
+  stat_smooth() +
   theme_bw() +
+  labs(y = "mean body size",
+       x = "mean water temp") +
   NULL
+
+dw %>% 
+  filter(mat_site > 2) %>%
+  group_by(ID) %>%
+  summarize(mat_site = unique(mat_site),
+            u_dw = weighted.mean(
+              dw, no_m2) #,
+            #sd_dw = 
+            #matrixStats::weightedSd(
+            # dw, no_m2
+  ) %>%
+  ggplot(aes(x = mat_site,
+             y = u_dw,
+             color = mat_site)) +
+  geom_point() +
+  scale_y_log10() +
+  scale_color_viridis_c(option = "plasma") +
+  stat_smooth() +
+  theme_bw() +
+  labs(y = "mean body size",
+       x = "mean water temp") +
+  NULL
+
+
+# community biomass -------------------------------------------------------
+
+
+dw %>% 
+  group_by(ID) %>%
+  summarize(mat_site = unique(mat_site),
+            sum_dw = sum(dw * no_m2) #,
+            #sd_dw = 
+            #matrixStats::weightedSd(
+            # dw, no_m2
+  ) %>%
+  ggplot(aes(x = mat_site,
+             y = sum_dw,
+             color = mat_site)) +
+  geom_point() +
+  scale_y_log10() +
+  scale_color_viridis_c(option = "plasma") +
+  stat_smooth() +
+  theme_bw() +
+  labs(y = "Community Biomass",
+       x = "mean water temp") +
+  NULL
+
+dw %>% 
+  filter(mat_site > 2) %>%
+  group_by(ID) %>%
+  summarize(mat_site = unique(mat_site),
+            sum_dw = sum(dw * no_m2) #,
+            #sd_dw = 
+            #matrixStats::weightedSd(
+            # dw, no_m2
+  ) %>%
+  ggplot(aes(x = mat_site,
+             y = sum_dw,
+             color = mat_site)) +
+  geom_point() +
+  scale_y_log10() +
+  scale_color_viridis_c(option = "plasma") +
+  stat_smooth() +
+  theme_bw() +
+  labs(y = "Community Biomass",
+       x = "mean water temp") +
+  NULL
+
+
+# range of body sizes -----------------------------------------------------
+
+dw %>%
+  ungroup() %>%
+  select(dw, mat_site) %>%
+  unique() %>%
+  ggplot(aes(y = dw,
+             x = mat_site)) +
+  geom_point(alpha = 0.4) +
+  scale_y_log10() +
+  theme_bw()
+
+dw %>%
+  ungroup() %>%
+  group_by(ID) %>%
+  summarize(min(dw),
+            max(dw))
+
+dw %>% filter(mat_site < 4) %>%
+  ungroup() %>%
+  select(site_id, mat_site, ID) %>%
+  unique()
