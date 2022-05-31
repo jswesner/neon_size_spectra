@@ -4,7 +4,31 @@
 
 library(brms)
 library(tidyverse)
-prt_small <- readRDS("code/temperature/temp_data/prt_small.RDS")
+#stream temps measured every 30 minutes
+prt <- readRDS("data/raw_data/prt.rds")
+
+# thin stream temp data
+# Look at finalQF
+prt_short <- prt %>%
+  mutate(
+    date = as_date(startDateTime),
+    hour = hour(startDateTime),
+    day = day(date),
+    year = year(date),
+    jdate = julian(date)) %>% 
+  filter(hour %in% c(0, 4, 8, 12, 16, 20)) %>% # limit to one measure every 4 hours 
+  # slice(which(row_number() %% 10 == 1)) %>% # limit to every 5 days
+  distinct(siteID, surfWaterTempMean, startDateTime, day, hour, date, jdate, year) %>% 
+  filter(surfWaterTempMean > -10 & surfWaterTempMean <50)  # remove extreme values (sensor errors)
+
+
+# plot raw data
+prt_short %>% 
+  ggplot(aes(x = date, y = surfWaterTempMean, group = siteID)) + 
+  geom_line(aes(group = siteID, color = siteID)) +
+  facet_wrap(~siteID) +
+  NULL
+
 
 get_prior(water_temp ~ s(jdate, by = siteID),
           family = gaussian(),

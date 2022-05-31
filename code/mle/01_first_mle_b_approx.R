@@ -84,6 +84,8 @@ saveRDS(mle_output,
         "results/mle_b_estimate_fish_macro.RDS")
 
 
+mle_output <- readRDS("results/mle_b_estimate_fish_macro.RDS")
+
 
 # exploration -------------------------------------------------------------
 
