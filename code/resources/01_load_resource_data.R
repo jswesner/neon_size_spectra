@@ -6,14 +6,15 @@ library(neonUtilities)
 library(neonstore)
 library(tidyverse)
 library(DBI)
-source("./code/update_data_products.R")
+# source("./code/update_data_products.R")
 # Load stream names
 streams = readRDS(file = "./data/derived_data/streams.rds")
 latlong = read_csv(file = "./data/site_latlong.csv")
+
 # Resource code for diferent resource types ----
 # GPP products ----
 ## download the products
-update_data_products(products = "resources")
+# update_data_products(products = "resources")
 # the neonstore db has been really slow and 
 # taking a lot of memory
 streams_mod = streams[streams %ni% c("POSE")]
@@ -83,50 +84,57 @@ for(i in seq_along(streams_mod[4:length(streams_mod)])){
 }
 
 
-products <- neonstore::neon_products()
-neonstore::neon_download("DP1.00024.001",
+
+
+
+
+
+
+
+ products <- neonstore::neon_products()
+ neonstore::neon_download(product = "DP4.00130.001",
                          site = streams)
-
-neonstore::neon_index("DP1.00024.001") %>% View()
-
-x = neonstore::neon_read(product = "DP1.00004.001",
-                     table = "BP_30min-basic",
-                     site = "BLDE",
-                     altrep = FALSE
-)
-### Check index of  water quality data
- ## These data are too large to subset locally, must subset on Larry
-x = neonstore::neon_index("DP1.00004.001")
-### Index discharge data
- ## These data are too large to subset locally must subset on Larry
-neonstore::neon_index("DP4.00130.001") -> Q
-### Index depth data
-neonstore::neon_index(product = "DP1.20016.001",
-                      table = "EOS_30_min-basic",
-                      )
-### Index Temp data
- ## Data have been subset to each stream
- neonstore::neon_index("DP1.20053.001")
-### Index rearation data
- ## currently need to assess if this is needed
-View(neonstore::neon_index("DP1.20190.001"))
-
-# download the water quality data
-neon_store(table = 'waq_instantaneous-basic', site = "BLDE")
-for(i in 1:length(streams)){
-  x = neonstore::neon_table(table = 'waq_instantaneous-basic', site = streams[i])
-  saveRDS(x, file = paste0("./ignore/site-gpp-data/",streams[i],"_waq.rds"))
-}
-
-for(i in 1:length(streams)){
-  x = neonstore::neon_table(table = "TSW_30min-basic", site = streams[i])
-  saveRDS(x, file = paste0("./ignore/site-gpp-data/",streams[i],"_30min_temp.rds"))
-}
-
-for(i in 1:length(streams)){
-  x = neonstore::neon_table(table = "", site = streams[i])
-  saveRDS(x, file = paste0("./ignore/site-gpp-data/",streams[i],"_continuousZ.rds"))
-}
+# 
+# neonstore::neon_index("DP1.00024.001") %>% View()
+# 
+# x = neonstore::neon_read(product = "DP1.00004.001",
+#                      table = "BP_30min-basic",
+#                      site = "BLDE",
+#                      altrep = FALSE
+# )
+# ### Check index of  water quality data
+#  ## These data are too large to subset locally, must subset on Larry
+# x = neonstore::neon_index("DP1.00004.001")
+# ### Index discharge data
+#  ## These data are too large to subset locally must subset on Larry
+# neonstore::neon_index("DP4.00130.001") -> Q
+# ### Index depth data
+# neonstore::neon_index(product = "DP1.20016.001",
+#                       table = "EOS_30_min-basic",
+#                       )
+# ### Index Temp data
+#  ## Data have been subset to each stream
+#  neonstore::neon_index("DP1.20053.001")
+# ### Index rearation data
+#  ## currently need to assess if this is needed
+# View(neonstore::neon_index("DP1.20190.001"))
+# 
+# # download the water quality data
+# neon_store(table = 'waq_instantaneous-basic', site = "BLDE")
+# for(i in 1:length(streams)){
+#   x = neonstore::neon_table(table = 'waq_instantaneous-basic', site = streams[i])
+#   saveRDS(x, file = paste0("./ignore/site-gpp-data/",streams[i],"_waq.rds"))
+# }
+# 
+# for(i in 1:length(streams)){
+#   x = neonstore::neon_table(table = "TSW_30min-basic", site = streams[i])
+#   saveRDS(x, file = paste0("./ignore/site-gpp-data/",streams[i],"_30min_temp.rds"))
+# }
+# 
+# for(i in 1:length(streams)){
+#   x = neonstore::neon_table(table = "", site = streams[i])
+#   saveRDS(x, file = paste0("./ignore/site-gpp-data/",streams[i],"_continuousZ.rds"))
+# }
 
 
 

@@ -1,3 +1,35 @@
+source("./code/resources/01_load-packages.R")
+# debugonce(get_site_data)# CUPE metabolism script
+BLDE_met_full = get_site_data(siteCode = "BLDE")
+
+# remove some data points above 25 which are anomolous
+# debugonce(clean_met_data)
+BLDE_met_clean = clean_met_data(BLDE_met_full)
+# Quick plot to check out the data series
+BLDE_met_clean %>% 
+  dplyr::filter(!is.na(solar.time)) %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  ggplot()+
+  geom_line(aes(x = solar.time, y = DO.pctsat))+
+  theme_minimal()
+
+plot_site("BLDE")
+
+
+BLDE_met_clean %>% 
+  dplyr::filter(!is.na(solar.time)) %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(between(solar.time, as.POSIXct("2018-08-01 00:00:00"), as.POSIXct("2020-06-30 00:00:00")) | solar.time >= as.POSIXct("2021-05-01 00:00:00")) %>%
+  saveRDS("./data/derived_data/clean-met-files/BLDE_met.rds")
+
+
+
+
+
+
+
+
+
 #Basic StreamPULSE data processing pipeline
 #Updated 2020-05-11
 #Contact Mike Vlah (michael.vlah@duke.edu) with questions or comments.
@@ -5,7 +37,7 @@
 # Install StreamPULSE pipeline tools from GitHub
 # The StreamPULSE package is in development and changes frequently!
 # If something doesn't work as expected, first try reinstalling.
-remotes::install_github('streampulse/StreamPULSE', dependencies=TRUE)
+# remotes::install_github('streampulse/StreamPULSE', dependencies=TRUE)
 
 # Install latest version of streamMetabolizer.
 remotes::install_github('appling/unitted')
@@ -116,6 +148,9 @@ BLDE_met = BLDE_list[[grep("DO", names(BLDE_list))]] %>%
 # 5 temp.water        numeric           degC required
 # 6      light        numeric umol m^-2 s^-1 required
 # 7  discharge        numeric       m^3 s^-1 optional
+
+debugonce(get_site_data)
+x = get_site_data(siteCode = "HOPB")
 
 # plot the data series
 
