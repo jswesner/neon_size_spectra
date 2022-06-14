@@ -1,26 +1,69 @@
 ---
 title: "2022 NSF annual report"
 date: '`r Sys.Date()`'
+includes:
+  - \usepackage{includegraphics}
 output: html_document
 ---
 
+```{r global options, include = FALSE}
+here::i_am("docs/2022_YR1_annual-report/2022_YR1_annual-report.Rmd")
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)#,fig.path='./docs/2022_YR1_annual-report/figures/')
+library(png)
+```
+
 # Accomplishments
+
+## What are the major goals of this project?
+
+The main goal of this project is to discern the role of temperature and resource supply on energy transfer through stream food webs of the National Ecological Observation Network (NEON).
+There is a common pattern across ecosystems in which the organism abundance (*N*) declines with increasing body mass (*M*). The shape of this relationship is described by a power law, $N ~ M^b$, known as the abundance size-spectrum and the exponent, *b* varies in relation to changes in energy flow through food webs and ecosystems. Warming temperatures are expected to alter ecosystem size-spectra, yet, experimental and observational research has shown varied effects (e.g., positive, negative, and neutral). Further, the transfer of energy from basal resources to higher trophic levels may also be influenced by the amount of resources available, as this sets the limits on the biomass an ecosystem can potentially support. Therefore, the goal of this proposal is to quantify the natural variation in the size-spectra in streams across broad geographical areas represented by NEON sites and to test the hypothesis that *b* scales with temperature and resource supply.
+
+```{r fig 1, fig.align = 'center', fig.cap= "Figure 1. Conceptual schematic of proposed connections between environmental temperature and resource supply on individual metabolism, carrying capacity, and ultimately body size distributions across stream ecosystems of NEON"}
+
+knitr::include_graphics(here::here("docs/2022_YR1_annual-report/Figure1_conceptual-schematic.png"))
+
+```
+
+We will accomplish this goal through a number of objectives. We will:
+
+1) **Characterize the relationship between abundance and body size, $N ~ M^b$, in the macroinvertebrate and fish communities of NEON streams**
+
+We will develop standardized protocols and methods to characterize spatiotemporal variability in NEON stream community size-spectra. The size-spectra literature is composed of varied methods for calculating *b* from community data--up to 16 different types of size spectra. These include multiple binning methods, pre-analysis normalization, biomass spectra, etc. and there exists no straightforward transformation among methods. This variation in methodologies hinders the ability for synthesis and drawing broader conclusions from the existing literature. In this project, we will estimate *b* using a standardized approach employing maximum likelihood estimation, a method that does not require binning thereby providing an unbiased estimate of *b*.
+
+Additionally, underlying the uncertainty in how size spectra relate to temperature and resource supply is an incomplete characterization of the natural variation in size spectra over space and time. Due to the large logistical efforts needed to collect, identify, count, and measure 1000's or 10000's of individuals for a single size spectrum, studies are limited to a small number of replicates and typically a single sample per site. We will leverage the sampling infrastructure of NEON, which conducts multiple sampling campaigns at each site annually, to better characterize the background variation in size spectra. We will analyze the biological data from these campaigns using a standardized approach. Further, we will develop an open-source package in the R statistical computing environment to help other researchers to estimate *b* using our standardized approach, reducing the barriers for future syntheses.
+
+2) **Characterize the temperature regimes of NEON streams**
+
+3) **Quantifying resource availability in NEON streams**
+
+
 
 ## What was accomplished under these goals (you must provide information for at least one of the 4 categories below)?
 
 ### Major activities:
 
+Through the past year we have made strides towards all three state objectives. We have developed the workflow and statistical framework to combined the NEON macroinvertebrate and fish assemblage data in comparable units allowing us to develop multi-trophic size spectra in all streams. We have further developed 
+
 ### Specific objectives:
 
-### Significat results:
+### Significant results:
+
+We 
 
 ### Key outcomes or other acheivements:
 
 ## What opportunities for training and professional development has the project provided?
 
+We
+
 ## How have the results been disseminated to communities of interest?
 
+We have presented initial results comparing multi-trophic size spectra of macroinvertebrate and fish assemblages and their relationship with mean annual stream temperature at a national meeting of aquatic scientific societies. The Joint Aquatic Societies Meeting held on May XX--XX in Grand Rapids, MI 
+
 ## What do you plan to do during the next reporting period to accomplish the goals?
+
+We have initiated the process to onboard a postdoctoral researcher 
 
 # Products
 
@@ -35,6 +78,8 @@ output: html_document
 ### Thesis/Dissertations:
 
 ### Conference papers and presentations:
+
+- 
 
 ### Other publications:
 
