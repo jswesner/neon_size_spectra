@@ -12,9 +12,9 @@ knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)#,fig.path='./doc
 library(png)
 ```
 
-# Accomplishments
+### Accomplishments
 
-## What are the major goals of this project?
+#### What are the major goals of this project?
 
 The main goal of this project is to discern the role of temperature and resource supply on energy transfer through stream food webs of the National Ecological Observation Network (NEON).
 There is a common pattern across ecosystems in which the organism abundance (*N*) declines with increasing body mass (*M*). The shape of this relationship is described by a power law, $N ~ M^b$, known as the abundance size-spectrum and the exponent, *b* varies in relation to changes in energy flow through food webs and ecosystems. Warming temperatures are expected to alter ecosystem size-spectra, yet, experimental and observational research has shown varied effects (e.g., positive, negative, and neutral). Further, the transfer of energy from basal resources to higher trophic levels may also be influenced by the amount of resources available, as this sets the limits on the biomass an ecosystem can potentially support. Therefore, the goal of this proposal is to quantify the natural variation in the size-spectra in streams across broad geographical areas represented by NEON sites and to test the hypothesis that *b* scales with temperature and resource supply.
@@ -35,67 +35,79 @@ Additionally, underlying the uncertainty in how size spectra relate to temperatu
 
 2) **Characterize the temperature regimes of NEON streams**
 
+We will develop statistical frameworks to characterize and summarize the temperature regimes of NEON streams. The water temperature data across NEON streams varies in length of record and completeness. We will develop workflows which allow us to characterize the water temperature regimes annually and account for missing values by integrating air temperature records
+
 3) **Quantifying resource availability in NEON streams**
 
+We will quantify the supply of basal resources to consumers across NEON stream ecosystems. Basal resource supply sets the energetic base which feeds higher trophic levels and therefore sets limits on the biomass and trophic levels ecosystems can support. 
 
+#### What was accomplished under these goals (you must provide information for at least one of the 4 categories below)?
 
-## What was accomplished under these goals (you must provide information for at least one of the 4 categories below)?
+##### Major activities:
 
-### Major activities:
+Through the past year we have made strides towards all three stated objectives. We have developed the workflow and statistical framework to combined the NEON macroinvertebrate and fish assemblage data in comparable units, allowing us to develop multi-trophic size spectra in all streams. We have also developed workflows and statistical frameworks to characterize and summarize stream temperature regimes, including the development of statistical models to impute missing values in the time series.
 
-Through the past year we have made strides towards all three state objectives. We have developed the workflow and statistical framework to combined the NEON macroinvertebrate and fish assemblage data in comparable units allowing us to develop multi-trophic size spectra in all streams. We have further developed 
+```{r fig 1, fig.align = 'center', fig.cap= "Figure 2. (Left panel) An example of a single multi-trophic size spectra of fish and invertebrate communities and (right panel) all estimated multi-trophic size spectra from NEON stream sites."}
 
-### Specific objectives:
+knitr::include_graphics(here::here("docs/2022_YR1_annual-report/Figure2_size-spectra.png"))
 
-### Significant results:
+```
 
-We 
+##### Specific objectives:
 
-### Key outcomes or other acheivements:
+##### Significant results:
 
-## What opportunities for training and professional development has the project provided?
+To date, we have completed initial analyses of the relationship between multi-trophic size scaling relationships, i.e. *b*, and mean annual water temperature across NEON streams. These analyses suggest temperature--when viewed in isolation--has a negative relationship with the size spectra scaling exponent with an 88% probability. Yet, the magnitude of the temperature effect in the preliminary analysis is small at -0.002 units (-0.006--0.002 95% credibility interval [CI]), corresponding to an estimated decline in *b* from -1.29 to -1.33 across the 22$^/circ$C gradient. Compared to the among sample variation of -1.13 to -1.82, the temperature effect is relatively small in relation to within-site variability. 
 
-We
+We have also completed initial analyses of the relationship between macroinvertebrate and fish biomass and stream temperature. Theory suggests community biomass should exhibit a negative relationship between standing biomass and temperature due to increased metabolic demands of consumers. However, initial analyses suggest a neutral relationship and, in the case of macroinvertebrates, a 94% percent probability of a positive relatioship between community biomass and temperature. 
 
-## How have the results been disseminated to communities of interest?
+Together, the weak negative relationship between size spectra scaling exponent and temperature and the unexpected neutral-to-positive relationship between community biomass and temperature leave open the potential for resource supply to play an important role in mediating multi-trophic size spectra.
 
-We have presented initial results comparing multi-trophic size spectra of macroinvertebrate and fish assemblages and their relationship with mean annual stream temperature at a national meeting of aquatic scientific societies. The Joint Aquatic Societies Meeting held on May XX--XX in Grand Rapids, MI 
+##### Key outcomes or other acheivements:
 
-## What do you plan to do during the next reporting period to accomplish the goals?
+#### What opportunities for training and professional development has the project provided?
 
-We have initiated the process to onboard a postdoctoral researcher 
+The project has motivated a special session, *"NEON data: leveraging continental scale data to advance freshwater science"*, led by the senior project personnel and involving the principal investigators and three additional early career scientists. The session was convened at the Joint Aquatic Sciences Meeting (JASM) held in Grand Rapids, MI on May 14--20. The session included 
 
-# Products
+#### How have the results been disseminated to communities of interest?
 
-## Within the Products section, you can list any products resulting from your project during the specified reporting period, such as:
+We have presented initial results comparing multi-trophic size spectra of macroinvertebrate and fish assemblages and their relationship with mean annual stream temperature at a national meeting of aquatic scientific societies. The Joint Aquatic Societies Meeting held on May 14--20 in Grand Rapids, MI was attended by 3400+ registrants with 2400+ in-person attendees from nine scientific societies. 
 
-### Journals:
+#### What do you plan to do during the next reporting period to accomplish the goals?
 
-### Books:
+We have initiated the process to on-board a postdoctoral researcher to fill the role vacated by Dr. J.P.Z. Pomeranz upon their appointment to Assistant Professor at Colorado Mesa University. The postdoctoral researcher will work with the 
 
-### Book chapters:
+### Products
 
-### Thesis/Dissertations:
+#### Within the Products section, you can list any products resulting from your project during the specified reporting period, such as:
 
-### Conference papers and presentations:
+##### Journals:
 
-- 
+##### Books:
 
-### Other publications:
+##### Book chapters:
 
-### Technologies or techniques:
+##### Thesis/Dissertations:
 
-### Patents:
+##### Conference papers and presentations:
 
-### Inventions:
+Wesner, J.S., J.P.Z. Pomeranz, J.R. Junker. "The influence of temperature and resource supply on stream size spectra". 2022. Poster. Joint Aquatic Sciences Meeting, May 14-20. Grand Rapids, MI USA.
 
-### Licenses:
+##### Other publications:
 
-### Websites:
+##### Technologies or techniques:
 
-### Other products:
+##### Patents:
 
-# Participants
+##### Inventions:
+
+##### Licenses:
+
+##### Websites:
+
+##### Other products:
+
+### Participants
 
 There are no limits on the number of participants you list for this section; however, you must list participants who have worked one person month or more for the project reporting period. You have the option of selecting “nothing to report” in this section.   For Research Experience for Undergraduates (REU) sites and supplements, specific questions will be listed in this section. The online service will also ask for additional information on participants such as: 
      
@@ -103,14 +115,15 @@ There are no limits on the number of participants you list for this section; how
 •	What organizations have been involved as partners?
 •	Have other collaborators or contacts been involved?
 
-## What individuals have worked on the project?
+#### What individuals have worked on the project?
 
 Name | Most senior project role | Nearest person months worked
 -----| ------------------------ | ----------------------------
-1.   |                          |                
-2.   |                          | 
+1. Jeff S. Wesner| Principal Investigator |                
+2. James R. Junker |  Co-Principal Investigator | 1 month
+2
 
-## What other organizations have been involved as partners?
+#### What other organizations have been involved as partners?
 
 The online service will also ask you for additional information such as:      
 •	Type of Partner Organization
@@ -118,45 +131,53 @@ The online service will also ask you for additional information such as:
 •	Location
 •	Partner’s contribution to the project
 
-## Have other collaborators or contacts been involved? 
+#### Have other collaborators or contacts been involved? 
 
 - Yes
 
 - No
 
-# Impacts
+### Impacts
 
-## What is the impact on the development of the principal discipline(s) of the project?
+#### What is the impact on the development of the principal discipline(s) of the project?
 
-## What is the impact on other disciplines?
+#### What is the impact on other disciplines?
 
-## What is the impact on the development of human resources?
+#### What is the impact on the development of human resources?
 
-## What is the impact on physical resources that form infrastructure?
+#### What is the impact on physical resources that form infrastructure?
 
-## What is the impact on institutional resources that form infrastructure?
+#### What is the impact on institutional resources that form infrastructure?
 
-## What is the impact on information resources that form infrastructure?
+#### What is the impact on information resources that form infrastructure?
 
-## What is the impact on technology transfer?
+#### What is the impact on technology transfer?
 
-## What is the impact on society beyond science and technology?
+#### What is the impact on society beyond science and technology?
 
-# Changes/Problems
+### Changes/Problems
 
-## Changes in approach and reason for change:
+#### Changes in approach and reason for change:
 
-## Actual anticipated problems or delays and actions or plans to resolve them:
+#### Actual anticipated problems or delays and actions or plans to resolve them:
 
-## Changes that have a significant impact on expenditures:
+#### Changes that have a significant impact on expenditures:
 
-## Significant changes in use or care of human subjects:
+The Senior Personnel named on the project has accepted a  
 
-## Significant changes in use or care of vertebrate animals:
+#### Significant changes in use or care of human subjects:
 
-## Significant changes in use or care of biohazards:
+N/A
 
-# Special requirements
+#### Significant changes in use or care of vertebrate animals:
+
+N/A
+
+#### Significant changes in use or care of biohazards:
+
+N/A
+
+### Special requirements
 
 This report section is only available when Special Requirements are specifically noted in the solicitation and approved by the Office of Management and Budget.
 
