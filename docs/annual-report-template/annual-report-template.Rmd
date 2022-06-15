@@ -1,0 +1,117 @@
+---
+title: "annual report template"
+date: '`r Sys.Date()`'
+output: html_document
+---
+
+# Accomplishments
+
+## What was accomplished under these goals (you must provide information for at least one of the 4 categories below)?
+
+### Major activities:
+
+### Specific objectives:
+
+### Significat results:
+
+### Key outcomes or other acheivements:
+
+## What opportunities for training and professional development has the project provided?
+
+## How have the results been disseminated to communities of interest?
+
+## What do you plan to do during the next reporting period to accomplish the goals?
+
+# Products
+
+## Within the Products section, you can list any products resulting from your project during the specified reporting period, such as:
+
+### Journals:
+
+### Books:
+
+### Book chapters:
+
+### Thesis/Dissertations:
+
+### Conference papers and presentations:
+
+### Other publications:
+
+### Technologies or techniques:
+
+### Patents:
+
+### Inventions:
+
+### Licenses:
+
+### Websites:
+
+### Other products:
+
+# Participants
+
+There are no limits on the number of participants you list for this section; however, you must list participants who have worked one person month or more for the project reporting period. You have the option of selecting “nothing to report” in this section.   For Research Experience for Undergraduates (REU) sites and supplements, specific questions will be listed in this section. The online service will also ask for additional information on participants such as: 
+     
+•	What individuals have worked on the project?
+•	What organizations have been involved as partners?
+•	Have other collaborators or contacts been involved?
+
+## What individuals have worked on the project?
+
+Name | Most senior project role | Nearest person months worked
+-----| ------------------------ | ----------------------------
+1.   |                          |                
+2.   |                          | 
+
+## What other organizations have been involved as partners?
+
+The online service will also ask you for additional information such as:      
+•	Type of Partner Organization
+•	Name
+•	Location
+•	Partner’s contribution to the project
+
+## Have other collaborators or contacts been involved? 
+
+- Yes
+
+- No
+
+# Impacts
+
+## What is the impact on the development of the principal discipline(s) of the project?
+
+## What is the impact on other disciplines?
+
+## What is the impact on the development of human resources?
+
+## What is the impact on physical resources that form infrastructure?
+
+## What is the impact on institutional resources that form infrastructure?
+
+## What is the impact on information resources that form infrastructure?
+
+## What is the impact on technology transfer?
+
+## What is the impact on society beyond science and technology?
+
+# Changes/Problems
+
+## Changes in approach and reason for change:
+
+## Actual anticipated problems or delays and actions or plans to resolve them:
+
+## Changes that have a significant impact on expenditures:
+
+## Significant changes in use or care of human subjects:
+
+## Significant changes in use or care of vertebrate animals:
+
+## Significant changes in use or care of biohazards:
+
+# Special requirements
+
+This report section is only available when Special Requirements are specifically noted in the solicitation and approved by the Office of Management and Budget.
+

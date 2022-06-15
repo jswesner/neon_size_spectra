@@ -1,6 +1,18 @@
 ############################ Working on
 Junker
-Implement metabolism model demo for one site
+Implement metabolism models
+
+Site priorities:
+- focus on temperature gradient
+- prioritize longer records
+Initial list:
+GUIL/CUPE
+MAYF
+POSE
+KING
+REDB
+BLDE
+OKSR
 
 Wesner
 Modeled fish abundance with 3 pass
