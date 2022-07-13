@@ -16,8 +16,7 @@ library(png)
 
 #### What are the major goals of this project?
 
-The main goal of this project is to discern the role of temperature and resource supply on energy transfer through stream food webs of the National Ecological Observation Network (NEON).
-There is a common pattern across ecosystems in which the organism abundance (*N*) declines with increasing body mass (*M*). The shape of this relationship is described by a power law, $N ~ M^b$, known as the abundance size-spectrum and the exponent, *b* varies in relation to changes in energy flow through food webs and ecosystems. Warming temperatures are expected to alter ecosystem size-spectra, yet, experimental and observational research has shown varied effects (e.g., positive, negative, and neutral). Further, the transfer of energy from basal resources to higher trophic levels may also be influenced by the amount of resources available, as this sets the limits on the biomass an ecosystem can potentially support. Therefore, the goal of this proposal is to quantify the natural variation in the size-spectra in streams across broad geographical areas represented by NEON sites and to test the hypothesis that *b* scales with temperature and resource supply.
+The main goal of this project is to discern the role of temperature and resource supply on energy transfer through stream food webs of the National Ecological Observation Network (NEON). There is a common pattern across ecosystems in which organism abundance (*N*) declines with increasing body mass (*M*). The shape of this relationship is described by a power law, $N ~ M^b$, known as the abundance size-spectrum and the exponent, *b*, varies in relation to changes in energy flow through food webs and ecosystems. Warming temperatures are expected to alter ecosystem size-spectra, yet, experimental and observational research has shown varied effects (e.g., positive, negative, and neutral). Further, the transfer of energy from basal resources to higher trophic levels may also be influenced by the amount of resources available, as this sets the limits on the biomass an ecosystem can potentially support. Therefore, the proposed work will quantify the natural variation in the size-spectra of streams across broad geographical areas represented by NEON sites and test the hypothesis that *b* scales with temperature and resource supply.
 
 ```{r fig 1, fig.align = 'center', fig.cap= "Figure 1. Conceptual schematic of proposed connections between environmental temperature and resource supply on individual metabolism, carrying capacity, and ultimately body size distributions across stream ecosystems of NEON"}
 
@@ -35,23 +34,27 @@ Additionally, underlying the uncertainty in how size spectra relate to temperatu
 
 2) **Characterize the temperature regimes of NEON streams**
 
-We will develop statistical frameworks to characterize and summarize the temperature regimes of NEON streams. The water temperature data across NEON streams varies in length of record and completeness. We will develop workflows which allow us to characterize the water temperature regimes annually and account for missing values by integrating air temperature records
+We will develop statistical frameworks to characterize and summarize the temperature regimes of NEON streams. The water temperature data across NEON streams varies in length of record and completeness. We will develop workflows which allow us to characterize the water temperature regimes annually and account for missing values by integrating air temperature record.
 
 3) **Quantifying resource availability in NEON streams**
 
-We will quantify the supply of basal resources to consumers across NEON stream ecosystems. Basal resource supply sets the energetic base which feeds higher trophic levels and therefore sets limits on the biomass and trophic levels ecosystems can support. 
+We will quantify the supply of basal resources to consumers across NEON stream ecosystems. Basal resource supply provides the energetic base which feeds higher trophic levels and therefore sets limits on the biomass and trophic levels ecosystems can support. In addition to the macroinvertebrate and fish sampling, NEON also maintains routine sampling of other ecological variables and network of sensors allowing for the quantification of both autochthonous and allochthonous basal resources availability. To quantify autochthonous resources we will take advantage of the sensor network's data streams of continuous dissolved oxygen, stream stage, discharge, and temperature to estimate ecosystem metabolism. To quantify allochthonous resources, we will build a metric of allochthonous inputs that takes into account canopy cover as a proxy for terrestrial inputs. Together, gross primary production and terrestrial inputs make up the total energetic base fueling production and the maintenance of biomass from primary to tertiary consumers.
 
 #### What was accomplished under these goals (you must provide information for at least one of the 4 categories below)?
 
 ##### Major activities:
 
-Through the past year we have made strides towards all three stated objectives. We have developed the workflow and statistical framework to combined the NEON macroinvertebrate and fish assemblage data in comparable units, allowing us to develop multi-trophic size spectra in all streams. We have also developed workflows and statistical frameworks to characterize and summarize stream temperature regimes, including the development of statistical models to impute missing values in the time series.
+Through the past year we have made strides towards all three stated objectives. We anticipate further refinements to be accomplished over the following year, as well as, substantive progress addressing the quantification of resource availability among NEON streams.
 
-```{r fig 1, fig.align = 'center', fig.cap= "Figure 2. (Left panel) An example of a single multi-trophic size spectra of fish and invertebrate communities and (right panel) all estimated multi-trophic size spectra from NEON stream sites."}
+We have developed the workflow and statistical framework to combined the NEON macroinvertebrate and fish assemblage data in comparable units, allowing us to develop multi-trophic size spectra in all streams (Figure 2). This procedure is updated upon new data releases by NEON (approximately semi-annually). 
+
+```{r fig 2, fig.align = 'center', fig.cap= "Figure 2. (Left panel) An example of a single multi-trophic size spectra of fish and invertebrate communities and (right panel) all estimated multi-trophic size spectra from NEON stream sites."}
 
 knitr::include_graphics(here::here("docs/2022_YR1_annual-report/Figure2_size-spectra.png"))
 
 ```
+
+We have also developed and 
 
 ##### Specific objectives:
 
@@ -75,7 +78,7 @@ We have presented initial results comparing multi-trophic size spectra of macroi
 
 #### What do you plan to do during the next reporting period to accomplish the goals?
 
-We have initiated the process to on-board a postdoctoral researcher to fill the role vacated by Dr. J.P.Z. Pomeranz upon their appointment to Assistant Professor at Colorado Mesa University. The postdoctoral researcher will work with the 
+We have initiated the process to on-board a postdoctoral researcher to fill the role vacated by Dr. J. Pomeranz upon their appointment to Assistant Professor at Colorado Mesa University. The postdoctoral researcher will work with the 
 
 ### Products
 
@@ -121,7 +124,7 @@ Name | Most senior project role | Nearest person months worked
 -----| ------------------------ | ----------------------------
 1. Jeff S. Wesner| Principal Investigator |                
 2. James R. Junker |  Co-Principal Investigator | 1 month
-2
+3. Justin P. Z. Pomeranz | Senior personnel | X months
 
 #### What other organizations have been involved as partners?
 
