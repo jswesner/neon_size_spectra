@@ -93,13 +93,10 @@ stream_fish_width_length_sampled <- all_fish %>%
          total_fish_perm2 = total_fish/area_m2)
 
 
-
- # 3-pass depletion model ---------------------------------------------------------------------
-
 stream_fish_torun <- stream_fish_width_length_sampled %>% 
-  select(site_id, pass_number, taxon_id, total_fish, reach, date, reach_id) %>% 
+  select(site_id, pass_number, taxon_id, total_fish, reach, date, reach_id, event_id) %>% 
   arrange(reach, pass_number) %>%
-  complete(pass_number, nesting(site_id, taxon_id, reach, reach_id, date), 
+  complete(pass_number, nesting(site_id, taxon_id, reach, reach_id, date, event_id), 
            fill = list(total_fish = 0)) %>% #add zeros to fish with no data in a given pass
   arrange(reach, taxon_id, date, pass_number, reach_id) %>% 
   distinct(pass_number, site_id, taxon_id, reach, reach_id, date, .keep_all = T) %>% # remove duplicates
@@ -107,9 +104,92 @@ stream_fish_torun <- stream_fish_width_length_sampled %>%
   mutate(last_minus_first = `3`-`1`) %>% 
   pivot_longer(cols = c(`1`,`2`,`3`), names_to = "pass_number",
                values_to = "total_fish") %>% 
-  mutate(increased = case_when(last_minus_first <=0 ~ "no", TRUE ~ "yes")) %>% 
-  unite("sample_id", c(site_id, taxon_id, reach, date), remove = F)
+  mutate(increased = case_when(last_minus_first <=0 ~ "no", TRUE ~ "yes"),
+         pass_number = as.integer(pass_number)) 
 
+
+fish_lengths = fish$fsh_perFish %>% as_tibble() %>% clean_names() %>% 
+  select(-identified_by, -fish_weight, -uid) %>% # remove these columns to allow removal of duplicates
+  distinct() %>%  # remove duplicates (duplicates confirmed via email with NEON on 2022-01-06)
+  mutate(date = ymd(as.Date(pass_start_time)),
+         year = year(date)) %>%
+  separate(event_id, c("site", "date2", "reach", NA, NA), 
+           remove = F) %>% 
+  unite("reach_id", site:reach, sep = ".") %>% 
+  separate(event_id, c(NA, NA, "reach", NA, NA, NA), remove = F) %>% 
+  ungroup() %>% 
+  anti_join(fixed_ids) %>% 
+  filter(site_id %in% streams)
+
+# Sample from length measurements with replacement.
+# Number of samples = total number of fish caught per pass per species.
+# If 4 fish caught, then sample 4 lengths from the 50 length measurements
+# If 400 fish caught, then sample 400 lengths (with replacement) from the 50 length measurements
+# There is surely a more efficient way to do this, but the code below works
+
+
+# total fish per pass per reach id
+total_fish = left_join(perfish, bulk_count) %>% 
+  replace_na(list(bulk_fish_count = 0)) %>% 
+  mutate(total_fish = n + bulk_fish_count,
+         pass_number = as.integer(pass_number)) %>% 
+  # filter(reach_id == "LECO.20211102.01") %>% 
+  select(total_fish, pass_number, reach_id) %>% 
+  group_by(reach_id, pass_number) %>% 
+  summarize(pass_total = sum(total_fish)) %>% 
+  filter(pass_number <= 3)
+
+# total fish across all passes per reach id
+total_fish_overall = left_join(perfish, bulk_count) %>% 
+  replace_na(list(bulk_fish_count = 0)) %>% 
+  mutate(total_fish = n + bulk_fish_count) %>% 
+  # filter(reach_id == "LECO.20211102.01") %>% 
+  select(total_fish, pass_number, reach_id) %>% 
+  group_by(reach_id) %>% 
+  summarize(grand_total = sum(total_fish))
+
+
+# simulate length totals
+lengths_and_totals = fish_lengths %>% 
+  select(reach_id, fish_total_length) %>% 
+  left_join(total_fish_overall)
+
+length_split = lengths_and_totals %>% group_split(reach_id)
+
+length_sims_temp = NULL
+for(i in 1:length(length_split)){
+  length_sims_temp[[i]] = sample_n(length_split[[i]], length_split[[i]] %>% distinct(grand_total) %>% pull(), replace = T)
+}
+
+length_sims = bind_rows(length_sims_temp)
+
+# make data for 3-pass depletion models
+length_sim_counts = length_sims %>%
+  expand_grid(pass_number = 1:3) %>% 
+  left_join(total_fish) %>% 
+  replace_na(list(pass_total = 0)) %>%
+  group_by(reach_id, fish_total_length, pass_number) %>% 
+  add_tally() %>% 
+  mutate(n_adjust = case_when(pass_total == 0 ~ 0, 
+                              is.na(pass_total) ~ 0,
+                              TRUE ~ 1),
+         n_lengths = n*n_adjust)
+
+# check (These look good. King creek has some higher values in pass three, but that is the only odd site
+# Will run them in the model and let sampler sort out pop sizes)
+length_sim_counts %>% 
+  filter(reach_id != "KING.20171018.01") %>% 
+  ggplot(aes(x = pass_number, y = n_lengths)) + 
+  geom_jitter()  
+
+
+##############################
+##############################
+###### 08/12/2022 - Code above works. Next step - figure out how to get 3-pass estiamtes for each body size/reach_id combo
+##############################
+##############################
+
+# 3-pass depletion model ---------------------------------------------------------------------
 # run 3 pass estimations
 stream_fish_abund <- stream_fish_torun %>% 
   select(-pass_number) %>%
@@ -117,7 +197,7 @@ stream_fish_abund <- stream_fish_torun %>%
   mutate(total_collected = sum(total_fish)) %>% 
   ungroup() %>% 
   nest_by(site_id, taxon_id,reach_id, reach, date, total_collected, 
-          last_minus_first, increased, sample_id) %>% 
+          last_minus_first, increased) %>% View()
   mutate(pop = lapply(data, function(fish) removal(fish, just.ests = T, method = "CarleStrub"))) %>% 
   unnest_wider(pop) %>% 
   clean_names() %>% 
@@ -153,4 +233,5 @@ ggplot(stream_fish_perm2 %>% group_by(site_id, date) %>% mutate(rank = rank(-tot
        aes(x = rank, y = total_fish_perm2)) + 
   geom_point() +
   facet_wrap(~site_id)
+
 
