@@ -4,13 +4,15 @@ library(lubridate)
 source("code/stream_site_id.R")
 
 # load densities, NEON fish, and length-weight parameters from fishbase via "2_get_fish_dry_weights.R"
+fish_length_cutoff = readRDS('code/fish/length_cutoffs.rds') %>% filter(animal_type == "fish") %>% pull(length_cutoff)
 stream_fish_perm2 = readRDS(file = "data/derived_data/stream_fish_perm2.rds")
 fish <- readRDS("data/raw_data/fish.rds")
 total_lengths_with_parameters <- read_csv(file = "data/derived_data/total_lengths_with_parameters.csv") %>% 
   # rename(wet_weight = grams) %>% 
   mutate(wet_weight_units = "grams_wet",
          dw = wet_weight*0.2,           # Conversion used by McGarvey and Kirk who cite Waters 1977. Secondary production in Inland Waters
-         dw_units = "grams_dry")
+         dw_units = "grams_dry") %>% 
+  filter(fish_total_length >= fish_length_cutoff)
 
 # adjust no_perm2 to number per 0.1km or something. otherwise the densities are all <1 if units are per m2
 # This allows us to sample a larger number of lengths and weights in the next step and then convert
@@ -66,9 +68,9 @@ saveRDS(fish_weights_perm2, file = "data/derived_data/fish_weights_perm2.rds")
 
 # sanity check
 fish_weights_perm2 %>% 
-  ggplot(aes(x = no_m2, y = dw)) + 
+  ggplot(aes(y = no_m2, x = dw)) + 
   geom_point() +
-  facet_wrap(~site_id, scales = "free")
+  facet_wrap(~site_id)
 
 
 

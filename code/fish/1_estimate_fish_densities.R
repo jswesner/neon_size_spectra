@@ -107,6 +107,8 @@ stream_fish_torun <- stream_fish_width_length_sampled %>%
   mutate(increased = case_when(last_minus_first <=0 ~ "no", TRUE ~ "yes"),
          pass_number = as.integer(pass_number)) 
 
+saveRDS(stream_fish_torun, file = "code/fish/stream_fish_torun.rds")
+
 
 fish_lengths = fish$fsh_perFish %>% as_tibble() %>% clean_names() %>% 
   select(-identified_by, -fish_weight, -uid) %>% # remove these columns to allow removal of duplicates
@@ -185,7 +187,7 @@ length_sim_counts %>%
 
 ##############################
 ##############################
-###### 08/12/2022 - Code above works. Next step - figure out how to get 3-pass estiamtes for each body size/reach_id combo
+###### 08/12/2022 - Code above works. Next step - figure out how to get 3-pass estimates for each body size/reach_id combo
 ##############################
 ##############################
 
@@ -197,13 +199,15 @@ stream_fish_abund <- stream_fish_torun %>%
   mutate(total_collected = sum(total_fish)) %>% 
   ungroup() %>% 
   nest_by(site_id, taxon_id,reach_id, reach, date, total_collected, 
-          last_minus_first, increased) %>% View()
+          last_minus_first, increased, event_id) %>%
   mutate(pop = lapply(data, function(fish) removal(fish, just.ests = T, method = "CarleStrub"))) %>% 
   unnest_wider(pop) %>% 
   clean_names() %>% 
   mutate(date_fac = as.factor(date)) %>% 
   mutate(increased = case_when(last_minus_first <=0 ~ "no", TRUE ~ "yes")) %>% 
   glimpse()
+
+saveRDS(stream_fish_abund, file = "code/fish/stream_fish_abund.rds")
 
 # add sample areas and sum across reaches. Results in the number of fish collected per m2 per site per date per species
 stream_fish_perm2 <- stream_fish_abund %>% 
@@ -216,7 +220,7 @@ stream_fish_perm2 <- stream_fish_abund %>%
          !is.na(mean_width_m)) %>% 
   distinct() %>% 
   mutate(area_m2 = measured_reach_length*mean_width_m) %>% 
-  group_by(site_id, taxon_id, date, increased) %>% 
+  group_by(site_id, taxon_id, date, increased, data) %>% 
   summarize(total_collected = sum(total_collected),
             area_m2 = sum(area_m2),
             no = sum(no)) %>% 
