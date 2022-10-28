@@ -4,12 +4,13 @@ library(lubridate)
 library(rfishbase)
 library(here)
 
-# Final dataset - use for size spectra anaylsis:
+# Final dataset - use for size spectra analysis:
 macro_fish_dw <- readRDS(file = "data/derived_data/macro_fish_dw.rds")
 
 # code to create macro_fish_dw
 macro_dw <- readRDS(here("data/derived_data/macro_dw.RDS")) %>% 
-  mutate(animal_type = "macroinvertebrates") %>% as_tibble()
+  mutate(animal_type = "macroinvertebrates") %>% as_tibble() %>% 
+  filter(dw >= 0.0026)
 
 fish_dw <- readRDS(file = "data/derived_data/fish_weights_perm2.rds") %>% as_tibble()
 
@@ -74,7 +75,16 @@ macro_fish_dw <- macro_fish_temp %>% select(-id) %>%
   group_by(site_id, year_month) %>% 
   mutate(site_int = as.integer(as.factor(ID)),
          year_int = as.integer(as.factor(year)),
-         group = paste(site_id, year_month, sep = "_"))
+         group = paste(site_id, year_month, sep = "_")) %>% 
+  ungroup() %>% 
+  group_by(dw, animal_type, site_id, date, year, month, year_month, mat_s, sdat_site, mat_site) %>% 
+  summarize(no_m2 = sum(no_m2)) %>% 
+  group_by(site_id, year, month) %>% 
+  mutate(rank = rank(-dw),
+         year_month = paste0(year,"_", month)) %>% 
+  ungroup()
+
+
 
 saveRDS(macro_fish_dw, file = "data/derived_data/macro_fish_dw.rds")
 saveRDS(macro_fish_dw, file = "C:/Users/Jeff.Wesner/OneDrive - The University of South Dakota/USD/Github Projects/stan_spectra/data/macro_fish_dw.rds")
@@ -86,7 +96,6 @@ macro_fish_dw %>%
 
 macro_fish_dw %>% 
   filter(year > 2017 & year < 2020) %>% 
-  mutate(dw = round(dw, 1)) %>% 
   ggplot(aes(y = rank, x = dw, color = animal_type)) + 
   geom_point(shape = 21) +
   # geom_line(aes(group = ID)) +

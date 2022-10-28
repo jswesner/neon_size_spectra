@@ -69,8 +69,7 @@ saveRDS(fish_weights_perm2, file = "data/derived_data/fish_weights_perm2.rds")
 # sanity check
 fish_weights_perm2 %>% 
   ggplot(aes(y = no_m2, x = dw)) + 
-  geom_point() +
-  facet_wrap(~site_id)
+  geom_point()
 
 
 
