@@ -14,13 +14,13 @@ knitr::opts_chunk$set(
 library(tidyverse)
 ```
 
-Reuman et al. (2008, Ecology Letters) derive the ISD exponent from metabolic theory. Based on their equation 7, ISD exponents are explained by:
+Reuman et al. (2008, Ecology Letters) derive the ISD exponent from metabolic theory. Based on their equation 7 on page 1220, ISD exponents are explained by:
 
 $$
-b = \frac{log_{10}\alpha}{log_{10}\beta} -\frac{7}{4}
+b + 1 = \frac{log_{10}\alpha}{log_{10}\beta} -\frac{3}{4}
 $$
 
-where $\alpha$ is the trophic transfer efficiency, ranging from 0 (no energy transfer) to 1 (all energy is transferred) and $\beta$ is the body mass ratio of consumers to their resources. $\beta$ is assumed to be \>\>1, since predators are assumed to be much larger than their prey. The fraction 7/4 is derived from the -3/4 scaling laws of the MTE (I think). The reason it is 7/4 and not 3/4 has something to do with using natural versus base-10 logs. I'm not sure and the paper isn't clear about it.
+where $\alpha$ is the trophic transfer efficiency, ranging from 0 (no energy transfer) to 1 (all energy is transferred) and $\beta$ is the body mass ratio of consumers to their resources. $\beta$ is assumed to be \>\>1, since predators are assumed to be much larger than their prey. The 3/4 is derived from the quarter scaling laws.
 
 Across a broad range of $\alpha$ and $\beta$, these are the prediction of the ISD exponent.
 
@@ -31,7 +31,7 @@ beta = seq(5, 500, length.out = 50)
 
 simulations = tibble(alpha = alpha) %>% 
   expand_grid(beta = beta) %>% 
-  mutate(b = (log(alpha)/log(beta)) - 7/4)
+  mutate(b = (log(alpha)/log(beta)) - 3/4 - 1)
 
 
 simulations %>% 
@@ -42,7 +42,7 @@ simulations %>%
   labs(title = "ISD predictions assuming the 3/4 power scaling")
 ```
 
-As shown in the figure above, predicted values of the ISD exponent converge to \~2 at moderate levels of trophic transfer efficiency ($\alpha$) and at large ratios of consumer to resource sizes ($\beta$). Our samples with NEON are typically closer to -1.5 or less. However, from this equation, the only way to generate samples close to that empirical value is to change the -7/4 scaling assumption, which implies changing the -3/4 value. For example, changing -7/4 to -4/4 places the predicted values closer to the observed levels.
+As shown in the figure above, predicted values of the ISD exponent converge to \~2 at moderate levels of trophic transfer efficiency ($\alpha$) and at large ratios of consumer to resource sizes ($\beta$). Our samples with NEON are typically closer to -1.5 or less. However, from this equation, the only way to generate samples close to that empirical value is to change the -3/4 scaling assumption, which implies changing the -3/4 value. For example, changing -3/4 to -1/3 places the predicted values closer to the observed levels.
 
 ```{r}
 alpha = seq(0.01,1, length.out = 10)
@@ -51,7 +51,7 @@ beta = seq(5, 500, length.out = 50)
 
 simulations = tibble(alpha = alpha) %>% 
   expand_grid(beta = beta) %>% 
-  mutate(b = (log(alpha)/log(beta)) - 4/4)
+  mutate(b = (log(alpha)/log(beta)) - 1/3 - 1)
 
 
 simulations %>% 
