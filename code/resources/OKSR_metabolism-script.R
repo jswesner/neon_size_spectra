@@ -1,7 +1,7 @@
 # OKSR metabolism script
 source("./code/resources/01_load-packages.R")
 # debugonce(clean_DO)
-OKSR_DO = clean_DO(siteCode ='OKSR')
+clean_DO(siteCode ='OKSR', doLims = c(7.5,25), return = FALSE)
 clean_temp(siteCode = 'OKSR', return = FALSE)
 OKSR_clean_temp = readRDS(file = "./ignore/site-gpp-data/OKSR_clean_temp.rds")
 

@@ -1,3 +1,4 @@
+# need to clean o2 deries more
 rm(list = ls())
 source("./code/resources/01_load-packages.R")
 COMO_met_full = get_site_data(siteCode = "COMO") %>%
@@ -33,10 +34,23 @@ mm1_vis %>%
   coord_trans('log10')
 
 # 
-mm2 <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'loess'),
+# 
+km1 <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'loess'),
+                          day_start = -1, day_end = 23), data_daily = k600_mm1)
+km2 <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'lm'),
+                          day_start = -1, day_end = 23), data_daily = k600_mm1)
+km3 <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'mean'),
                           day_start = -1, day_end = 23), data_daily = k600_mm1)
 # 
-k600_mm2 <- get_params(mm2) %>% select(date, K600.daily) %>%  
+k600_mm2 <- get_params(km1) %>% 
+  select(date, K600.daily) %>%  
+  dplyr::mutate(model = 'loess') %>%
+  bind_rows(get_params(km2) %>%
+              select(date, K600.daily) %>%  
+              dplyr::mutate(model = 'lm')) %>%
+  bind_rows(get_params(km3) %>%
+              select(date, K600.daily) %>%
+              dplyr::mutate(model = 'mean')) %>%
   left_join(COMO_met_full %>%
               dplyr::mutate(date = as.Date(solar.time)) %>%
               group_by(date) %>%
@@ -44,22 +58,34 @@ k600_mm2 <- get_params(mm2) %>% select(date, K600.daily) %>%
 
 k600_mm2 %>%
   ggplot()+
-  geom_point(aes(x = discharge.daily, y = K600.daily)) +
-  coord_trans('log10')
+  geom_point(aes(x = discharge.daily+0.001, y = K600.daily)) +
+  coord_trans('log10') +
+  facet_wrap(~model, scales = 'free_y')
 # 
-mm3 <- metab_mle(mle_specs, data = COMO_met_full, data_daily = k600_mm2 %>% dplyr::select(-discharge.daily))
+mm2 <- metab_mle(mle_specs, data = COMO_met_full, data_daily = k600_mm2 %>% dplyr::filter(model == 'loess') %>% dplyr::select(date, K600.daily))
 
+mm3 <- metab_mle(mle_specs, data = COMO_met_full, data_daily = k600_mm2 %>% dplyr::filter(model == 'lm') %>% dplyr::select(date, K600.daily))
+
+mm4 <- metab_mle(mle_specs, data = COMO_met_full, data_daily = k600_mm2 %>% dplyr::filter(model == 'mean') %>% dplyr::select(date, K600.daily))
 # model assessment
-mods = data.frame(model = c("mm1","mm3"),
-                  RSME = c(calc_mod_RSME(plot_DO_preds(mm1)),
-                           calc_mod_RSME(plot_DO_preds(mm3))))
-topMod = mods %>% slice_min(RSME) %>% select(model) %>% unlist %>% as.character
+mods = data.frame(
+  modelID = c("mm1","mm2","mm3","mm4"),
+  modelType = c("raw", "loess","lm","mean"),
+  gppTot = c(sum(mm1@fit$GPP.daily, na.rm = TRUE),
+             sum(mm2@fit$GPP.daily, na.rm = TRUE),
+             sum(mm3@fit$GPP.daily, na.rm = TRUE),
+             sum(mm4@fit$GPP.daily, na.rm = TRUE)),
+  RSME = c(calc_mod_RSME(plot_DO_preds(mm1)),
+           calc_mod_RSME(plot_DO_preds(mm2)),
+           calc_mod_RSME(plot_DO_preds(mm3)),
+           calc_mod_RSME(plot_DO_preds(mm4)))
+)
 
 knitr::kable(mods)
 
+topMod = pick_model(mods)
+
 saveRDS(mm3, "./ignore/metab-models/COMO_full_mle.rds")
-
-
 ###
 
 # ## run a quick version of the 

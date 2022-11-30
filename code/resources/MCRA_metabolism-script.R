@@ -1,7 +1,7 @@
 # MCRA metabolism script
 source("./code/resources/01_load-packages.R")
-# debugonce(clean_DO)
-MCRA_DO = clean_DO(siteCode ='MCRA')
+debugonce(clean_DO)
+clean_DO(siteCode ='MCRA', doLims = c(12,25), return = FALSE)
 clean_temp(siteCode = 'MCRA', return = FALSE)
 MCRA_clean_temp = readRDS(file = "./ignore/site-gpp-data/MCRA_clean_temp.rds")
 

@@ -488,16 +488,111 @@ plot_met_series = function(df = NULL, selCols = c("solar.time","DO.obs","DO.pcts
 #'
 #'
 #'
-calc_mod_RSME = function(metObj = NULL,...){
+calc_mod_RSME = function(metObj = NULL, relative = FALSE, ...){
   data = metObj$data 
   error = data %>%
     dplyr::mutate(diff = obs-mod,
                   diff2 = diff^2) %>%
     dplyr::select(diff2) %>%
     unlist %>% na.omit
-  n = length(error)
   
-  rsme = sqrt(sum(error)/n)
+  n = length(error)
+  if(relative){
+    rrsme = (sqrt(sum(error)/n))/mean(data$obs, na.rm = TRUE)
+    return(rrsme)
+    
+  } else{
+    rsme = sqrt(sum(error)/n)
   return(rsme)
+  }
 }
 
+#'
+#'
+#'
+pick_model = function(df, ...){
+  if(any(unlist(df$GPPtot) <= 0)){
+    dfMod = df[which(df$GPPtot > 0),]
+  } else if(abs(range(df$RSME)[1] - range(df$RSME)[2]) < 3){
+    topMod = 'mm3'
+  } else{
+    topMod = df %>% slice_min(RSME) %>% select(modelID) %>% unlist %>% as.character
+  }
+  return(topMod)
+}
+
+#'
+#'
+#'
+count_negative_dates = function(mm,...){
+  df = mm@metab_daily
+  gppDf = na.omit(df$GPP)
+  negGpp = length(which(gppDf <= 0))
+  negGpp
+}
+
+#'
+#'
+#'
+count_positive_dates = function(mm,...){
+  df = mm@metab_daily
+  erDf = na.omit(df$ER)
+  posER = length(which(erDf >= 0))
+  posER
+}
+
+#'
+#'
+#'
+calc_gpp_mean = function(mm, PQ = 1.28, scaler = NULL,...){
+  metab = mm@metab_daily
+  gppTot = sum(metab$GPP, na.rm = TRUE)
+  days = length(which(!is.na(metab$GPP)))
+  
+  if(is.null(scaler)){
+    gppMean = gppTot/days * ((1/PQ)*(12/32))
+  } else{
+    gppEqn = paste0("(gppTot/days * ((1/PQ)*(12/32)))",as.character(scaler))
+    gppMean = eval(parse(text = gppEqn))
+  }
+  
+  comment(gppMean) <- "mg C m-2 t-1"
+  return(gppMean)
+}
+
+#'
+#'
+#'
+slim_models = function(df,RSMEcutoff = 0.7,...){
+  meanGPPunits = grep("mg C m-2 y-1", attr(df$meanGPP,"comment"))
+  highRRSME = quantile(df$RSME, RSMEcutoff)
+  
+  
+  if(meanGPPunits){
+    
+    dfSlim = df %>%
+      dplyr::filter(between(meanGPP, 0, 5000))
+    if(nrow(dfSlim) < 5){
+      return(dfSlim)
+    } else{ dfSlim %>%
+          dplyr::filter(RSME < RSMEcutoff)
+      }
+  } else{
+    dfSlim = df %>%
+      dplyr::filter(between(meanGPP, 0, 5000/365))
+    if(nrow(dfSlim) < 5){
+      return(dfSlim)
+    } else{ dfSlim %>%
+        dplyr::filter(RSME < RSMEcutoff)
+    }
+  }
+}
+
+#'
+#'
+#'
+max_k = function(mm,...){
+  mmDf = data.frame(mm@fit)
+  k600vec = mmDf$K600.daily
+  max(k600vec, na.rm = TRUE)
+}

@@ -1,6 +1,12 @@
+rm(list = ls())
 source("./code/resources/01_load-packages.R")
 WLOU_met_full = get_site_data(siteCode = "WLOU") %>%
-  dplyr::select(-DO.pctsat)
+   dplyr::select(-DO.pctsat) #%>% 
+  # dplyr::mutate(DO.obs = case_when(DO.obs < 6.5 ~ NA_real_,
+                                   # TRUE ~ DO.obs),
+                # DO.obs = zoo::na.approx(DO.obs, maxgap = 10))
+
+WLOU_met_clean = clean_met_data(WLOU_met_full, doPctCutoff = c(90,110))
 
 discharge.daily = WLOU_met_full %>%
   dplyr::mutate(date = as.Date(solar.time)) %>%
@@ -10,7 +16,7 @@ discharge.daily = WLOU_met_full %>%
 ## 
 mle_specs <- specs(mm_name(type = "mle"))
 # debugonce(metab_mle)
-mm1 <- metab_mle(specs(mm_name(type = "mle")), data = WLOU_met_full)
+mm1 <- metab_mle(mle_specs, data = WLOU_met_full)
 
 k600_mm1 <- get_params(mm1, uncertainty = 'ci') %>%
   select(date, K600.daily, K600.daily.lower, K600.daily.upper) %>%
@@ -24,18 +30,29 @@ mm1_vis = get_params(mm1, uncertainty = 'ci') %>%
   left_join(WLOU_met_full %>%
               dplyr::mutate(date = as.Date(solar.time)) %>%
               group_by(date) %>%
-              dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE)))
+              dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE)+0.001))
 
 mm1_vis %>%
   ggplot()+
   geom_point(aes(x = discharge.daily, y = K600.daily)) +
-  scale_y_log10()+
-  scale_x_log10()
+  coord_trans('log10')
 # 
-mm2 <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'loess'),
+km1 <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'loess'),
+                          day_start = -1, day_end = 23), data_daily = k600_mm1)
+km2 <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'lm'),
+                          day_start = -1, day_end = 23), data_daily = k600_mm1)
+km3 <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'mean'),
                           day_start = -1, day_end = 23), data_daily = k600_mm1)
 # 
-k600_mm2 <- get_params(mm2) %>% select(date, K600.daily) %>%  
+k600_mm2 <- get_params(km1) %>% 
+  select(date, K600.daily) %>%  
+  dplyr::mutate(model = 'loess') %>%
+  bind_rows(get_params(km2) %>%
+              select(date, K600.daily) %>%  
+              dplyr::mutate(model = 'lm')) %>%
+  bind_rows(get_params(km3) %>%
+              select(date, K600.daily) %>%
+              dplyr::mutate(model = 'mean')) %>%
   left_join(WLOU_met_full %>%
               dplyr::mutate(date = as.Date(solar.time)) %>%
               group_by(date) %>%
@@ -43,22 +60,34 @@ k600_mm2 <- get_params(mm2) %>% select(date, K600.daily) %>%
 
 k600_mm2 %>%
   ggplot()+
-  geom_point(aes(x = discharge.daily, y = K600.daily)) +
-  coord_trans('log10')
+  geom_point(aes(x = discharge.daily+0.001, y = K600.daily)) +
+  coord_trans('log10') +
+  facet_wrap(~model, scales = 'free_y')
 # 
-mm3 <- metab_mle(mle_specs, data = WLOU_met_full, data_daily = k600_mm2 %>% dplyr::select(-discharge.daily))
+mm2 <- metab_mle(mle_specs, data = WLOU_met_full, data_daily = k600_mm2 %>% dplyr::filter(model == 'loess') %>% dplyr::select(date, K600.daily))
 
+mm3 <- metab_mle(mle_specs, data = WLOU_met_full, data_daily = k600_mm2 %>% dplyr::filter(model == 'lm') %>% dplyr::select(date, K600.daily))
+
+mm4 <- metab_mle(mle_specs, data = WLOU_met_full, data_daily = k600_mm2 %>% dplyr::filter(model == 'mean') %>% dplyr::select(date, K600.daily))
 # model assessment
-mods = data.frame(model = c("mm1","mm3"),
-                  RSME = c(calc_mod_RSME(plot_DO_preds(mm1)),
-                           calc_mod_RSME(plot_DO_preds(mm3))))
-topMod = mods %>% slice_min(RSME) %>% select(model) %>% unlist %>% as.character
+mods = data.frame(
+  modelID = c("mm1","mm2","mm3","mm4"),
+  modelType = c("raw", "loess","lm","mean"),
+  gppTot = c(sum(mm1@fit$GPP.daily, na.rm = TRUE),
+             sum(mm2@fit$GPP.daily, na.rm = TRUE),
+             sum(mm3@fit$GPP.daily, na.rm = TRUE),
+             sum(mm4@fit$GPP.daily, na.rm = TRUE)),
+  RSME = c(calc_mod_RSME(plot_DO_preds(mm1)),
+           calc_mod_RSME(plot_DO_preds(mm2)),
+           calc_mod_RSME(plot_DO_preds(mm3)),
+           calc_mod_RSME(plot_DO_preds(mm4)))
+)
 
 knitr::kable(mods)
 
-saveRDS(eval(as.name(topMod)), "./ignore/metab-models/WLOU_full_mle.rds")
+topMod = pick_model(mods)
 
-
+saveRDS(mm1, "./ignore/metab-models/WLOU_full_mle.rds")
 ###
 
 # ## run a quick version of the 

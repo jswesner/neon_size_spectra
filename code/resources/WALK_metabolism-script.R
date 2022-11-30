@@ -1,67 +1,106 @@
-# WLOU metabolism script
+# WALK metabolism script
 source("./code/resources/01_load-packages.R")
+theme_set(theme_minimal())
+# debugonce(clean_DO)
+clean_DO(siteCode ='WALK', return = FALSE) 
+# debugonce(clean_temp)
+clean_temp(siteCode = 'WALK', return = FALSE)
+WALK_clean_temp = readRDS(file = "./ignore/site-gpp-data/WALK_clean_temp.rds")
+WALK_clean_DO = readRDS("./ignore/site-gpp-data/WALK_clean_DO.rds")
 
-clean_DO(siteCode ='WLOU', doLims = c(0,10.8), doSatLims = c(90,110), return= FALSE)
-clean_temp(siteCode = 'WLOU', return = FALSE)
-WLOU_clean_DO = readRDS(file = "./ignore/site-gpp-data/WLOU_clean_DO.rds")
-WLOU_clean_temp = readRDS(file = "./ignore/site-gpp-data/WLOU_clean_temp.rds")
+plot(ts(WALK_clean_DO[,grep('DO', names(WALK_clean_DO))])) 
+plot(ts(WALK_clean_temp$temp_102))
 
-WLOU_clean_DO %>% filter(!between(timePeriod, as.POSIXct("2017-11-15 00:00:00"), as.POSIXct("2017-12-31 23:59:59")),
-                         !between(timePeriod, as.POSIXct("2019-09-01 00:00:00:"), as.POSIXct("2019-12-31 23:59:59")),
-                         !between(timePeriod, as.POSIXct("2020-11-15 00:00:00"), as.POSIXct("2020-12-31 23:59:59"))) %>%
-  saveRDS(file = "./ignore/site-gpp-data/WLOU_clean_DO.rds")
+rstudioapi::jobRunScript(
+  path = "./ignore/metab-models/WALK_doLM.R",
+  name = "WALK LM",
+  workingDir = getwd(),
+  importEnv = FALSE,
+  exportEnv = FALSE
+)
+rstudioapi::jobRunScript(
+  path = "./ignore/metab-models/WALK_tempLM.R",
+  name = "WALK tempLM",
+  workingDir = getwd(),
+  importEnv = FALSE,
+  exportEnv = FALSE
+)
 
-# debugonce(get_site_data)
-WLOU_met = get_site_data(siteCode = "WLOU")
+WALK_tempLM = readRDS(file = "./ignore/metab-models/WALK_tempLM.rds")
+WALK_clean_temp = WALK_clean_temp %>%
+  cbind(.,predict(WALK_tempLM,
+                  .,
+                  se.fit = FALSE,
+                  type = 'response'))
 
+rstudioapi::jobRunScript(
+  path = "./ignore/metab-models/WALK_metModel.R",
+  name = "WALK metMM",
+  workingDir = getwd(),
+  importEnv = FALSE,
+  exportEnv = FALSE
+)
+
+WALK_full_mle = readRDS("./ignore/metab-models/WALK_full_mle.rds")
+
+
+WALK_mle_params = get_params(WALK_full_mle, uncertainty = 'ci') %>%
+  dplyr::mutate(GPP.daily = case_when(GPP.daily < 0 ~ 0,
+                                      GPP.daily > 72 ~ NA_real_,
+                                      TRUE ~ GPP.daily))
+
+WALK_mle_params %>%
+  ggplot()+geom_line(aes(x = date, y = GPP.daily), color = 'green')
+
+
+
+
+
+plot_met_series(WALK_met_full)
 # remove some data points above 25 which are anomolous
-# debugonce(clean_met_data)
-WLOU_met_clean = clean_met_data(WLOU_met)
+debugonce(clean_met_data)
+WALK_met_clean = clean_met_data(WALK_met_full, doCutOff = 15)
 # Quick plot to check out the data series
-# tz = attr(WLOU_met$solar.time,"tzone")
 
-WLOU_met_clean %>% 
-  # dplyr::filter(!as.logical(outQF)) %>%
+WALK_met_clean %>% 
+  # dplyr::filter(!is.na(solar.time)) %>%
+  dplyr::filter(!as.logical(outQF)) %>%
   # dplyr::filter(lubridate::year(solar.time) %in% c(2018,2019)) %>%
   ggplot()+
   geom_line(aes(x = solar.time, y = DO.obs, color = as.logical(outQF)))+
   theme_minimal()
 
-WLOU_met %>% 
+WALK_met_clean %>%
+  dplyr::filter(lubridate::year(solar.time) == 2019) %>%
+  saveRDS("./data/derived_data/clean-met-files/WALK2019_met.rds")
+WALK_met_clean %>%
+  dplyr::filter(lubridate::year(solar.time) == 2020)%>%
+  saveRDS("./data/derived_data/clean-met-files/WALK2020_met.rds")
+
+WALK_met_clean %>%
+  dplyr::filter(lubridate::year(solar.time) == 2021)%>%
+  saveRDS("./data/derived_data/clean-met-files/WALK2021_met.rds")
+
+WALK_met_clean %>%
+  dplyr::filter(lubridate::year(solar.time) == 2022)%>%
+  saveRDS("./data/derived_data/clean-met-files/WALK2022_met.rds")
+
+plot_site("WALK")
+
+WALK_met %>% 
   dplyr::filter(!is.na(solar.time)) %>%
   dplyr::filter(!as.logical(outQF)) %>%
-  # dplyr::filter(lubridate::year(solar.time) %in% c(2018,2019)) %>%
-  saveRDS("./ignore/site-gpp-data/clean-met-files/WLOU_met.rds")
-
-WLOU_met_clean %>%
-  dplyr::filter(!as.logical(outQF)) %>%
-  dplyr::filter(lubridate::year(solar.time) == 2018) %>%
-  saveRDS("./data/derived_data/clean-met-files/WLOU2018_met.rds")
-WLOU_met_clean %>%
-  dplyr::filter(!as.logical(outQF)) %>%
-  dplyr::filter(lubridate::year(solar.time) == 2019) %>%
-  saveRDS("./data/derived_data/clean-met-files/WLOU2019_met.rds")
-WLOU_met_clean %>%
-  dplyr::filter(!as.logical(outQF)) %>%
-  dplyr::filter(lubridate::year(solar.time) == 2020)%>%
-  saveRDS("./data/derived_data/clean-met-files/WLOU2020_met.rds")
-WLOU_met_clean %>%
-  dplyr::filter(!as.logical(outQF)) %>%
-  dplyr::filter(lubridate::year(solar.time) == 2021)%>%
-  saveRDS("./data/derived_data/clean-met-files/WLOU2021_met.rds")
-WLOU_met_clean %>%
-  dplyr::filter(!as.logical(outQF)) %>%
-  dplyr::filter(lubridate::year(solar.time) == 2022)%>%
-  saveRDS("./data/derived_data/clean-met-files/WLOU2022_met.rds")
-# WLOU test 
-tz(WLOU_met$solar.time)
+  # dplyr::filter(lubridate::year(solar.time) %in% c(2019,2020)) %>%
+  saveRDS("./data/derived/clean-met-files/WALK_met.rds")
 
 
-WLOU_test = WLOU_met %>%
-  dplyr::filter(between(solar.time, as.POSIXct("2017-10-03 00:00:00"), as.POSIXct("2017-10-15 04:00:00")))
-
-WLOU_test %>%
- 
+rstudioapi::jobRunScript(
+  path = "./ignore/metab-models/WALK_metModel.R",
+  name = "WALK metMM",
+  workingDir = getwd(),
+  importEnv = FALSE,
+  exportEnv = FALSE
+)
 ## run a quick version of the 
 bayes_name <- mm_name(type='bayes', pool_K600='binned', err_obs_iid=TRUE,
                       err_proc_iid=FALSE, err_proc_GPP = TRUE, ode_method = "trapezoid")
@@ -102,7 +141,7 @@ bayes_specs <- revise(bayes_specs, day_start = 0, day_end = 24, burnin_steps= 10
                       thin_steps = 10,n_cores=5, n_chains = 3, GPP_daily_mu = 3, GPP_daily_sigma=2, verbose = TRUE)
 
 # tictoc::tic();
-mm_bin <- metab(bayes_specs, data=WLOU_test)#;tictoc::toc()
+mm_bin <- metab(bayes_specs, data=WALK_test)#;tictoc::toc()
 
 mm_bin
 

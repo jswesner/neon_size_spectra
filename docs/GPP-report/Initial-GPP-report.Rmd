@@ -1,0 +1,47 @@
+---
+title: "GPP Report"
+date: '`r Sys.Date()`'
+output: html_document
+---
+
+```{r set options, echo =FALSE, warning=FALSE, message=FALSE}
+
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+```
+
+```{r initiate code, echo=F}
+source("./code/resources/01_load-packages.R")
+
+# exclude streams with GPP models still under constructions
+streamsExclude = c('LECO','MCRA','POSE','COMO','WLOU','BLUE')
+
+streamsMod = streams[streams %ni% streamsExclude]
+
+# load in mle models
+
+mleFiles = list.files(path = "./ignore/metab-models/", pattern = ".*_full_mle.rds", full.names = TRUE) %>% unlist
+
+
+mleModels = mleFiles %>% purrr::map(~readRDS(.x) %>% pluck('fit') %>% dplyr::select(date, matches('GPP.daily'))) %>% setNames(.,gsub("./ignore/metab-models/(.*_full_mle).rds","\\1",mleFiles)) %>% bind_rows(.id = "siteID")
+
+gppFull = mleModels %>%
+  dplyr::mutate(siteID = gsub("(\\w{4})_full_mle","\\1",siteID),
+                jdate = lubridate::yday(date),
+                year = lubridate::year(date)) %>%
+  dplyr::select(siteID, date, year, jdate, GPP.daily) %>% 
+  filter(!is.na(GPP.daily)) %>%
+  dplyr::mutate(GPP.daily = ifelse(GPP.daily <= 0, NA, GPP.daily))
+```
+
+
+```{r gpp plot,fig.width=8,fig.height=6,fig.align='center', fig.cap="Daily "}
+gppFull %>% ggplot+
+  geom_point(aes(x = jdate, y = GPP.daily, color = siteID)) +
+  geom_smooth(aes(x = jdate, y =  GPP.daily, color = siteID), method = 'loess', span = 0.25, color = "black", se = FALSE)+
+  viridis::scale_color_viridis(discrete = TRUE)+
+  # scale_y_log10()+
+  facet_wrap(~siteID, scales = 'free_y')+
+  theme(legend.position = 'none')
+```
+

@@ -1,10 +1,10 @@
-# get air pressure data
+# get air pressure
 rm(list = ls())
 source("./code/resources/01_load-packages.R")
-PRIN_met_full = get_site_data(siteCode = "PRIN") %>%
+MCDI_met_full = get_site_data(siteCode = "MCDI") %>%
   dplyr::select(-DO.pctsat)
 
-discharge.daily = PRIN_met_full %>%
+discharge.daily = MCDI_met_full %>%
   dplyr::mutate(date = as.Date(solar.time)) %>%
   group_by(date) %>%
   dplyr::summarise(discharge = mean(discharge, na.rm = TRUE))
@@ -12,11 +12,11 @@ discharge.daily = PRIN_met_full %>%
 ## 
 mle_specs <- specs(mm_name(type = "mle"))
 # debugonce(metab_mle)
-mm1 <- metab_mle(specs(mm_name(type = "mle")), data = PRIN_met_full)
-plot_DO_preds(mm1)
+mm1 <- metab_mle(specs(mm_name(type = "mle")), data = MCDI_met_full)
+
 k600_mm1 <- get_params(mm1, uncertainty = 'ci') %>%
   select(date, K600.daily, K600.daily.lower, K600.daily.upper) %>%
-  left_join(PRIN_met_full %>%
+  left_join(MCDI_met_full %>%
               dplyr::mutate(date = as.Date(solar.time)) %>%
               group_by(date) %>%
               dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE)+0.001))
@@ -30,7 +30,7 @@ km2 <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'lm'),
                           day_start = -1, day_end = 23), data_daily = k600_mm1)
 km3 <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'mean'),
                           day_start = -1, day_end = 23), data_daily = k600_mm1)
-km4 <- metab_night(data = PRIN_met_full)
+km4 <- metab_night(data = MCDI_met_full)
 # 
 k600_mm2 <- get_params(km1) %>% 
   select(date, K600.daily) %>%  
@@ -44,7 +44,7 @@ k600_mm2 <- get_params(km1) %>%
   bind_rows(get_params(km4) %>%
               select(date, K600.daily) %>%
               dplyr::mutate(model = 'night')) %>%
-  left_join(PRIN_met_full %>%
+  left_join(MCDI_met_full %>%
               dplyr::mutate(date = as.Date(solar.time)) %>%
               group_by(date) %>%
               dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE)))
@@ -55,22 +55,22 @@ k600_mm2 %>%
   coord_trans('log10') +
   facet_wrap(~model, scales = 'free_y')
 # 
-mm2 <- metab_mle(mle_specs, data = PRIN_met_full, data_daily = k600_mm2 %>% dplyr::filter(model == 'loess') %>% dplyr::select(date, K600.daily))
+mm2 <- metab_mle(mle_specs, data = MCDI_met_full, data_daily = k600_mm2 %>% dplyr::filter(model == 'loess') %>% dplyr::select(date, K600.daily))
 
-mm3 <- metab_mle(mle_specs, data = PRIN_met_full, data_daily = k600_mm2 %>% dplyr::filter(model == 'lm') %>% dplyr::select(date, K600.daily))
+mm3 <- metab_mle(mle_specs, data = MCDI_met_full, data_daily = k600_mm2 %>% dplyr::filter(model == 'lm') %>% dplyr::select(date, K600.daily))
 
-mm4 <- metab_mle(mle_specs, data = PRIN_met_full, data_daily = k600_mm2 %>% dplyr::filter(model == 'mean') %>% dplyr::select(date, K600.daily))
+mm4 <- metab_mle(mle_specs, data = MCDI_met_full, data_daily = k600_mm2 %>% dplyr::filter(model == 'mean') %>% dplyr::select(date, K600.daily))
 
-mm5 <- metab_mle(mle_specs, data = PRIN_met_full, data_daily = k600_mm2 %>% dplyr::filter(model == 'night') %>% dplyr::select(date, K600.daily))
+mm5 <- metab_mle(mle_specs, data = MCDI_met_full, data_daily = k600_mm2 %>% dplyr::filter(model == 'night') %>% dplyr::select(date, K600.daily))
 ## 
 mle_specs_sat <- specs(mm_name(type = "mle", GPP_fun = 'satlight'))
-mm1_sat <- metab_mle(mle_specs_sat, data = PRIN_met_full)
+mm1_sat <- metab_mle(mle_specs_sat, data = MCDI_met_full)
 
 # identify negative values
 k600_mm1_sat <- get_params(mm1_sat, uncertainty = 'ci') %>%
   left_join(predict_metab(mm1_sat) %>% select(date, GPP.daily = 'GPP')) %>%
   select(date, GPP.daily, K600.daily, K600.daily.lower, K600.daily.upper) %>%
-  left_join(PRIN_met_full %>%
+  left_join(MCDI_met_full %>%
               dplyr::mutate(date = as.Date(solar.time)) %>%
               group_by(date) %>%
               dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE))) #%>%
@@ -113,7 +113,7 @@ k600_mm2_sat <- get_params(km1_sat) %>%
   bind_rows(get_params(km4) %>%
               select(date, K600.daily) %>%
               dplyr::mutate(model = 'night')) %>%
-  left_join(PRIN_met_full %>%
+  left_join(MCDI_met_full %>%
               dplyr::mutate(date = as.Date(solar.time)) %>%
               group_by(date) %>%
               dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE)))
@@ -124,23 +124,23 @@ k600_mm2_sat %>%
   coord_trans('log10') +
   facet_wrap(~model, scales = 'free_y')
 # 
-mm2_sat <- metab_mle(mle_specs_sat, data = PRIN_met_full, data_daily = k600_mm2_sat %>% dplyr::filter(model == 'loess') %>% dplyr::select(date, K600.daily))
+mm2_sat <- metab_mle(mle_specs_sat, data = MCDI_met_full, data_daily = k600_mm2_sat %>% dplyr::filter(model == 'loess') %>% dplyr::select(date, K600.daily))
 
-mm3_sat <- metab_mle(mle_specs_sat, data = PRIN_met_full, data_daily = k600_mm2_sat %>% dplyr::filter(model == 'lm') %>% dplyr::select(date, K600.daily))
+mm3_sat <- metab_mle(mle_specs_sat, data = MCDI_met_full, data_daily = k600_mm2_sat %>% dplyr::filter(model == 'lm') %>% dplyr::select(date, K600.daily))
 
-mm4_sat <- metab_mle(mle_specs_sat, data = PRIN_met_full, data_daily = k600_mm2_sat %>% dplyr::filter(model == 'mean') %>% dplyr::select(date, K600.daily))
+mm4_sat <- metab_mle(mle_specs_sat, data = MCDI_met_full, data_daily = k600_mm2_sat %>% dplyr::filter(model == 'mean') %>% dplyr::select(date, K600.daily))
 
-mm5_sat <- metab_mle(mle_specs_sat, data = PRIN_met_full, data_daily = k600_mm2_sat %>% dplyr::filter(model == 'night') %>% dplyr::select(date, K600.daily))
+mm5_sat <- metab_mle(mle_specs_sat, data = MCDI_met_full, data_daily = k600_mm2_sat %>% dplyr::filter(model == 'night') %>% dplyr::select(date, K600.daily))
 
 ## satq10temp
 mle_specs_satq10 <- specs(mm_name(type = "mle", GPP_fun = 'satlight', ER_fun = 'q10temp'))
-mm1_satq10 <- metab_mle(mle_specs_satq10, data = PRIN_met_full)
+mm1_satq10 <- metab_mle(mle_specs_satq10, data = MCDI_met_full)
 
 # identify negative values
 k600_mm1_satq10 <- get_params(mm1_satq10, uncertainty = 'ci') %>%
   left_join(predict_metab(mm1_sat) %>% select(date, GPP.daily = 'GPP')) %>%
   select(date, GPP.daily, K600.daily, K600.daily.lower, K600.daily.upper) %>%
-  left_join(PRIN_met_full %>%
+  left_join(MCDI_met_full %>%
               dplyr::mutate(date = as.Date(solar.time)) %>%
               group_by(date) %>%
               dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE))) #%>%
@@ -181,7 +181,7 @@ k600_mm2_satq10 <- get_params(km1_satq10) %>%
   bind_rows(get_params(km4) %>%
               select(date, K600.daily) %>%
               dplyr::mutate(model = 'night')) %>%
-  left_join(PRIN_met_full %>%
+  left_join(MCDI_met_full %>%
               dplyr::mutate(date = as.Date(solar.time)) %>%
               group_by(date) %>%
               dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE)))
@@ -192,13 +192,13 @@ k600_mm2_satq10 %>%
   coord_trans('log10') +
   facet_wrap(~model, scales = 'free_y')
 # 
-mm2_satq10 <- metab_mle(mle_specs_satq10, data = PRIN_met_full, data_daily = k600_mm2_satq10 %>% dplyr::filter(model == 'loess') %>% dplyr::select(date, K600.daily))
+mm2_satq10 <- metab_mle(mle_specs_satq10, data = MCDI_met_full, data_daily = k600_mm2_satq10 %>% dplyr::filter(model == 'loess') %>% dplyr::select(date, K600.daily))
 
-mm3_satq10 <- metab_mle(mle_specs_satq10, data = PRIN_met_full, data_daily = k600_mm2_satq10 %>% dplyr::filter(model == 'lm') %>% dplyr::select(date, K600.daily))
+mm3_satq10 <- metab_mle(mle_specs_satq10, data = MCDI_met_full, data_daily = k600_mm2_satq10 %>% dplyr::filter(model == 'lm') %>% dplyr::select(date, K600.daily))
 
-mm4_satq10 <- metab_mle(mle_specs_satq10, data = PRIN_met_full, data_daily = k600_mm2_satq10 %>% dplyr::filter(model == 'mean') %>% dplyr::select(date, K600.daily))
+mm4_satq10 <- metab_mle(mle_specs_satq10, data = MCDI_met_full, data_daily = k600_mm2_satq10 %>% dplyr::filter(model == 'mean') %>% dplyr::select(date, K600.daily))
 
-mm5_satq10 <- metab_mle(mle_specs_satq10, data = PRIN_met_full, data_daily = k600_mm2_sat %>% dplyr::filter(model == 'night') %>% dplyr::select(date, K600.daily))
+mm5_satq10 <- metab_mle(mle_specs_satq10, data = MCDI_met_full, data_daily = k600_mm2_sat %>% dplyr::filter(model == 'night') %>% dplyr::select(date, K600.daily))
 ####
 
 # model assessment
@@ -258,15 +258,15 @@ comment(mods$meanGPP) <- "mg C m-2 d-1"
 comment(mods$gppTot) <- "mg O2 m-2"
 
 modList = ls()[grep("^mm\\d{1}.*", ls())] %>% purrr::map(~eval(as.symbol(.x)))
-save(modList, file = "./ignore/metab-models/mleModLists/PRINmlemods.Rdata")
+save(modList, file = "./ignore/metab-models/mleModLists/MCDImlemods.Rdata")
 
 knitr::kable(mods)
 
 # topMod = pick_model(mods)
 
-# saveRDS(mm4_sat, "./ignore/metab-models/PRIN_full_mle.rds")
-###
+# saveRDS(mm4_sat, "./ignore/metab-models/MCDI_full_mle.rds")
 
+###
 # ## run a quick version of the 
 # bayes_name <- mm_name(type='bayes', pool_K600='binned', err_obs_iid=TRUE,err_proc_iid=FALSE, err_proc_GPP = TRUE, ode_method = "trapezoid")
 # bayes_specs <- specs(bayes_name)
@@ -279,7 +279,7 @@ knitr::kable(mods)
 # source("./ignore/metab-models/bayes_allply.R")
 # # debugonce(metab_fun);
 # debugonce(bayes_allply)
-# metab_fun(specs = bayes_specs, data = PRIN_met_mod, data_daily = data_daily, info = info)
+# metab_fun(specs = bayes_specs, data = MCDI_met_mod, data_daily = data_daily, info = info)
 # 
 # 
 # 
@@ -287,7 +287,7 @@ knitr::kable(mods)
 # mod <- cmdstanr::cmdstan_model("./ignore/metab-models/b_Kb_oipp_tr_plrckm.stan")
 # 
 # fit <- mod$sample(
-#   data = PRIN_met_mod, 
+#   data = MCDI_met_mod, 
 #   seed = 123, 
 #   chains = 4, 
 #   parallel_chains = 4,
@@ -296,7 +296,7 @@ knitr::kable(mods)
 # 
 # fit1 <- stan(
 #   file = "./ignore/metab-models/b_Kb_oipp_tr_plrckm.stan",  # Stan program
-#   data = PRIN_met_mod,    # named list of data
+#   data = MCDI_met_mod,    # named list of data
 #   chains = 4,             # number of Markov chains
 #   warmup = 500,          # number of warmup iterations per chain
 #   iter = 1000,            # total number of iterations per chain
@@ -307,6 +307,6 @@ knitr::kable(mods)
 # 
 # # 
 # debugonce(metab)
-# mm_bin <- metab(bayes_specs, data=PRIN_met_mod)
+# mm_bin <- metab(bayes_specs, data=MCDI_met_mod)
 # 
-# saveRDS(mm_bin, "./ignore/metab-models/PRIN_test.rds")
+# saveRDS(mm_bin, "./ignore/metab-models/MCDI_test.rds")

@@ -2,16 +2,19 @@
 '%ni%' = Negate('%in%')
 # Load packages and helper functions --------
 # devtools::install_github("cboettig/neonstore")
+library(tidyverse)
+# library(magrittr)
+# library(plyr)
+# library(dplyr)
 library(neonUtilities)
 library(neonstore)
-library(tidyverse)
 library(DBI)
 source("./code/update_data_products.R")
 # Load stream names
 streams = readRDS(file = "./data/derived_data/streams.rds")
 latlong = read_csv(file = "./data/site_latlong.csv")
 
-# Resource code for diferent resource types ----
+# Resource code for different resource types ----
 # GPP products ----
 ## download the products
 update_data_products(products = "resources")
@@ -72,8 +75,6 @@ for(i in seq_along(streams)){
   gc()
 }
 
-# streams_mod = streams[streams %ni% c("POSE")]
-
 for(i in seq_along(streams)){
   fileName = paste0("./ignore/site-gpp-data/",streams[i],"_30min_airPressure.rds")
   # load, stack, munge, and save depth files
@@ -108,11 +109,35 @@ for(i in seq_along(streams)){
   gc()
   
 }
-#  products <- neonstore::neon_products()
+
+for(i in seq_along(streams)){
+  
+  fileName = paste0("./ignore/site-gpp-data/",streams[i],"_reaeration.rds")
+  # load, stack, munge, and save DO files
+  tictoc::tic();neonstore::neon_read(table = 'rea_plateauSampleFieldData',
+                                     product = 'DP1.20190.001',
+                                     site = streams[i],
+                                     altrep = FALSE
+  ) %>%
+    dplyr::select(siteID, startDateTime, surfWaterTempMean, horizontalPosition) %>%
+    junkR::named_group_split(horizontalPosition) %>%
+    # dplyr::mutate(timePeriod = cut(startDateTime, breaks = "15 min")) %>%
+    furrr::future_map(~.x %>% 
+                        group_by(startDateTime) %>%
+                        dplyr::summarise(across(where(is.numeric), ~mean(.x, na.rm = TRUE)))) %>%
+    saveRDS(., file = fileName);tictoc::toc()
+  # clean up the mess to clear memory
+  # rm(waq_df);
+  gc()
+  
+}
+
+# rea_backgroundFieldCondData-basic
+ products <- neonstore::neon_products()
 #  neonstore::neon_download(product = "DP4.00130.001",
 #                          site = streams)
 # # 
-# neonstore::neon_index("DP1.00024.001") %>% View()
+neonstore::neon_index("DP1.20190.001") %>% View()
 # 
 # x = neonstore::neon_read(product = "DP1.00004.001",
 #                      table = "BP_30min-basic",
@@ -152,8 +177,6 @@ for(i in seq_along(streams)){
 #   x = neonstore::neon_table(table = "", site = streams[i])
 #   saveRDS(x, file = paste0("./ignore/site-gpp-data/",streams[i],"_continuousZ.rds"))
 # }
-
-
 
 # Allochthonous products -----
 ## organic matter data
@@ -250,5 +273,3 @@ for(i in seq_along(streams)){
 #   geom_point(aes(x = Date, y = log(AFDM_mg_mean)), size = 3)+
 #   theme_minimal()+
 #   facet_wrap(~siteID)
-
-#
