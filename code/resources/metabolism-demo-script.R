@@ -28,8 +28,8 @@ NEON_query = query_available_data(region='all') %>% flatten %>% data.frame %>% d
 # the variables returned here. If USGS data are available, they will be acquired
 # automatically when you use prep_metabolism below. Likewise, air pressure and
 # PAR estimates will be automatically acquired below, if necessary.
-query_available_data(region='AL', site='MAYF-up')
-
+query_available_results(region='AL', site='MAYF-up')
+mayfUpResults = request_results(sitecode = 'AL_MAYF-up', year = '2018')
 # Select site and date range for which to acquire StreamPULSE data.
 # site_code is a combination of regionID and siteID
 site_code = 'AL_MAYF-up'

@@ -4,20 +4,17 @@ library(lubridate)
 library(rfishbase)
 library(here)
 
-# Final dataset - use for size spectra anaylsis:
+# Final dataset - use for size spectra analysis:
 macro_fish_dw <- readRDS(file = "data/derived_data/macro_fish_dw.rds")
 
 # code to create macro_fish_dw
 macro_dw <- readRDS(here("data/derived_data/macro_dw.RDS")) %>% 
-  mutate(animal_type = "macroinvertebrates") %>% as_tibble()
+  mutate(animal_type = "macroinvertebrates") %>% as_tibble() %>% 
+  filter(dw >= 0.0026)
 
-fish_dw <- read_csv(file = "data/derived_data/total_lengths_with_parameters.csv") %>% 
-  # rename(wet_weight = grams) %>% 
-  mutate(animal_type = "fish") %>% as_tibble() # Converts all lengths <=2 to to 2 cm.
+fish_dw <- readRDS(file = "data/derived_data/fish_weights_perm2.rds") %>% as_tibble()
 
-
-fish_dw_short <- fish_dw %>% select(dw, animal_type, area_m2, no_m2, site_id, date) %>%
-  mutate(dw = dw*1000, dw_units = "mg") %>%  # convert grams to mg
+fish_dw_short <- fish_dw %>% select(dw, animal_type, no_m2, site_id, date) %>%
   mutate(year = year(date),
          fish_month = month(date)) %>% 
   mutate(fish_julian = julian(as_date(date)))
@@ -41,19 +38,8 @@ macro_dw_short <- filtered_dates %>%
   select(-fish_julian, -diff_julian) %>% 
   distinct()
   
-macro_dw_short %>% 
-  distinct(month, year, site_id) %>% 
-  group_by(month, site_id) %>% 
-  tally() %>% 
-  mutate(animal_type = "macroinvertebrates") %>% 
-  bind_rows(fish_dw_short %>% 
-              distinct(month, year, site_id) %>% 
-              group_by(month, site_id) %>% tally() %>% mutate(animal_type = "fish")) %>%
-  ggplot(aes(x = month, y = n, color = animal_type)) + 
-  geom_point(position = position_dodge(width = 0.2)) +
-  facet_wrap(~site_id)
 
-# create dataset for analysis
+# create dataset for analysis (MAKE A TIE-BREAKER)
 macro_fish_temp <- bind_rows(macro_dw_short, 
                            fish_dw_short %>% 
                              right_join(
@@ -73,26 +59,43 @@ samples_with_macros_and_fish <- macro_fish_temp %>%
   filter(n > 1) %>% 
   distinct(site_id, year_month) 
 
+# get mean annual temps
+mat_posts = readRDS("code/temperature/posteriors/mat_posts.rds") %>% clean_names() %>% 
+  ungroup() %>% 
+  mutate(mat_s = (mat_site - mean(mat_site))/sd(mat_site))
 
 macro_fish_dw <- macro_fish_temp %>% select(-id) %>%
   mutate(year_month = paste0(year, "_", month)) %>% 
   right_join(samples_with_macros_and_fish) %>%
-  group_by(site_id, year_month) %>%
-  mutate(ID = cur_group_id()) # add an identifier for each macro_fish combination
+  left_join(mat_posts)  %>%           # add mean annual temperature per site
+  mutate(ID = cur_group_id()) %>% 
+  group_by(ID) %>% 
+  mutate(xmin = min(dw),
+         xmax = max(dw)) %>%             
+  group_by(site_id, year_month) %>% 
+  mutate(site_int = as.integer(as.factor(ID)),
+         year_int = as.integer(as.factor(year)),
+         group = paste(site_id, year_month, sep = "_")) %>% 
+  ungroup() %>% 
+  group_by(dw, animal_type, site_id, date, year, month, year_month, mat_s, sdat_site, mat_site) %>% 
+  summarize(no_m2 = sum(no_m2)) %>% 
+  group_by(site_id, year, month) %>% 
+  mutate(rank = rank(-dw),
+         year_month = paste0(year,"_", month)) %>% 
+  ungroup()
+
+
 
 saveRDS(macro_fish_dw, file = "data/derived_data/macro_fish_dw.rds")
-
+saveRDS(macro_fish_dw, file = "C:/Users/Jeff.Wesner/OneDrive - The University of South Dakota/USD/Github Projects/stan_spectra/data/macro_fish_dw.rds")
 
 
 macro_fish_dw %>% 
   ggplot(aes(y = no_m2, x = dw, color = animal_type), shape = 21) + 
-  geom_point() +
-  scale_y_log10() + 
-  scale_x_log10()
+  geom_point() 
 
 macro_fish_dw %>% 
   filter(year > 2017 & year < 2020) %>% 
-  mutate(dw = round(dw, 1)) %>% 
   ggplot(aes(y = rank, x = dw, color = animal_type)) + 
   geom_point(shape = 21) +
   # geom_line(aes(group = ID)) +
