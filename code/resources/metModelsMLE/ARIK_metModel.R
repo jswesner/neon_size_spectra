@@ -304,8 +304,20 @@ mm2_satq10all <- metab_mle(mle_specs_satq10all, data = ARIK_met_full, data_daily
 mm3_satq10all <- metab_mle(mle_specs_satq10all, data = ARIK_met_full, data_daily = k600_mm1_satq10all %>% dplyr::filter(model == 'lm') %>% dplyr::select(date, K600.daily))
 
 mm4_satq10all <- metab_mle(mle_specs_satq10all, data = ARIK_met_full, data_daily = k600_mm1_satq10all %>% dplyr::filter(model == 'mean') %>% dplyr::select(date, K600.daily))
-
+####
+modList = ls()[grep("^mm\\d{1}.*", ls())] %>% purrr::map(~eval(as.symbol(.x)))
+save(modList, file = "./ignore/metab-models/mleModLists/ARIKmlemods.Rdata")
 # model assessment
+rm(list = ls())
+source("./code/resources/01_load-packages.R")
+load(file = "./ignore/metab-models/mleModLists/BIGCmlemods.Rdata")
+modList_sub = unlist(lapply(modList, function(x) !is.data.frame(x)))
+modList = modList[modList_sub]
+
+modList = setNames(modList, nm = c("mm1","mm2","mm3","mm4","mm1_sat","mm2_sat","mm3_sat","mm4_sat","mm1_satq10gpp","mm2_satq10gpp","mm3_satq10gpp","mm4_satq10gpp","mm1_satq10","mm2_satq10","mm3_satq10","mm4_satq10","mm1_satq10all","mm2_satq10all","mm3_satq10all","mm4_satq10all"))
+
+
+list2env(modList, .GlobalEnv)
 mods = data.frame(
   modelID = c("mm1","mm2","mm3","mm4","mm1_sat","mm2_sat","mm3_sat","mm4_sat","mm1_satq10gpp","mm2_satq10gpp","mm3_satq10gpp","mm4_satq10gpp","mm1_satq10","mm2_satq10","mm3_satq10","mm4_satq10","mm1_satq10all","mm2_satq10all","mm3_satq10all","mm4_satq10all"),
   modelType = c("raw", "loess","lm","mean","raw", "loess","lm","mean","raw", "loess","lm","mean","raw", "loess","lm","mean","raw", "loess","lm","mean"),
@@ -391,8 +403,7 @@ mods = data.frame(
                 calc_gpp_mean(mm4_satq10all))
 )
 
-modList = ls()[grep("^mm\\d{1}.*", ls())] %>% purrr::map(~eval(as.symbol(.x)))
-save(modList, file = "./ignore/metab-models/mleModLists/ARIKmlemods.Rdata")
+
 
 knitr::kable(mods)
 

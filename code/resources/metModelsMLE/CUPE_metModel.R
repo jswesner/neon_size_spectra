@@ -284,30 +284,30 @@ mods = data.frame(
                  count_positive_dates(mm3_satq10),
                  count_positive_dates(mm4_satq10),
                  count_positive_dates(mm5_satq10)),
-  meanGPP = c(calc_gpp_mean(mm1, scaler = "*365"),
-              calc_gpp_mean(mm2, scaler = "*365"),
-              calc_gpp_mean(mm3, scaler = "*365"),
-              calc_gpp_mean(mm4, scaler = "*365"),
-              calc_gpp_mean(mm5, scaler = "*365"),
-              calc_gpp_mean(mm1_sat, scaler = "*365"),
-              calc_gpp_mean(mm2_sat, scaler = "*365"),
-              calc_gpp_mean(mm3_sat, scaler = "*365"),
-              calc_gpp_mean(mm4_sat, scaler = "*365"),
-              calc_gpp_mean(mm5_sat, scaler = "*365"),
-              calc_gpp_mean(mm1_satq10, scaler = "*365"),
-              calc_gpp_mean(mm2_satq10, scaler = "*365"),
-              calc_gpp_mean(mm3_satq10, scaler = "*365"),
-              calc_gpp_mean(mm4_satq10, scaler = "*365"),
-              calc_gpp_mean(mm5_satq10, scaler = "*365"))
+  meanGPP = c(calc_gpp_mean(mm1, scaler = "*0.365"),
+              calc_gpp_mean(mm2, scaler = "*0.365"),
+              calc_gpp_mean(mm3, scaler = "*0.365"),
+              calc_gpp_mean(mm4, scaler = "*0.365"),
+              calc_gpp_mean(mm5, scaler = "*0.365"),
+              calc_gpp_mean(mm1_sat, scaler = "*0.365"),
+              calc_gpp_mean(mm2_sat, scaler = "*0.365"),
+              calc_gpp_mean(mm3_sat, scaler = "*0.365"),
+              calc_gpp_mean(mm4_sat, scaler = "*0.365"),
+              calc_gpp_mean(mm5_sat, scaler = "*0.365"),
+              calc_gpp_mean(mm1_satq10, scaler = "*0.365"),
+              calc_gpp_mean(mm2_satq10, scaler = "*0.365"),
+              calc_gpp_mean(mm3_satq10, scaler = "*0.365"),
+              calc_gpp_mean(mm4_satq10, scaler = "*0.365"),
+              calc_gpp_mean(mm5_satq10, scaler = "*0.365"))
 )
-comment(mods$meanGPP) <- "mg C m-2 y-1"
+comment(mods$meanGPP) <- "g C m-2 y-1"
 # comment(mods$gppTot) <- "mg O2 m-2"
 
 knitr::kable(mods)
 # debugonce(slim_models)
 modsDf = slim_models(mods);knitr::kable(modsDf)
 
-saveRDS(mm3_sat, "./ignore/metab-models/CUPE_full_mle.rds")
+saveRDS(mm3, "./ignore/metab-models/CUPE_full_mle.rds")
 
 # ## run a quick version of the 
 # bayes_name <- mm_name(type='bayes', pool_K600='binned', err_obs_iid=TRUE,err_proc_iid=FALSE, err_proc_GPP = TRUE, ode_method = "trapezoid")

@@ -16,8 +16,8 @@ library(brms)
 library(mgcv)
 library(rstan)
 # library(cmdstanr)
+library(reaRate)
 '%ni%' <- Negate('%in%')
-
 
 source("./code/resources/metabFunctions.R")
 latlong = read_csv(file = "./data/site_latlong.csv")

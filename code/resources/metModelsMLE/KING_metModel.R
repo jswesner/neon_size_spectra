@@ -1,8 +1,10 @@
 # model development ----
 rm(list = ls())
 source("./code/resources/01_load-packages.R")
+badDates = readRDS("./ignore/site-gpp-data/KING_badDates.rds") %>% pluck(1)
 KING_met_full = get_site_data(siteCode = "KING") %>%
-  dplyr::select(-DO.pctsat)
+  dplyr::select(-DO.pctsat) %>% 
+  dplyr::filter(as.Date(solar.time) %ni% badDates)
 
 discharge.daily = KING_met_full %>%
   dplyr::mutate(date = as.Date(solar.time)) %>%
@@ -12,7 +14,7 @@ discharge.daily = KING_met_full %>%
 ## 
 mle_specs <- specs(mm_name(type = "mle"))
 # debugonce(metab_mle)
-mm1 <- metab_mle(specs(mm_name(type = "mle")), data = KING_met_full)
+mm1 <- metab_mle(mle_specs, data = KING_met_full)
 
 k600_mm1 <- get_params(mm1, uncertainty = 'ci') %>%
   select(date, K600.daily, K600.daily.lower, K600.daily.upper) %>%
@@ -22,7 +24,7 @@ k600_mm1 <- get_params(mm1, uncertainty = 'ci') %>%
               dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE)))
 
 k600_mm1 = k600_mm1 %>%
-  dplyr::filter(K600.daily < 400) 
+  dplyr::filter(K600.daily < 10000) 
 # # 
 km1 <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'loess'), predictors = 'discharge.daily', other_args = list(span = 0.5),
                           day_start = -1, day_end = 23), data_daily = k600_mm1)
@@ -51,7 +53,7 @@ k600_mm2 <- get_params(km1) %>%
 
 k600_mm2 %>%
   ggplot()+
-  geom_point(aes(x = discharge.daily+0.001, y = K600.daily)) +
+  geom_point(aes(x = discharge.daily, y = K600.daily)) +
   coord_trans('log10') +
   facet_wrap(~model, scales = 'free_y')
 # 
@@ -79,7 +81,7 @@ k600_mm1_sat <- get_params(mm1_sat, uncertainty = 'ci') %>%
 
 k600_mm1_sat %>%
   ggplot()+
-  geom_point(aes(x = discharge.daily+0.001, y = K600.daily)) +
+  geom_point(aes(x = discharge.daily, y = K600.daily)) +
   coord_trans('log10')
 
 k600_mm1_sat %>%
@@ -87,11 +89,11 @@ k600_mm1_sat %>%
   geom_point(aes(x = GPP.daily, K600.daily))
 
 k600_mm1_sat = k600_mm1_sat %>%
-  dplyr::filter(K600.daily < 500,
-                GPP.daily >= 1)
+  dplyr::filter(K600.daily < 10000,
+                GPP.daily >= 0.1)
 
 #
-km1_sat <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'loess'), predictors = 'discharge.daily', other_args = list(span = 0.6),
+km1_sat <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'loess'), predictors = 'discharge.daily', other_args = list(span = 0.5),
                               day_start = -1, day_end = 23), data_daily = k600_mm1_sat%>% select(-GPP.daily))
 
 km2_sat <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'lm'),
@@ -120,7 +122,7 @@ k600_mm2_sat <- get_params(km1_sat) %>%
 
 k600_mm2_sat %>%
   ggplot()+
-  geom_point(aes(x = discharge.daily+0.001, y = K600.daily)) +
+  geom_point(aes(x = discharge.daily, y = K600.daily)) +
   coord_trans('log10') +
   facet_wrap(~model, scales = 'free_y')
 # 
@@ -158,7 +160,7 @@ k600_mm1_satq10 %>%
   coord_cartesian(ylim = c(NA, 700))
 
 k600_mm1_satq10 = k600_mm1_satq10 %>%
-  dplyr::filter(K600.daily < 500 & GPP.daily >0)
+  dplyr::filter(K600.daily < 10000 & GPP.daily >0)
 # 
 km1_satq10 <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'loess'), predictors = 'discharge.daily', other_args = list(span = 0.6),
                                  day_start = -1, day_end = 23), data_daily = k600_mm1_satq10 %>% select(-GPP.daily))
@@ -278,45 +280,45 @@ mods = data.frame(
                  count_positive_dates(mm3_satq10),
                  count_positive_dates(mm4_satq10),
                  count_positive_dates(mm5_satq10)),
-  maxK = c(max_k(mm1),
-           max_k(mm2),
-           max_k(mm3),
-           max_k(mm4),
-           max_k(mm5),
-           max_k(mm1_sat),
-           max_k(mm2_sat),
-           max_k(mm3_sat),
-           max_k(mm4_sat),
-           max_k(mm5_sat),
-           max_k(mm1_satq10),
-           max_k(mm2_satq10),
-           max_k(mm3_satq10),
-           max_k(mm4_satq10),
-           max_k(mm5_satq10)),
-  meanGPP = c(calc_gpp_mean(mm1, scaler = "*365"),
-              calc_gpp_mean(mm2, scaler = "*365"),
-              calc_gpp_mean(mm3, scaler = "*365"),
-              calc_gpp_mean(mm4, scaler = "*365"),
-              calc_gpp_mean(mm5, scaler = "*365"),
-              calc_gpp_mean(mm1_sat, scaler = "*365"),
-              calc_gpp_mean(mm2_sat, scaler = "*365"),
-              calc_gpp_mean(mm3_sat, scaler = "*365"),
-              calc_gpp_mean(mm4_sat, scaler = "*365"),
-              calc_gpp_mean(mm5_sat, scaler = "*365"),
-              calc_gpp_mean(mm1_satq10, scaler = "*365"),
-              calc_gpp_mean(mm2_satq10, scaler = "*365"),
-              calc_gpp_mean(mm3_satq10, scaler = "*365"),
-              calc_gpp_mean(mm4_satq10, scaler = "*365"),
-              calc_gpp_mean(mm5_satq10, scaler = "*365"))
+  maxK = c(calc_max_k(mm1),
+           calc_max_k(mm2),
+           calc_max_k(mm3),
+           calc_max_k(mm4),
+           calc_max_k(mm5),
+           calc_max_k(mm1_sat),
+           calc_max_k(mm2_sat),
+           calc_max_k(mm3_sat),
+           calc_max_k(mm4_sat),
+           calc_max_k(mm5_sat),
+           calc_max_k(mm1_satq10),
+           calc_max_k(mm2_satq10),
+           calc_max_k(mm3_satq10),
+           calc_max_k(mm4_satq10),
+           calc_max_k(mm5_satq10)),
+  meanGPP = c(calc_gpp_mean(mm1, scaler = "*0.365"),
+              calc_gpp_mean(mm2, scaler = "*0.365"),
+              calc_gpp_mean(mm3, scaler = "*0.365"),
+              calc_gpp_mean(mm4, scaler = "*0.365"),
+              calc_gpp_mean(mm5, scaler = "*0.365"),
+              calc_gpp_mean(mm1_sat, scaler = "*0.365"),
+              calc_gpp_mean(mm2_sat, scaler = "*0.365"),
+              calc_gpp_mean(mm3_sat, scaler = "*0.365"),
+              calc_gpp_mean(mm4_sat, scaler = "*0.365"),
+              calc_gpp_mean(mm5_sat, scaler = "*0.365"),
+              calc_gpp_mean(mm1_satq10, scaler = "*0.365"),
+              calc_gpp_mean(mm2_satq10, scaler = "*0.365"),
+              calc_gpp_mean(mm3_satq10, scaler = "*0.365"),
+              calc_gpp_mean(mm4_satq10, scaler = "*0.365"),
+              calc_gpp_mean(mm5_satq10, scaler = "*0.365"))
 )
-comment(mods$meanGPP) <- "mg C m-2 y-1"
+comment(mods$meanGPP) <- "g C m-2 y-1"
 # comment(mods$gppTot) <- "mg O2 m-2"
 
 knitr::kable(mods)
 # debugonce(slim_models)
 modsDf = slim_models(mods);knitr::kable(modsDf)
 
-saveRDS(mm2, "./ignore/metab-models/KING_full_mle.rds")
+saveRDS(mm3, "./ignore/metab-models/KING_full_mle.rds")
 
 ###
 

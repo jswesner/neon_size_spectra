@@ -112,32 +112,67 @@ for(i in seq_along(streams)){
 
 for(i in seq_along(streams)){
   
-  fileName = paste0("./ignore/site-gpp-data/",streams[i],"_reaeration.rds")
-  # load, stack, munge, and save DO files
-  tictoc::tic();neonstore::neon_read(table = 'rea_plateauSampleFieldData',
-                                     product = 'DP1.20190.001',
-                                     site = streams[i],
-                                     altrep = FALSE
-  ) %>%
-    dplyr::select(siteID, startDateTime, surfWaterTempMean, horizontalPosition) %>%
-    junkR::named_group_split(horizontalPosition) %>%
-    # dplyr::mutate(timePeriod = cut(startDateTime, breaks = "15 min")) %>%
-    furrr::future_map(~.x %>% 
-                        group_by(startDateTime) %>%
-                        dplyr::summarise(across(where(is.numeric), ~mean(.x, na.rm = TRUE)))) %>%
-    saveRDS(., file = fileName);tictoc::toc()
-  # clean up the mess to clear memory
-  # rm(waq_df);
-  gc()
+  tictoc::tic();reafileName = paste0('./ignore/site-gpp-data/',streams[i],'_reaeration.rds')
+  reaInputList <- neonUtilities::loadByProduct(dpID = 'DP1.20190.001', 
+                                               site = streams[i],
+                                               check.size = FALSE)
   
+  rea_backgroundFieldCondDataIn <- reaInputList$rea_backgroundFieldCondData
+  rea_backgroundFieldSaltDataIn <- reaInputList$rea_backgroundFieldSaltData
+  rea_fieldDataIn <- reaInputList$rea_fieldData
+  rea_plateauMeasurementFieldDataIn <- reaInputList$rea_plateauMeasurementFieldData
+  rea_plateauSampleFieldDataIn <- reaInputList$rea_plateauSampleFieldData
+  rea_externalLabDataSaltIn <- reaInputList$rea_externalLabDataSalt
+  rea_externalLabDataGasIn <- reaInputList$rea_externalLabDataGas
+  rea_widthFieldDataIn <- reaInputList$rea_widthFieldData
+  
+  Sys.sleep(time = 100)
+  qInputList <- neonUtilities::loadByProduct(dpID = 'DP1.20048.001', 
+                                             site = streams[i], 
+                                             check.size = FALSE)
+  
+  dsc_fieldDataIn <- qInputList$dsc_fieldData
+  dsc_individualFieldDataIn <- qInputList$dsc_individualFieldData
+  dsc_fieldDataADCPIn <- qInputList$dsc_fieldDataADCP
+  
+  Sys.sleep(time = 100)
+  # Download Sensor Data
+  sensorData <- neonUtilities::loadByProduct(dpID = 'DP1.20288.001', 
+                                             site = streams[i],
+                                             check.size = FALSE)
+  
+  waq_instantaneousIn <- sensorData$waq_instantaneous
+  
+  reaFormatted <- reaRate::def.format.reaeration(
+    rea_backgroundFieldCondData = rea_backgroundFieldCondDataIn,
+    rea_backgroundFieldSaltData = rea_backgroundFieldSaltDataIn,
+    rea_fieldData = rea_fieldDataIn,
+    rea_plateauMeasurementFieldData = rea_plateauMeasurementFieldDataIn,
+    rea_plateauSampleFieldData = rea_plateauSampleFieldDataIn,
+    rea_externalLabDataSalt = rea_externalLabDataSaltIn,
+    rea_externalLabDataGas = rea_externalLabDataGasIn,
+    rea_widthFieldData = rea_widthFieldDataIn,
+    dsc_fieldData = dsc_fieldDataIn,
+    dsc_individualFieldData = dsc_individualFieldDataIn,
+    dsc_fieldDataADCP = dsc_fieldDataADCPIn,
+    waq_instantaneous = waq_instantaneousIn)
+  
+  saveRDS(list("reaFormatted" = reaFormatted,
+               "qInputList" = qInputList,
+               "reaInputList" = reaInputList), reafileName)
+  rm("reaFormatted","reaInputList","waq_instantaneousIn","sensorData",
+       "dsc_fieldDataIn", "dsc_individualFieldDataIn", "dsc_fieldDataADCPIn",
+       "rea_backgroundFieldCondDataIn", "rea_backgroundFieldSaltDataIn",
+       "rea_fieldDataIn", "rea_plateauMeasurementFieldDataIn",
+       "rea_plateauSampleFieldDataIn", "rea_externalLabDataSaltIn",
+       "rea_externalLabDataGasIn", "rea_widthFieldDataIn","qInputList");gc();tictoc::toc()
 }
-
 # rea_backgroundFieldCondData-basic
- products <- neonstore::neon_products()
+ # products <- neonstore::neon_products()
 #  neonstore::neon_download(product = "DP4.00130.001",
 #                          site = streams)
 # # 
-neonstore::neon_index("DP1.20190.001") %>% View()
+# neonstore::neon_index("DP1.20190.001") %>% View()
 # 
 # x = neonstore::neon_read(product = "DP1.00004.001",
 #                      table = "BP_30min-basic",

@@ -202,7 +202,7 @@ mm4_satq10 <- metab_mle(mle_specs_satq10, data = HOPB_met_full, data_daily = k60
 mm5_satq10 <- metab_mle(mle_specs_satq10, data = HOPB_met_full, data_daily = k600_mm2_sat %>% dplyr::filter(model == 'night') %>% dplyr::select(date, K600.daily))
 ####
 modList = ls()[grep("^mm\\d{1}.*", ls())] %>% purrr::map(~eval(as.symbol(.x)))
-save(modList, file = "./ignore/metab-models/mleModLists/HOPBmlemods.rds")
+save(modList, file = "./ignore/metab-models/mleModLists/HOPBmlemods.Rdata")
 
 # model assessment ----
 rm(list = ls())
@@ -278,38 +278,38 @@ mods = data.frame(
                  count_positive_dates(mm3_satq10),
                  count_positive_dates(mm4_satq10),
                  count_positive_dates(mm5_satq10)),
-  maxK = c(max_k(mm1),
-                 max_k(mm2),
-                 max_k(mm3),
-                 max_k(mm4),
-                 max_k(mm5),
-                 max_k(mm1_sat),
-                 max_k(mm2_sat),
-                 max_k(mm3_sat),
-                 max_k(mm4_sat),
-                 max_k(mm5_sat),
-                 max_k(mm1_satq10),
-                 max_k(mm2_satq10),
-                 max_k(mm3_satq10),
-                 max_k(mm4_satq10),
-                 max_k(mm5_satq10)),
-  meanGPP = c(calc_gpp_mean(mm1, scaler = "*365"),
-              calc_gpp_mean(mm2, scaler = "*365"),
-              calc_gpp_mean(mm3, scaler = "*365"),
-              calc_gpp_mean(mm4, scaler = "*365"),
-              calc_gpp_mean(mm5, scaler = "*365"),
-              calc_gpp_mean(mm1_sat, scaler = "*365"),
-              calc_gpp_mean(mm2_sat, scaler = "*365"),
-              calc_gpp_mean(mm3_sat, scaler = "*365"),
-              calc_gpp_mean(mm4_sat, scaler = "*365"),
-              calc_gpp_mean(mm5_sat, scaler = "*365"),
-              calc_gpp_mean(mm1_satq10, scaler = "*365"),
-              calc_gpp_mean(mm2_satq10, scaler = "*365"),
-              calc_gpp_mean(mm3_satq10, scaler = "*365"),
-              calc_gpp_mean(mm4_satq10, scaler = "*365"),
-              calc_gpp_mean(mm5_satq10, scaler = "*365"))
+  maxK = c(calc_max_k(mm1),
+           calc_max_k(mm2),
+           calc_max_k(mm3),
+           calc_max_k(mm4),
+           calc_max_k(mm5),
+           calc_max_k(mm1_sat),
+           calc_max_k(mm2_sat),
+           calc_max_k(mm3_sat),
+           calc_max_k(mm4_sat),
+           calc_max_k(mm5_sat),
+           calc_max_k(mm1_satq10),
+           calc_max_k(mm2_satq10),
+           calc_max_k(mm3_satq10),
+           calc_max_k(mm4_satq10),
+           calc_max_k(mm5_satq10)),
+  meanGPP = c(calc_gpp_mean(mm1, scaler = "*0.365"),
+              calc_gpp_mean(mm2, scaler = "*0.365"),
+              calc_gpp_mean(mm3, scaler = "*0.365"),
+              calc_gpp_mean(mm4, scaler = "*0.365"),
+              calc_gpp_mean(mm5, scaler = "*0.365"),
+              calc_gpp_mean(mm1_sat, scaler = "*0.365"),
+              calc_gpp_mean(mm2_sat, scaler = "*0.365"),
+              calc_gpp_mean(mm3_sat, scaler = "*0.365"),
+              calc_gpp_mean(mm4_sat, scaler = "*0.365"),
+              calc_gpp_mean(mm5_sat, scaler = "*0.365"),
+              calc_gpp_mean(mm1_satq10, scaler = "*0.365"),
+              calc_gpp_mean(mm2_satq10, scaler = "*0.365"),
+              calc_gpp_mean(mm3_satq10, scaler = "*0.365"),
+              calc_gpp_mean(mm4_satq10, scaler = "*0.365"),
+              calc_gpp_mean(mm5_satq10, scaler = "*0.365"))
 )
-comment(mods$meanGPP) <- "mg C m-2 y-1"
+comment(mods$meanGPP) <- "g C m-2 y-1"
 # comment(mods$gppTot) <- "mg O2 m-2"
 
 knitr::kable(mods)

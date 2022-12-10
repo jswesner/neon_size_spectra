@@ -199,67 +199,65 @@ mm4_satq10 <- metab_mle(mle_specs_satq10, data = TECR_met_full, data_daily = k60
 
 mm5_satq10 <- metab_mle(mle_specs_satq10, data = TECR_met_full, data_daily = k600_mm2_sat %>% dplyr::filter(model == 'night') %>% dplyr::select(date, K600.daily))
 ####
-
-# model assessment
-mods = data.frame(
-  modelID = c("mm1","mm2","mm3","mm4","mm1_sat","mm2_sat","mm3_sat","mm4_sat","mm1_satq10","mm2_satq10","mm3_satq10","mm4_satq10"),
-  modelType = c("raw", "loess","lm","mean","raw", "loess","lm","mean","raw", "loess","lm","mean"),
-  gppTot = c(sum(mm1@metab_daily$GPP, na.rm = TRUE),
-             sum(mm2@metab_daily$GPP, na.rm = TRUE),
-             sum(mm3@metab_daily$GPP, na.rm = TRUE),
-             sum(mm4@metab_daily$GPP, na.rm = TRUE),
-             sum(mm1_sat@metab_daily$GPP, na.rm = TRUE),
-             sum(mm2_sat@metab_daily$GPP, na.rm = TRUE),
-             sum(mm3_sat@metab_daily$GPP, na.rm = TRUE),
-             sum(mm4_sat@metab_daily$GPP, na.rm = TRUE),
-             sum(mm1_satq10@metab_daily$GPP, na.rm = TRUE),
-             sum(mm2_satq10@metab_daily$GPP, na.rm = TRUE),
-             sum(mm3_satq10@metab_daily$GPP, na.rm = TRUE),
-             sum(mm4_satq10@metab_daily$GPP, na.rm = TRUE)),
-  RSME = c(calc_mod_RSME(plot_DO_preds(mm1), relative = TRUE),
-           calc_mod_RSME(plot_DO_preds(mm2), relative = TRUE),
-           calc_mod_RSME(plot_DO_preds(mm3), relative = TRUE),
-           calc_mod_RSME(plot_DO_preds(mm4), relative = TRUE),
-           calc_mod_RSME(plot_DO_preds(mm1_sat), relative = TRUE),
-           calc_mod_RSME(plot_DO_preds(mm2_sat), relative = TRUE),
-           calc_mod_RSME(plot_DO_preds(mm3_sat), relative = TRUE),
-           calc_mod_RSME(plot_DO_preds(mm4_sat), relative = TRUE),
-           calc_mod_RSME(plot_DO_preds(mm1_satq10), relative = TRUE),
-           calc_mod_RSME(plot_DO_preds(mm2_satq10), relative = TRUE),
-           calc_mod_RSME(plot_DO_preds(mm3_satq10), relative = TRUE),
-           calc_mod_RSME(plot_DO_preds(mm4_satq10), relative = TRUE)),
-  negatives = c(count_negative_dates(mm1),
-                count_negative_dates(mm2),
-                count_negative_dates(mm3),
-                count_negative_dates(mm4),
-                count_negative_dates(mm1_sat),
-                count_negative_dates(mm2_sat),
-                count_negative_dates(mm3_sat),
-                count_negative_dates(mm4_sat),
-                count_negative_dates(mm1_satq10),
-                count_negative_dates(mm2_satq10),
-                count_negative_dates(mm3_satq10),
-                count_negative_dates(mm4_satq10)),
-  meanGPP = c(calc_gpp_mean(mm1),
-              calc_gpp_mean(mm2),
-              calc_gpp_mean(mm3),
-              calc_gpp_mean(mm4),
-              calc_gpp_mean(mm1_sat),
-              calc_gpp_mean(mm2_sat),
-              calc_gpp_mean(mm3_sat),
-              calc_gpp_mean(mm4_sat),
-              calc_gpp_mean(mm1_satq10),
-              calc_gpp_mean(mm2_satq10),
-              calc_gpp_mean(mm3_satq10),
-              calc_gpp_mean(mm4_satq10))
-)
-comment(mods$meanGPP) <- "mg C m-2 d-1"
-comment(mods$gppTot) <- "mg O2 m-2"
-
 modList = ls()[grep("^mm\\d{1}.*", ls())] %>% purrr::map(~eval(as.symbol(.x)))
 save(modList, file = "./ignore/metab-models/mleModLists/TECRmlemods.Rdata")
-
-knitr::kable(mods)
+# model assessment
+# mods = data.frame(
+#   modelID = c("mm1","mm2","mm3","mm4","mm1_sat","mm2_sat","mm3_sat","mm4_sat","mm1_satq10","mm2_satq10","mm3_satq10","mm4_satq10"),
+#   modelType = c("raw", "loess","lm","mean","raw", "loess","lm","mean","raw", "loess","lm","mean"),
+#   gppTot = c(sum(mm1@metab_daily$GPP, na.rm = TRUE),
+#              sum(mm2@metab_daily$GPP, na.rm = TRUE),
+#              sum(mm3@metab_daily$GPP, na.rm = TRUE),
+#              sum(mm4@metab_daily$GPP, na.rm = TRUE),
+#              sum(mm1_sat@metab_daily$GPP, na.rm = TRUE),
+#              sum(mm2_sat@metab_daily$GPP, na.rm = TRUE),
+#              sum(mm3_sat@metab_daily$GPP, na.rm = TRUE),
+#              sum(mm4_sat@metab_daily$GPP, na.rm = TRUE),
+#              sum(mm1_satq10@metab_daily$GPP, na.rm = TRUE),
+#              sum(mm2_satq10@metab_daily$GPP, na.rm = TRUE),
+#              sum(mm3_satq10@metab_daily$GPP, na.rm = TRUE),
+#              sum(mm4_satq10@metab_daily$GPP, na.rm = TRUE)),
+#   RSME = c(calc_mod_RSME(plot_DO_preds(mm1), relative = TRUE),
+#            calc_mod_RSME(plot_DO_preds(mm2), relative = TRUE),
+#            calc_mod_RSME(plot_DO_preds(mm3), relative = TRUE),
+#            calc_mod_RSME(plot_DO_preds(mm4), relative = TRUE),
+#            calc_mod_RSME(plot_DO_preds(mm1_sat), relative = TRUE),
+#            calc_mod_RSME(plot_DO_preds(mm2_sat), relative = TRUE),
+#            calc_mod_RSME(plot_DO_preds(mm3_sat), relative = TRUE),
+#            calc_mod_RSME(plot_DO_preds(mm4_sat), relative = TRUE),
+#            calc_mod_RSME(plot_DO_preds(mm1_satq10), relative = TRUE),
+#            calc_mod_RSME(plot_DO_preds(mm2_satq10), relative = TRUE),
+#            calc_mod_RSME(plot_DO_preds(mm3_satq10), relative = TRUE),
+#            calc_mod_RSME(plot_DO_preds(mm4_satq10), relative = TRUE)),
+#   negatives = c(count_negative_dates(mm1),
+#                 count_negative_dates(mm2),
+#                 count_negative_dates(mm3),
+#                 count_negative_dates(mm4),
+#                 count_negative_dates(mm1_sat),
+#                 count_negative_dates(mm2_sat),
+#                 count_negative_dates(mm3_sat),
+#                 count_negative_dates(mm4_sat),
+#                 count_negative_dates(mm1_satq10),
+#                 count_negative_dates(mm2_satq10),
+#                 count_negative_dates(mm3_satq10),
+#                 count_negative_dates(mm4_satq10)),
+#   meanGPP = c(calc_gpp_mean(mm1),
+#               calc_gpp_mean(mm2),
+#               calc_gpp_mean(mm3),
+#               calc_gpp_mean(mm4),
+#               calc_gpp_mean(mm1_sat),
+#               calc_gpp_mean(mm2_sat),
+#               calc_gpp_mean(mm3_sat),
+#               calc_gpp_mean(mm4_sat),
+#               calc_gpp_mean(mm1_satq10),
+#               calc_gpp_mean(mm2_satq10),
+#               calc_gpp_mean(mm3_satq10),
+#               calc_gpp_mean(mm4_satq10))
+# )
+# comment(mods$meanGPP) <- "mg C m-2 d-1"
+# comment(mods$gppTot) <- "mg O2 m-2"
+# 
+# knitr::kable(mods)
 
 # topMod = pick_model(mods)
 

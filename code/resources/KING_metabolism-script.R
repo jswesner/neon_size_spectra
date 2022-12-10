@@ -1,11 +1,20 @@
 # KING metabolism script
 source("./code/resources/01_load-packages.R")
-# debugonce(clean_DO)
-KING_DO = clean_DO(siteCode ='KING')
+debugonce(clean_DO)
+clean_DO(siteCode ='KING', doDiffLims = c(0.001,0.999), return = FALSE)
 clean_temp(siteCode = 'KING', return = FALSE)
 KING_clean_temp = readRDS(file = "./ignore/site-gpp-data/KING_clean_temp.rds")
 debugonce(get_site_data)
 KING_met = get_site_data(siteCode = "KING")
+
+# identify(
+  
+plot(x = KING_met$solar.time, y = KING_met$DO.obs, type = 'l')
+points(x = KING_met$solar.time, y = rep(0,nrow(KING_met)))
+identify(x = KING_met$solar.time,y = rep(0,nrow(KING_met)),n = 2)
+# , 2)
+
+?identify
 
 # remove some data points above 25 which are anomolous
 # debugonce(clean_met_data)
@@ -54,8 +63,8 @@ KING_met_clean %>%
 KING_test %>%
  
 ## run a quick version of the 
-bayes_name <- mm_name(type='bayes', pool_K600='binned', err_obs_iid=TRUE,
-                      err_proc_iid=FALSE, err_proc_GPP = TRUE, ode_method = "trapezoid")
+bayes_name <- mm_name(type='bayes', pool_K600='complete', err_obs_iid=TRUE,
+                      err_proc_iid=TRUE, err_proc_GPP = TRUE, ode_method = "trapezoid")
 bayes_specs <- specs(bayes_name)
 # bayes_specs
 # Model specifications:

@@ -35,7 +35,7 @@ slice_min_max <- function(df, order_by = value, n = 1) {
 #'
 #'
 
-clean_DO = function(siteCode = NA,startDate = NULL, endDate = NULL, doLims = c(0,30), return = TRUE,...){
+clean_DO = function(siteCode = NA,startDate = NULL, endDate = NULL, doLims = c(0,30), return = TRUE, doDiffLims = c(0.001,0.999),...){
   require(tidyverse)
   require(lutz)
   library(lubridate)
@@ -48,7 +48,7 @@ clean_DO = function(siteCode = NA,startDate = NULL, endDate = NULL, doLims = c(0
                                   lon = unlist(latlong[which(latlong$site == siteCode), 'long']),
                                   method = 'accurate')
   ## Get site files
-  fileList = list.files("./ignore/site-gpp-data/", paste0(siteCode,".*DO.*.rds"), full.names = TRUE)
+  fileList = list.files("./ignore/site-gpp-data/", paste0(siteCode,"_DO.*.rds"), full.names = TRUE)
   DOList = fileList %>%
     purrr::map(readRDS)
   oldColNames = c(
@@ -79,7 +79,10 @@ clean_DO = function(siteCode = NA,startDate = NULL, endDate = NULL, doLims = c(0
                  warn_missing = FALSE) %>%
     dplyr::mutate(startDateTime = as.POSIXct(startDateTime, format = "%Y-%m-%d %H:%M:%S", tz = siteTZ),
                   startDateTime = ceiling_date(startDateTime, 'minute')) %>%
-    dplyr::select(startDateTime, DO.obs)) %>%
+    dplyr::select(startDateTime, DO.obs) %>%
+    dplyr::mutate(diff = c(NA,diff(DO.obs))) %>%
+    dplyr::mutate(DO.obs = ifelse(between(diff, quantile(diff, doDiffLims[1], na.rm = TRUE), quantile(diff, doDiffLims[2], na.rm = TRUE)), DO.obs, NA)) %>%
+    dplyr::select(-diff)) %>%
     reduce(merge, by = 'startDateTime', all = TRUE) %>%
     setNames(.,nm = c('startDateTime', paste0("DO_",sensorNames)))
   
@@ -490,19 +493,25 @@ plot_met_series = function(df = NULL, selCols = c("solar.time","DO.obs","DO.pcts
 #'
 calc_mod_RSME = function(metObj = NULL, relative = FALSE, ...){
   data = metObj$data 
-  error = data %>%
-    dplyr::mutate(diff = obs-mod,
-                  diff2 = diff^2) %>%
-    dplyr::select(diff2) %>%
-    unlist %>% na.omit
   
-  n = length(error)
   if(relative){
-    rrsme = (sqrt(sum(error)/n))/mean(data$obs, na.rm = TRUE)
-    return(rrsme)
+    error = data %>%
+      dplyr::mutate(diff = mod-obs) %>%
+      dplyr::select(diff) %>%
+      unlist %>% na.omit
+    
+    n = length(error)
+    rrsme = sqrt(sum((error/mean(data$obs, na.rm = TRUE))^2)/n)*100
+    return(round(rrsme,2))
     
   } else{
-    rsme = sqrt(sum(error)/n)
+    error = data %>%
+      dplyr::mutate(diff = mod-obs) %>%
+      dplyr::select(diff) %>%
+      unlist %>% na.omit
+    
+    n = length(error)
+    rsme = sqrt(sum(error^2))/n
   return(rsme)
   }
 }
@@ -550,13 +559,12 @@ calc_gpp_mean = function(mm, PQ = 1.28, scaler = NULL,...){
   days = length(which(!is.na(metab$GPP)))
   
   if(is.null(scaler)){
-    gppMean = gppTot/days * ((1/PQ)*(12/32))
+    gppMean = mean(metab$GPP, na.rm = TRUE) * ((1/PQ)*(12/32))
   } else{
-    gppEqn = paste0("(gppTot/days * ((1/PQ)*(12/32)))",as.character(scaler))
+    gppEqn = paste0("(mean(metab$GPP, na.rm = TRUE) * ((1/PQ)*(12/32)))",as.character(scaler))
     gppMean = eval(parse(text = gppEqn))
   }
   
-  comment(gppMean) <- "mg C m-2 t-1"
   return(gppMean)
 }
 
@@ -564,7 +572,7 @@ calc_gpp_mean = function(mm, PQ = 1.28, scaler = NULL,...){
 #'
 #'
 slim_models = function(df,RSMEcutoff = 0.7,...){
-  meanGPPunits = grep("mg C m-2 y-1", attr(df$meanGPP,"comment"))
+  meanGPPunits = grep("g C m-2 y-1", attr(df$meanGPP,"comment"))
   highRRSME = quantile(df$RSME, RSMEcutoff)
   
   
@@ -591,8 +599,57 @@ slim_models = function(df,RSMEcutoff = 0.7,...){
 #'
 #'
 #'
-max_k = function(mm,...){
-  mmDf = data.frame(mm@fit)
-  k600vec = mmDf$K600.daily
-  max(k600vec, na.rm = TRUE)
+calc_max_k = function(mm,...){
+  if(all(is.na(mm@fit$K600.daily))){
+    k600vec = mm@data_daily$K600.daily
+    max(k600vec, na.rm = TRUE)
+  } else{
+    k600vec = mm@fit$K600.daily
+    max(k600vec, na.rm = TRUE)
+  }
+}
+
+#'
+#'
+#'
+# calc K600
+calc_k600 = function(df, LRcol = "slopeNormClean",...){
+  ##### Constants #####
+  #Coefficients for Least Squares Third-Order Polynomial Fits of Schmidt Number Versus Temperature
+  #Valid for 0 - 30 Celsius temperature range
+  #Table A1, Fresh water, Wanninkhof (1992), DOI: 10.1029/92JC00188
+  #See also Jahne et al. (1987), DOI: 10.4236/jep.2014.511103
+  A_O2 = 1800.6
+  B_O2 = 120.10
+  C_O2 = 3.7818
+  D_O2 = 0.047608
+  
+  A_CO2 = 1911.1
+  B_CO2 = 118.11
+  C_CO2 = 3.4527
+  D_CO2 = 0.041320
+  
+  A_SF6 = 3255.3
+  B_SF6 = 217.13
+  C_SF6 = 6.8370
+  D_SF6 = 0.086070
+  
+  Sc_CO2 = 600 #Schmidt number of O2 at 20 C in fresh water
+  
+  convLpsCms = 1/1000 #Conversion from litersPerSecond to cubicMetersPerSecond
+  
+  #Reaeration Rate Conversion
+  #Equation 7, Wanninkhof (1990), DOI: 10.1029/WR026i007p01621
+  Sc_O2_25 <- A_O2 - B_O2 * 25 + C_O2 * 25^2 - D_O2 * 25^3
+  Sc_SF6_25 <- A_SF6 - B_SF6 * 25 + C_SF6 * 25^2 - D_SF6 * 25^3
+  reaRateConv <- (Sc_O2_25/Sc_SF6_25) ^ (-0.5)
+  
+  df %>%
+    mutate(kSF6 = !!rlang::sym(LRcol) * (btwStaDist/peakMaxVelocity)*-1*86400) %>%# m^-1 * m/s * -1 for negative slope and 86400 for number of seconds in a day
+    mutate(kO2 = kSF6 * reaRateConv * meanDepth) %>%  #Calculate the gas transfer velocity for oxygen# d^-1 * m
+    mutate(sc02 = A_O2 - B_O2 * meanTemp + C_O2 * meanTemp^2 - D_O2 * meanTemp^3,#Normalize to schmidt number of 600
+           k = (Sc_CO2/sc02)^(-0.5)* kO2,#Equation 1, Wanninkhof (1992) "little k"
+           K600 = k/meanDepth) %>% # d^-1 "Big K"
+    dplyr::mutate(across(c(k,K600), ~ifelse(.x < 0, NA, .x)))
+  
 }

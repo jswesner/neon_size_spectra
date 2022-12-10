@@ -4,30 +4,32 @@ source("./code/resources/01_load-packages.R")
 BLDE_met_full = get_site_data(siteCode = "BLDE") %>%
   dplyr::select(-DO.pctsat)
 
+BLDE_kGAM = readRDS("./ignore/site-gpp-data/BLDE_kGAM.rds")
+
 discharge.daily = BLDE_met_full %>%
   dplyr::mutate(date = as.Date(solar.time)) %>%
   group_by(date) %>%
-  dplyr::summarise(discharge = mean(discharge, na.rm = TRUE))
+  dplyr::summarise(discharge = mean(discharge, na.rm = TRUE),
+                   model = 'gam') 
+
+discharge.daily$K600.daily = exp(predict(BLDE_kGAM, newdata = discharge.daily))
 
 ## 
-mle_specs <- specs(mm_name(type = "mle", GPP_fun = "linlight"))
-# debugonce(metab_mle)
+mle_specs <- specs(mm_name(type = "mle"))
+
 mm1 <- metab_mle(mle_specs, data = BLDE_met_full)
 
 k600_mm1 <- get_params(mm1, uncertainty = 'ci') %>%
   select(date, GPP.daily, K600.daily, K600.daily.lower, K600.daily.upper) %>%
-  left_join(BLDE_met_full %>%
-              dplyr::mutate(date = as.Date(solar.time)) %>%
-              group_by(date) %>%
-              dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE)+0.01))
+  left_join(discharge.daily %>% dplyr::select(date, discharge.daily = 'discharge'))
 
 k600_mm1 %>%
   ggplot()+
-  geom_point(aes(x = discharge.daily, y = K600.daily)) +
+  geom_point(aes(x = discharge.daily , y = K600.daily)) +
   coord_trans('log10')
 
 k600_mm1 = k600_mm1 %>%
-  dplyr::filter(K600.daily <500)
+  dplyr::filter(K600.daily <10000)
 
 # 
 # 
@@ -51,10 +53,8 @@ k600_mm2 <- get_params(km1) %>%
   bind_rows(get_params(km4) %>%
               select(date, K600.daily) %>%
               dplyr::mutate(model = 'night')) %>%
-  left_join(BLDE_met_full %>%
-              dplyr::mutate(date = as.Date(solar.time)) %>%
-              group_by(date) %>%
-              dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE)))
+  bind_rows(discharge.daily %>% select(date, model, K600.daily)) %>%
+  left_join(discharge.daily %>% dplyr::select(date, discharge.daily = 'discharge'))
 
 k600_mm2 %>%
   ggplot()+
@@ -69,6 +69,8 @@ mm3 <- metab_mle(mle_specs, data = BLDE_met_full, data_daily = k600_mm2 %>% dply
 mm4 <- metab_mle(mle_specs, data = BLDE_met_full, data_daily = k600_mm2 %>% dplyr::filter(model == 'mean') %>% dplyr::select(date, K600.daily))
 
 mm5 <- metab_mle(mle_specs, data = BLDE_met_full, data_daily = k600_mm2 %>% dplyr::filter(model == 'night') %>% dplyr::select(date, K600.daily))
+
+mm6 <- metab_mle(mle_specs, data = BLDE_met_full, data_daily = k600_mm2 %>% dplyr::filter(model == 'gam') %>% dplyr::select(date, K600.daily))
 ## 
 mle_specs_sat <- specs(mm_name(type = "mle", GPP_fun = 'satlight'))
 mm1_sat <- metab_mle(mle_specs_sat, data = BLDE_met_full)
@@ -77,16 +79,11 @@ mm1_sat <- metab_mle(mle_specs_sat, data = BLDE_met_full)
 k600_mm1_sat <- get_params(mm1_sat, uncertainty = 'ci') %>%
   left_join(predict_metab(mm1_sat) %>% select(date, GPP.daily = 'GPP')) %>%
   select(date, GPP.daily, K600.daily, K600.daily.lower, K600.daily.upper) %>%
-  left_join(BLDE_met_full %>%
-              dplyr::mutate(date = as.Date(solar.time)) %>%
-              group_by(date) %>%
-              dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE))) #%>%
-# dplyr::filter(GPP.daily >0,
-#              K600.daily < 500) %>% dplyr::select(-GPP.daily)
+  left_join(discharge.daily %>% dplyr::select(date, discharge.daily = 'discharge'))
 
 k600_mm1_sat %>%
   ggplot()+
-  geom_point(aes(x = discharge.daily+0.001, y = K600.daily)) +
+  geom_point(aes(x = discharge.daily, y = K600.daily)) +
   coord_trans('log10')
 
 k600_mm1_sat %>%
@@ -94,8 +91,7 @@ k600_mm1_sat %>%
   geom_point(aes(x = GPP.daily, K600.daily))
 
 k600_mm1_sat = k600_mm1_sat %>%
-  # dplyr::filter(between(K600.daily,0, 400)) #%>%
-  dplyr::filter(GPP.daily >= 1)
+  dplyr::filter(GPP.daily >= 0.1)
 
 #
 km1_sat <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'loess'), predictors = 'discharge.daily', other_args = list(span = 0.6),
@@ -120,14 +116,12 @@ k600_mm2_sat <- get_params(km1_sat) %>%
   bind_rows(get_params(km4) %>%
               select(date, K600.daily) %>%
               dplyr::mutate(model = 'night')) %>%
-  left_join(BLDE_met_full %>%
-              dplyr::mutate(date = as.Date(solar.time)) %>%
-              group_by(date) %>%
-              dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE)))
+  bind_rows(discharge.daily %>% select(date, model, K600.daily)) %>%
+  left_join(discharge.daily %>% dplyr::select(date, discharge.daily = 'discharge'))
 
 k600_mm2_sat %>%
   ggplot()+
-  geom_point(aes(x = discharge.daily+0.001, y = K600.daily)) +
+  geom_point(aes(x = discharge.daily, y = K600.daily)) +
   coord_trans('log10') +
   facet_wrap(~model, scales = 'free_y')
 # 
@@ -139,6 +133,8 @@ mm4_sat <- metab_mle(mle_specs_sat, data = BLDE_met_full, data_daily = k600_mm2_
 
 mm5_sat <- metab_mle(mle_specs_sat, data = BLDE_met_full, data_daily = k600_mm2_sat %>% dplyr::filter(model == 'night') %>% dplyr::select(date, K600.daily))
 
+mm6_sat <- metab_mle(mle_specs_sat, data = BLDE_met_full, data_daily = k600_mm2_sat %>% dplyr::filter(model == 'gam') %>% dplyr::select(date, K600.daily))
+
 ## satq10temp
 mle_specs_satq10 <- specs(mm_name(type = "mle", GPP_fun = 'satlight', ER_fun = 'q10temp'))
 mm1_satq10 <- metab_mle(mle_specs_satq10, data = BLDE_met_full)
@@ -147,27 +143,22 @@ mm1_satq10 <- metab_mle(mle_specs_satq10, data = BLDE_met_full)
 k600_mm1_satq10 <- get_params(mm1_satq10, uncertainty = 'ci') %>%
   left_join(predict_metab(mm1_sat) %>% select(date, GPP.daily = 'GPP')) %>%
   select(date, GPP.daily, K600.daily, K600.daily.lower, K600.daily.upper) %>%
-  left_join(BLDE_met_full %>%
-              dplyr::mutate(date = as.Date(solar.time)) %>%
-              group_by(date) %>%
-              dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE))) #%>%
-# dplyr::filter(GPP.daily >0,
-#              K600.daily < 500) %>% dplyr::select(-GPP.daily)
+  left_join(discharge.daily %>% dplyr::select(date, discharge.daily = 'discharge')) 
 
 k600_mm1_satq10 %>%
   ggplot()+
-  geom_point(aes(x = discharge.daily+0.001, y = K600.daily)) +
+  geom_point(aes(x = discharge.daily, y = K600.daily)) +
   coord_trans('log10')
 
 k600_mm1_satq10 %>%
   ggplot()+
   geom_point(aes(x = GPP.daily, K600.daily))+
-  coord_cartesian(ylim = c(NA, 700))
+  coord_cartesian(ylim = c(NA, 10000))
 
 k600_mm1_satq10 = k600_mm1_satq10 %>%
-  dplyr::filter(K600.daily < 500 & GPP.daily >0)
+  dplyr::filter(K600.daily < 10000 & GPP.daily > 0)
 # 
-km1_satq10 <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'loess'), predictors = 'discharge.daily', other_args = list(span = 0.6),
+km1_satq10 <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'loess'), predictors = 'discharge.daily', other_args = list(span = 0.5),
                                  day_start = -1, day_end = 23), data_daily = k600_mm1_satq10 %>% select(-GPP.daily))
 
 km2_satq10 <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'lm'),
@@ -188,14 +179,12 @@ k600_mm2_satq10 <- get_params(km1_satq10) %>%
   bind_rows(get_params(km4) %>%
               select(date, K600.daily) %>%
               dplyr::mutate(model = 'night')) %>%
-  left_join(BLDE_met_full %>%
-              dplyr::mutate(date = as.Date(solar.time)) %>%
-              group_by(date) %>%
-              dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE)))
+  bind_rows(discharge.daily %>% select(date, model, K600.daily)) %>%
+  left_join(discharge.daily %>% dplyr::select(date, discharge.daily = 'discharge'))
 
 k600_mm2_satq10 %>%
   ggplot()+
-  geom_point(aes(x = discharge.daily+0.001, y = K600.daily)) +
+  geom_point(aes(x = discharge.daily, y = K600.daily)) +
   coord_trans('log10') +
   facet_wrap(~model, scales = 'free_y')
 # 
@@ -206,110 +195,145 @@ mm3_satq10 <- metab_mle(mle_specs_satq10, data = BLDE_met_full, data_daily = k60
 mm4_satq10 <- metab_mle(mle_specs_satq10, data = BLDE_met_full, data_daily = k600_mm2_satq10 %>% dplyr::filter(model == 'mean') %>% dplyr::select(date, K600.daily))
 
 mm5_satq10 <- metab_mle(mle_specs_satq10, data = BLDE_met_full, data_daily = k600_mm2_sat %>% dplyr::filter(model == 'night') %>% dplyr::select(date, K600.daily))
+
+mm6_satq10 <- metab_mle(mle_specs_satq10, data = BLDE_met_full, data_daily = k600_mm2_sat %>% dplyr::filter(model == 'gam') %>% dplyr::select(date, K600.daily))
 ####
 
 modList = ls()[grep("^mm\\d{1}.*", ls())] %>% purrr::map(~eval(as.symbol(.x)))
-save(modList, file = "./ignore/metab-models/mleModLists/BLDEmlemods.rds")
+save(modList, file = "./ignore/metab-models/mleModLists/BLDEmlemods.Rdata")
 
 # model assessment ----
-# rm(list = ls())
-# source("./code/resources/01_load-packages.R")
-# load(file = "./ignore/metab-models/mleModLists/BLDEmlemods.Rdata")
-# modList_sub = unlist(lapply(modList, function(x) !is.data.frame(x)))
-# modList = modList[modList_sub]
-# 
-# modList = setNames(modList, nm = c("mm1","mm2","mm3","mm4","mm5","mm1_sat","mm2_sat","mm3_sat","mm4_sat","mm5_sat","mm1_satq10","mm2_satq10","mm3_satq10","mm4_satq10","mm5_satq10"))
-# 
-# 
-# list2env(modList, .GlobalEnv)
-# 
-# mods = data.frame(
-#   modelID = c("mm1","mm2","mm3","mm4","mm5","mm1_sat","mm2_sat","mm3_sat","mm4_sat","mm5_sat","mm1_satq10","mm2_satq10","mm3_satq10","mm4_satq10","mm5_satq10"),
-#   modelType = c("raw", "loess","lm","mean","night","raw", "loess","lm","mean","night","raw", "loess","lm","mean","night"),
-#   # gppTot = c(sum(mm1@metab_daily$GPP, na.rm = TRUE),
-#   #            sum(mm2@metab_daily$GPP, na.rm = TRUE),
-#   #            sum(mm3@metab_daily$GPP, na.rm = TRUE),
-#   #            sum(mm4@metab_daily$GPP, na.rm = TRUE),
-#   #            sum(mm5@metab_daily$GPP, na.rm = TRUE),
-#   #            sum(mm1_sat@metab_daily$GPP, na.rm = TRUE),
-#   #            sum(mm2_sat@metab_daily$GPP, na.rm = TRUE),
-#   #            sum(mm3_sat@metab_daily$GPP, na.rm = TRUE),
-#   #            sum(mm4_sat@metab_daily$GPP, na.rm = TRUE),
-#   #            sum(mm5_sat@metab_daily$GPP, na.rm = TRUE),
-#   #            sum(mm1_satq10@metab_daily$GPP, na.rm = TRUE),
-#   #            sum(mm2_satq10@metab_daily$GPP, na.rm = TRUE),
-#   #            sum(mm3_satq10@metab_daily$GPP, na.rm = TRUE),
-#   #            sum(mm4_satq10@metab_daily$GPP, na.rm = TRUE),
-#   #            sum(mm5_satq10@metab_daily$GPP, na.rm = TRUE)),
-#   RSME = c(calc_mod_RSME(plot_DO_preds(mm1), relative = TRUE),
-#            calc_mod_RSME(plot_DO_preds(mm2), relative = TRUE),
-#            calc_mod_RSME(plot_DO_preds(mm3), relative = TRUE),
-#            calc_mod_RSME(plot_DO_preds(mm4), relative = TRUE),
-#            calc_mod_RSME(plot_DO_preds(mm5), relative = TRUE),
-#            calc_mod_RSME(plot_DO_preds(mm1_sat), relative = TRUE),
-#            calc_mod_RSME(plot_DO_preds(mm2_sat), relative = TRUE),
-#            calc_mod_RSME(plot_DO_preds(mm3_sat), relative = TRUE),
-#            calc_mod_RSME(plot_DO_preds(mm4_sat), relative = TRUE),
-#            calc_mod_RSME(plot_DO_preds(mm5_sat), relative = TRUE),
-#            calc_mod_RSME(plot_DO_preds(mm1_satq10), relative = TRUE),
-#            calc_mod_RSME(plot_DO_preds(mm2_satq10), relative = TRUE),
-#            calc_mod_RSME(plot_DO_preds(mm3_satq10), relative = TRUE),
-#            calc_mod_RSME(plot_DO_preds(mm4_satq10), relative = TRUE),
-#            calc_mod_RSME(plot_DO_preds(mm5_satq10), relative = TRUE)),
-#   negativeGPP = c(count_negative_dates(mm1),
-#                   count_negative_dates(mm2),
-#                   count_negative_dates(mm3),
-#                   count_negative_dates(mm4),
-#                   count_negative_dates(mm5),
-#                   count_negative_dates(mm1_sat),
-#                   count_negative_dates(mm2_sat),
-#                   count_negative_dates(mm3_sat),
-#                   count_negative_dates(mm4_sat),
-#                   count_negative_dates(mm5_sat),
-#                   count_negative_dates(mm1_satq10),
-#                   count_negative_dates(mm2_satq10),
-#                   count_negative_dates(mm3_satq10),
-#                   count_negative_dates(mm4_satq10),
-#                   count_negative_dates(mm5_satq10)),
-#   positiveER = c(count_positive_dates(mm1),
-#                  count_positive_dates(mm2),
-#                  count_positive_dates(mm3),
-#                  count_positive_dates(mm4),
-#                  count_positive_dates(mm5),
-#                  count_positive_dates(mm1_sat),
-#                  count_positive_dates(mm2_sat),
-#                  count_positive_dates(mm3_sat),
-#                  count_positive_dates(mm4_sat),
-#                  count_positive_dates(mm5_sat),
-#                  count_positive_dates(mm1_satq10),
-#                  count_positive_dates(mm2_satq10),
-#                  count_positive_dates(mm3_satq10),
-#                  count_positive_dates(mm4_satq10),
-#                  count_positive_dates(mm5_satq10)),
-#   meanGPP = c(calc_gpp_mean(mm1, scaler = "*365"),
-#               calc_gpp_mean(mm2, scaler = "*365"),
-#               calc_gpp_mean(mm3, scaler = "*365"),
-#               calc_gpp_mean(mm4, scaler = "*365"),
-#               calc_gpp_mean(mm5, scaler = "*365"),
-#               calc_gpp_mean(mm1_sat, scaler = "*365"),
-#               calc_gpp_mean(mm2_sat, scaler = "*365"),
-#               calc_gpp_mean(mm3_sat, scaler = "*365"),
-#               calc_gpp_mean(mm4_sat, scaler = "*365"),
-#               calc_gpp_mean(mm5_sat, scaler = "*365"),
-#               calc_gpp_mean(mm1_satq10, scaler = "*365"),
-#               calc_gpp_mean(mm2_satq10, scaler = "*365"),
-#               calc_gpp_mean(mm3_satq10, scaler = "*365"),
-#               calc_gpp_mean(mm4_satq10, scaler = "*365"),
-#               calc_gpp_mean(mm5_satq10, scaler = "*365"))
-# )
-# comment(mods$meanGPP) <- "mg C m-2 y-1"
-# # comment(mods$gppTot) <- "mg O2 m-2"
-# 
-# knitr::kable(mods)
-# # debugonce(slim_models)
-# modsDf = slim_models(mods);knitr::kable(modsDf)
-# 
-# saveRDS(mm3_sat, "./ignore/metab-models/BLDE_full_mle.rds")
+rm(list = ls())
+source("./code/resources/01_load-packages.R")
+load(file = "./ignore/metab-models/mleModLists/BLDEmlemods.Rdata")
+modList_sub = unlist(lapply(modList, function(x) !is.data.frame(x)))
+modList = modList[modList_sub]
+
+modList = setNames(modList, nm = c("mm1","mm2","mm3","mm4","mm5","mm6", "mm1_sat","mm2_sat","mm3_sat","mm4_sat","mm5_sat","mm6_sat","mm1_satq10","mm2_satq10","mm3_satq10","mm4_satq10","mm5_satq10", "mm6_satq10"))
+
+
+list2env(modList, .GlobalEnv)
+
+mods = data.frame(
+  modelID = c("mm1","mm2","mm3","mm4","mm5","mm6", "mm1_sat","mm2_sat","mm3_sat","mm4_sat","mm5_sat","mm6_sat","mm1_satq10","mm2_satq10","mm3_satq10","mm4_satq10","mm5_satq10", "mm6_satq10"),
+  modelType = c("raw", "loess","lm","mean","night","gam", "raw", "loess","lm","mean","night","gam","raw", "loess","lm","mean","night","gam"),
+   gppTot = c(sum(mm1@metab_daily$GPP, na.rm = TRUE),
+              sum(mm2@metab_daily$GPP, na.rm = TRUE),
+              sum(mm3@metab_daily$GPP, na.rm = TRUE),
+              sum(mm4@metab_daily$GPP, na.rm = TRUE),
+              sum(mm5@metab_daily$GPP, na.rm = TRUE),
+              sum(mm6@metab_daily$GPP, na.rm = TRUE),
+              sum(mm1_sat@metab_daily$GPP, na.rm = TRUE),
+              sum(mm2_sat@metab_daily$GPP, na.rm = TRUE),
+              sum(mm3_sat@metab_daily$GPP, na.rm = TRUE),
+              sum(mm4_sat@metab_daily$GPP, na.rm = TRUE),
+              sum(mm5_sat@metab_daily$GPP, na.rm = TRUE),
+              sum(mm6_sat@metab_daily$GPP, na.rm = TRUE),
+              sum(mm1_satq10@metab_daily$GPP, na.rm = TRUE),
+              sum(mm2_satq10@metab_daily$GPP, na.rm = TRUE),
+              sum(mm3_satq10@metab_daily$GPP, na.rm = TRUE),
+              sum(mm4_satq10@metab_daily$GPP, na.rm = TRUE),
+              sum(mm5_satq10@metab_daily$GPP, na.rm = TRUE),
+              sum(mm6_satq10@metab_daily$GPP, na.rm = TRUE)),
+  RSME = c(calc_mod_RSME(plot_DO_preds(mm1), relative = TRUE),
+           calc_mod_RSME(plot_DO_preds(mm2), relative = TRUE),
+           calc_mod_RSME(plot_DO_preds(mm3), relative = TRUE),
+           calc_mod_RSME(plot_DO_preds(mm4), relative = TRUE),
+           calc_mod_RSME(plot_DO_preds(mm5), relative = TRUE),
+           calc_mod_RSME(plot_DO_preds(mm6), relative = TRUE),
+           calc_mod_RSME(plot_DO_preds(mm1_sat), relative = TRUE),
+           calc_mod_RSME(plot_DO_preds(mm2_sat), relative = TRUE),
+           calc_mod_RSME(plot_DO_preds(mm3_sat), relative = TRUE),
+           calc_mod_RSME(plot_DO_preds(mm4_sat), relative = TRUE),
+           calc_mod_RSME(plot_DO_preds(mm5_sat), relative = TRUE),
+           calc_mod_RSME(plot_DO_preds(mm6_sat), relative = TRUE),
+           calc_mod_RSME(plot_DO_preds(mm1_satq10), relative = TRUE),
+           calc_mod_RSME(plot_DO_preds(mm2_satq10), relative = TRUE),
+           calc_mod_RSME(plot_DO_preds(mm3_satq10), relative = TRUE),
+           calc_mod_RSME(plot_DO_preds(mm4_satq10), relative = TRUE),
+           calc_mod_RSME(plot_DO_preds(mm5_satq10), relative = TRUE),
+           calc_mod_RSME(plot_DO_preds(mm6_satq10), relative = TRUE)),
+  negativeGPP = c(count_negative_dates(mm1),
+                  count_negative_dates(mm2),
+                  count_negative_dates(mm3),
+                  count_negative_dates(mm4),
+                  count_negative_dates(mm5),
+                  count_negative_dates(mm6),
+                  count_negative_dates(mm1_sat),
+                  count_negative_dates(mm2_sat),
+                  count_negative_dates(mm3_sat),
+                  count_negative_dates(mm4_sat),
+                  count_negative_dates(mm5_sat),
+                  count_negative_dates(mm6_sat),
+                  count_negative_dates(mm1_satq10),
+                  count_negative_dates(mm2_satq10),
+                  count_negative_dates(mm3_satq10),
+                  count_negative_dates(mm4_satq10),
+                  count_negative_dates(mm5_satq10),
+                  count_negative_dates(mm6_satq10)),
+  positiveER = c(count_positive_dates(mm1),
+                 count_positive_dates(mm2),
+                 count_positive_dates(mm3),
+                 count_positive_dates(mm4),
+                 count_positive_dates(mm5),
+                 count_positive_dates(mm6),
+                 count_positive_dates(mm1_sat),
+                 count_positive_dates(mm2_sat),
+                 count_positive_dates(mm3_sat),
+                 count_positive_dates(mm4_sat),
+                 count_positive_dates(mm5_sat),
+                 count_positive_dates(mm6_sat),
+                 count_positive_dates(mm1_satq10),
+                 count_positive_dates(mm2_satq10),
+                 count_positive_dates(mm3_satq10),
+                 count_positive_dates(mm4_satq10),
+                 count_positive_dates(mm5_satq10),
+                 count_positive_dates(mm6_satq10)),
+  meanGPP = c(calc_gpp_mean(mm1, scaler = "*0.0365"),
+              calc_gpp_mean(mm2, scaler = "*0.0365"),
+              calc_gpp_mean(mm3, scaler = "*0.0365"),
+              calc_gpp_mean(mm4, scaler = "*0.0365"),
+              calc_gpp_mean(mm5, scaler = "*0.0365"),
+              calc_gpp_mean(mm6, scaler = "*0.0365"),
+              calc_gpp_mean(mm1_sat, scaler = "*0.0365"),
+              calc_gpp_mean(mm2_sat, scaler = "*0.0365"),
+              calc_gpp_mean(mm3_sat, scaler = "*0.0365"),
+              calc_gpp_mean(mm4_sat, scaler = "*0.0365"),
+              calc_gpp_mean(mm5_sat, scaler = "*0.0365"),
+              calc_gpp_mean(mm6_sat, scaler = "*0.0365"),
+              calc_gpp_mean(mm1_satq10, scaler = "*0.0365"),
+              calc_gpp_mean(mm2_satq10, scaler = "*0.0365"),
+              calc_gpp_mean(mm3_satq10, scaler = "*0.0365"),
+              calc_gpp_mean(mm4_satq10, scaler = "*0.0365"),
+              calc_gpp_mean(mm5_satq10, scaler = "*0.0365"),
+              calc_gpp_mean(mm6_satq10, scaler = "*0.0365")),
+  maxK = c(calc_max_k(mm1),
+              calc_max_k(mm2),
+              calc_max_k(mm3),
+              calc_max_k(mm4),
+              calc_max_k(mm5),
+              calc_max_k(mm6),
+              calc_max_k(mm1_sat),
+              calc_max_k(mm2_sat),
+              calc_max_k(mm3_sat),
+              calc_max_k(mm4_sat),
+              calc_max_k(mm5_sat),
+              calc_max_k(mm6_sat),
+              calc_max_k(mm1_satq10),
+              calc_max_k(mm2_satq10),
+              calc_max_k(mm3_satq10),
+              calc_max_k(mm4_satq10),
+              calc_max_k(mm5_satq10),
+              calc_max_k(mm6_satq10))
+)
+comment(mods$meanGPP) <- "g C m-2 y-1"
+# comment(mods$gppTot) <- "mg O2 m-2"
+
+knitr::kable(mods)
+# debugonce(slim_models)
+modsDf = slim_models(mods);knitr::kable(modsDf)
+
+saveRDS(mm3_sat, "./ignore/metab-models/BLDE_full_mle.rds")
 # ###
 
 # ## run a quick version of the 
