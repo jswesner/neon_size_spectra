@@ -1,0 +1,156 @@
+---
+title: "Repository structure"
+date: "12/9/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# About
+
+This file is intended to be used as a guiding document to help organize the collaborative repository `neon_size_spectra`, which is an NSF-MES funded project. The [project proposal can be found here](https://www.nsf.gov/awardsearch/showAward?AWD_ID=2106067&HistoricalAwards=false)
+
+## File structure
+
+There are two primary check points in the data: `derived_data` and `model_fits`.
+
+`derived_data`: Upstream is all the data downloading, cleaning, wrangling, etc. Downstream is the analysis and writeup. 
+`model_fits`: Upstream is the data wrangling and analysis. Downstream is making the figures and writeup. 
+
+```
+neon_size_spectra/ 
+  |─── data/
+    |─── raw_data/
+      |─── fish/
+        |─── 01_fish_download.R
+        |─── 02_fish_clean.R
+        |─── 03_stream-widths.R
+        |─── fish_data-cleaned.rds
+      |─── inverts/
+        |─── 01_invert_download.R
+        |─── 02_invert_clean.R
+        |─── invert_data-cleaned.rds
+      |─── temperature/
+        |─── 01_temperature_download.R
+        |─── 02_temperature_clean.R
+        |─── temperature_model-clean.rds
+        |─── 03_temperature_make-mean-annual.R
+        |─── temperature_mean-annual.rds
+        |─── 04_temperature_make-degree-days.R
+        |─── temperature_degree-day.rds
+      |─── resources/ **come back to this**
+        |─── instructions_readme.txt
+        |─── download_data.R
+        |─── clean_stream_data/
+          |─── stream_x.R
+        |─── model/
+          |─── model_gpp.R
+      |─── combine_mean-annual-data.R
+      |─── combine_annual-data.R
+    |─── derived_data/
+      |─── mean-annual-data.rds
+      |─── annual-data.rds
+  |─── code/
+    |─── custom_functions/
+      |─── LW_coef.R
+      |─── est_dw.R
+      |─── etc..
+    |─── models/
+      |─── mean-annual_analysis.stan
+      |─── mean-annual_analysis.R
+      |─── annual_analysis.stan
+      |─── annual_analysis.R
+      |─── model_fits/
+        |─── mean-annual_fit.rds
+        |─── annual_fit.rds
+  |─── manuscript/
+    |─── temp_gpp_isd/
+      |─── figures/
+        |─── 01_make-figures.R
+        |─── 02_make-SI-figures.R
+        |─── figure-01_temp-isd-exp-scatter.png
+        |─── figure-02_post-beta-distributions.png
+        |─── figure-03_lambda-boxplots.png
+      |─── tables/
+        |─── 01_make-tables.R
+        |─── table-01_temp-gpp-summary.csv
+    |─── Gjoni_V_Pomzy/
+      |─── tables/
+      |─── figure/
+
+```
+
+## Filenames
+
+The folder names indicated above will be set. The individual file names within the folders can be named as needed. However, please adhere to the following recommendations
+
+### Three principles for filenames (From Jenny Bryan)
+    1. Machine readable
+    2. Human Readable
+    3. Plays well with default ordering
+  
+## Machine readable
+
+  - No spaces
+  - No punctuation
+  - No accented characters
+  - No files named "foo" and "Foo" 
+  
+## Human Readable
+
+Name contains info on content. 
+Easy to figure out what is in the file based on the name. 
+If a data product is produced at the end of a script, make the filename of the script and the filename of the data product match, or at least be similar. 
+
+  - `fish_clean-data.R` creates `fish_cleaned-data.rds` 
+  
+  - Script titles should be informative but succinct
+    - `data-product_thing-thats-being-done.R`
+  
+  - data files should be short and succinct and closely follow the name of the script which created it. 
+  
+## Plays well with default ordering
+
+Filenames should be chosen with the default ordering in mind:
+  - put something numeric first
+    
+  - left pad other numbers with zeros
+    
+  - Scripts should begin with a number (`01_`, `02_`, etc.)
+      
+    - use the ISO 8601 standard for dates
+      
+      - YYYY-MM-DD
+
+  - Use `_` to separate parts of filenames and `-` to keep metadata together
+  
+  - “_” underscore used to delimit units of meta-data I want later
+
+    - “-” hyphen used to delimit words so my eyes don’t bleed
+  
+    - i.e., `ARIK_temperature_2012-2018.csv`
+    
+    - Can easily separate `ARIK`, `temperature`, and keep `2012-2018` together.
+    
+## Folder descriptions
+
+`data` This subdirectory will contain two folders: `raw_data` and `derived_data`, both of which are explained below. 
+
+`raw_data` this folder will contain scripts to download and clean the raw data directly from NEON. In addition, this will be where the cleaned .rds data will be stored. Subfolders will be used as needed for organization, i.e., `fish`, `temperature`, etc. Finally, the `raw_data` folder will contain scripts (not in a subdirectory) wich will join all the datasets together for analysis and export it to the `derived_data` folder. Make sure to name the `combine.R` scripts with a descriptive title which also matches the data product written. For example: `combine_mean-annual-data.R` will summarize the data to make one estimate for mean annual temperature and productivity and will save a data product called `mean-annual-data.rds`. Likewise a `combine_annual-data.R` and `annual-data.rds` will be made for summarizing data across years. Further scripts/data products can be made for seasonal or degree day analysis as needed. 
+
+`derived_data/` This folder will only contain combined .rds files which will be used for analysis. For example, `mean-annual-data.rds`, `annual-data.rds`. the `derived_data/` folder also represents the first major checkpoint in the workflow. Everything above (upstream) this is necessary to obtain and wrangle the data. Below (downstream) of this is the analysis and write up.  
+
+`code` this folder will contain to subdirectories: `custom_functions/` and `models/`. 
+
+`custom_functions/` This folder will contain any custom functions written for the project. each script should only contain one function, and the script title and function name should match. For example: `LW_coef.R` makes the function called `LW_coef()` and is used to add length weight coefficients to macroinvertebrate data
+
+`models/` this folder will contain scripts necessary for performing statistical analyses. Generally, there will be paired stan and R scripts for each analysis. There will also have a subbfolder called `model_fits/` which will contain the .rds data files that are produced. Analysis script titles should be succinct and informative and match the data files that they produce. 
+
+`model_fits/` this folder will only contain .rds files that are produced in the analysis scripts found in the `models/` folder. This is the second major checkpoint in the workflow. Everything downstream of this will be necessary for the writing of individual manuscripts. 
+
+`manuscript/` folder will contain a subdirectory for each manuscript that comes out of this project. Each manuscript folder will be further subdivided into a `figures/` and `tables/` subfolder. 
+
+`figures/` and `tables/` folders will contain the scripts to produce figures and tables as well as the figure and table end results. 
+
