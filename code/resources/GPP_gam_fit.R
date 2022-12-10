@@ -1,5 +1,7 @@
 ## to do 
-
+# Confirm and clean status of a few streams
+# add in units and confirm
+# finalize workflow
 rm(list = ls())
 source("./code/resources/01_load-packages.R")
 
@@ -84,8 +86,6 @@ for(i in 1:length(brm_gpp_fit)){
  }
  plot(conditional_effects(brm_gpp_fit[[13]]), points = T)
 
-
-
 gpp_means = gpp_conditionals %>%
    rename(siteID = 'model') %>% 
    mutate(.epred = .epred*100) %>% 
@@ -101,6 +101,7 @@ gpp_means = gpp_conditionals %>%
    summarize(mean = mean(total_gpp),
              sd = sd(total_gpp))
 
+saveRDS(file = "./data/derived_data/gpp_means.rds")
 
 library(janitor)
 library(readr)
