@@ -1,3 +1,5 @@
+## to do 
+
 rm(list = ls())
 source("./code/resources/01_load-packages.R")
 
@@ -29,15 +31,16 @@ gppFull = mleModels %>% ungroup %>%
          mean_jday = mean(jday),  
          jday_c_100 = (jday - mean_jday)/100,
          # gpp_c_100 = (GPP - median_GPP)/100,
-         gpp_c = scale(GPP, center = TRUE, scale = TRUE),
+         # gpp_c = scale(GPP, center = TRUE, scale = TRUE),
+         gpp_100 = GPP/100,
          year = lubridate::year(date),
          year_f = as.factor(year)) %>%
   dplyr::select(siteID, date, year_f, jday_c_100, gpp_c)
 
 
 gppFull %>% ggplot+
-  geom_point(aes(x = jday_c_100, y = gpp_c_100, color = siteID)) +
-  geom_smooth(aes(x = jday_c_100, y =  gpp_c_100, color = siteID, group = year_f), method = 'loess', span = 0.5, se=F)+
+  geom_point(aes(x = jday_c_100, y = gpp_100, color = siteID)) +
+  geom_smooth(aes(x = jday_c_100, y =  gpp_100, color = siteID, group = year_f), method = 'loess', span = 0.5, se=F)+
   viridis::scale_color_viridis(discrete = TRUE)+
   facet_wrap(~siteID, scales = 'free_y')+
   theme(legend.position = 'none')
@@ -46,9 +49,9 @@ library(brms)
 
 gpp_c_split = split(gppFull, f = gppFull$siteID)
 
-brm_gpp <- brm_multiple(gpp_c ~ 
+brm_gpp_fit <- brm_multiple(gpp_100 ~ 
                   s(jday_c_100) + (1|year_f),
-                family = gaussian(),
+                family = Gamma(link = "log"),
                 data = gpp_c_split,
                 prior = 
                   c(prior(normal(0, 2),
@@ -59,21 +62,45 @@ brm_gpp <- brm_multiple(gpp_c ~
                           class = "sds"),
                     prior(exponential(1),
                           class = "sd")),
-                iter = 500, chains = 1, combine = FALSE, 
+                iter = 1000, chains = 2, combine = FALSE, 
                 backend = 'cmdstanr')
 
 saveRDS(brm_gpp, "./data/derived_data/brm_gpp_fit.rds")
 
-# plot(conditional_effects(brm_gpp, effects = "jdate:siteID", re_formula = NULL),
-#      points = T)
+##
+gpp_conditionals <- NULL
+brm_gpp_fit <- setNames(brm_gpp_fit, nm = names(gpp_c_split))
+for(i in 1:length(brm_gpp_fit)){
+   # brm_gpp_fit[[i]]$data %>%
+     # distinct(tibble) %>%
+     tibble(jday_c_100 = 1:365) %>%
+     tidybayes::add_epred_draws(brm_gpp_fit[[i]],
+                               re_formula = NA,
+                               ndraws = 500) %>%
+     mutate(model = names(brm_gpp_fit)[i]) %>%
+     bind_rows() -> posts_tidy
+   gpp_conditionals <- rbind(gpp_conditionals, posts_tidy)
+                                  
+ }
+ plot(conditional_effects(brm_gpp_fit[[13]]), points = T)
 
-# extract posterior on each sample date
-
-brm_gpp <- setNames(brm_gpp, nm = names(gpp_c_split))
 
 
+gpp_means = gpp_conditionals %>%
+   rename(siteID = 'model') %>% 
+   mutate(.epred = .epred*100) %>% 
+   left_join(gppFull %>% group_by(siteID) %>% 
+             mutate(day_min = min(jday_c_100),
+                   day_max = max(jday_c_100)) %>% 
+             distinct(siteID, day_min, day_max)) %>% 
+   mutate(.epred = case_when(jday_c_100 < day_min ~ 0,
+                             jday_c_100 > day_max ~ 0,
+                             TRUE ~ .epred)) %>% 
+   group_by(siteID, .draw) %>% 
+   summarize(total_gpp = sum(.epred)) %>% 
+   summarize(mean = mean(total_gpp),
+             sd = sd(total_gpp))
 
-list_of_data <- conditional_effects(fit, effects = "jdate:siteID", re_formula = NULL)[[1]]
 
 library(janitor)
 library(readr)
