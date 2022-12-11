@@ -1,27 +1,47 @@
 # HOPB metabolism script
 source("./code/resources/01_load-packages.R")
-
+# debugonce(clean_DO)
+HOPB_DO = clean_DO(siteCode ='HOPB')
+clean_temp(siteCode = 'HOPB', return = FALSE)
+HOPB_clean_DO = readRDS(file = "./ignore/site-gpp-data/HOPB_clean_DO.rds")
+HOPB_clean_temp = readRDS(file = "./ignore/site-gpp-data/HOPB_clean_temp.rds")
 # latlong = read_csv(file = "./data/site_latlong.csv")
-# debugonce(get_site_data)
+debugonce(get_site_data)
 HOPB_met = get_site_data(siteCode = "HOPB")
 
 # remove some data points above 25 which are anomolous
 
-HOPB_met = clean_met_data(HOPB_met)
+HOPB_met_clean = clean_met_data(HOPB_met)
 # Quick plot to check out the data series
 
-HOPB_met %>% 
-  dplyr::filter(!is.na(solar.time)) %>%
+HOPB_met_clean %>% 
+  # dplyr::filter(!is.na(solar.time)) %>%
   dplyr::filter(!as.logical(outQF)) %>%
   ggplot()+
   geom_line(aes(x = solar.time, y = DO.obs))+
   theme_minimal()
 
+plot_site("HOPB")
+
 HOPB_met %>%
   filter(lubridate::year(solar.time) %in% c(2018,2019)) %>%
   saveRDS("./ignore/site-gpp-data/clean-met-files/HOPB_met.rds")
 
-
+HOPB_met_clean %>%
+  dplyr::filter(lubridate::year(solar.time) == 2018) %>%
+  saveRDS("./data/derived_data/clean-met-files/HOPB2018_met.rds")
+HOPB_met_clean %>%
+  dplyr::filter(lubridate::year(solar.time) == 2019) %>%
+  saveRDS("./data/derived_data/clean-met-files/HOPB2019_met.rds")
+HOPB_met_clean %>%
+  dplyr::filter(lubridate::year(solar.time) == 2020)%>%
+  saveRDS("./data/derived_data/clean-met-files/HOPB2020_met.rds")
+HOPB_met_clean %>%
+  dplyr::filter(lubridate::year(solar.time) == 2021)%>%
+  saveRDS("./data/derived_data/clean-met-files/HOPB2021_met.rds")
+HOPB_met_clean %>%
+  dplyr::filter(lubridate::year(solar.time) == 2022)%>%
+  saveRDS("./data/derived_data/clean-met-files/HOPB2022_met.rds")
 
 # HOPB test 
 

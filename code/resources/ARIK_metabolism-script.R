@@ -1,20 +1,87 @@
 # ARIK metabolism script
 source("./code/resources/01_load-packages.R")
-# debugonce(get_site_data)
-ARIK_met_full = get_site_data(siteCode = "ARIK")
+theme_set(theme_minimal())
+# debugonce(clean_DO)
+# ARIK_DO = clean_DO(siteCode ='ARIK')
+# debugonce(clean_temp)
+# clean_temp(siteCode = 'ARIK', return = FALSE)
+ARIK_clean_temp = readRDS(file = "./ignore/site-gpp-data/ARIK_clean_temp.rds")
+ARIK_clean_DO = readRDS("./ignore/site-gpp-data/ARIK_clean_DO.rds")
+plot(ts(ARIK_clean_DO$DO_102))
+plot(ts(ARIK_clean_temp$temp_102))
+rstudioapi::jobRunScript(
+  path = "./ignore/metab-models/ARIK_doLM.R",
+  name = "ARIK LM",
+  workingDir = getwd(),
+  importEnv = FALSE,
+  exportEnv = FALSE
+)
+rstudioapi::jobRunScript(
+  path = "./ignore/metab-models/ARIK_tempLM.R",
+  name = "ARIK tempLM",
+  workingDir = getwd(),
+  importEnv = FALSE,
+  exportEnv = FALSE
+)
 
+ARIK_tempLM = readRDS(file = "./ignore/metab-models/ARIK_tempLM.rds")
+ARIK_clean_temp = ARIK_clean_temp %>%
+  cbind(.,predict(ARIK_tempLM,
+                  .,
+                  se.fit = FALSE,
+                  type = 'response'))
+
+rstudioapi::jobRunScript(
+  path = "./ignore/metab-models/ARIK_metModel.R",
+  name = "ARIK metMM",
+  workingDir = getwd(),
+  importEnv = FALSE,
+  exportEnv = FALSE
+)
+
+ARIK_full_mle = readRDS("./ignore/metab-models/ARIK_full_mle.rds")
+
+
+ARIK_mle_params = get_params(ARIK_full_mle, uncertainty = 'ci') %>%
+  dplyr::mutate(GPP.daily = case_when(GPP.daily < 0 ~ 0,
+                                      GPP.daily > 72 ~ NA_real_,
+                                      TRUE ~ GPP.daily))
+
+ARIK_mle_params %>%
+  ggplot()+geom_line(aes(x = date, y = GPP.daily), color = 'green')
+
+
+
+
+
+plot_met_series(ARIK_met_full)
 # remove some data points above 25 which are anomolous
-# debugonce(clean_met_data)
-ARIK_met_clean = clean_met_data(ARIK_met_full)
+debugonce(clean_met_data)
+ARIK_met_clean = clean_met_data(ARIK_met_full, doCutOff = 15)
 # Quick plot to check out the data series
 
 ARIK_met_clean %>% 
-  dplyr::filter(!is.na(solar.time)) %>%
-  # dplyr::filter(!as.logical(outQF)) %>%
+  # dplyr::filter(!is.na(solar.time)) %>%
+  dplyr::filter(!as.logical(outQF)) %>%
   # dplyr::filter(lubridate::year(solar.time) %in% c(2018,2019)) %>%
   ggplot()+
-  geom_line(aes(x = solar.time, y = DO.obs))+
+  geom_line(aes(x = solar.time, y = DO.obs, color = as.logical(outQF)))+
   theme_minimal()
+
+ARIK_met_clean %>%
+  dplyr::filter(lubridate::year(solar.time) == 2019) %>%
+  saveRDS("./data/derived_data/clean-met-files/ARIK2019_met.rds")
+ARIK_met_clean %>%
+  dplyr::filter(lubridate::year(solar.time) == 2020)%>%
+  saveRDS("./data/derived_data/clean-met-files/ARIK2020_met.rds")
+
+ARIK_met_clean %>%
+  dplyr::filter(lubridate::year(solar.time) == 2021)%>%
+  saveRDS("./data/derived_data/clean-met-files/ARIK2021_met.rds")
+
+ARIK_met_clean %>%
+  dplyr::filter(lubridate::year(solar.time) == 2022)%>%
+  saveRDS("./data/derived_data/clean-met-files/ARIK2022_met.rds")
 
 plot_site("ARIK")
 
@@ -25,7 +92,13 @@ ARIK_met %>%
   saveRDS("./data/derived/clean-met-files/ARIK_met.rds")
 
 
-
+rstudioapi::jobRunScript(
+  path = "./ignore/metab-models/ARIK_metModel.R",
+  name = "ARIK metMM",
+  workingDir = getwd(),
+  importEnv = FALSE,
+  exportEnv = FALSE
+)
 ## run a quick version of the 
 bayes_name <- mm_name(type='bayes', pool_K600='binned', err_obs_iid=TRUE,
                       err_proc_iid=FALSE, err_proc_GPP = TRUE, ode_method = "trapezoid")

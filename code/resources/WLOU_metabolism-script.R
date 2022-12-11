@@ -1,29 +1,52 @@
 # WLOU metabolism script
 source("./code/resources/01_load-packages.R")
+
+WLOU_DO = clean_DO(siteCode ='WLOU')
+clean_temp(siteCode = 'WLOU', return = FALSE)
+WLOU_clean_temp = readRDS(file = "./ignore/site-gpp-data/WLOU_clean_temp.rds")
+
 # debugonce(get_site_data)
 WLOU_met = get_site_data(siteCode = "WLOU")
 
 # remove some data points above 25 which are anomolous
 # debugonce(clean_met_data)
-WLOU_met = clean_met_data(WLOU_met)
+WLOU_met_clean = clean_met_data(WLOU_met)
 # Quick plot to check out the data series
 # tz = attr(WLOU_met$solar.time,"tzone")
 
-WLOU_met %>% 
-  dplyr::filter(!is.na(solar.time)) %>%
-  dplyr::filter(!as.logical(outQF)) %>%
+WLOU_met_clean %>% 
+  # dplyr::filter(!as.logical(outQF)) %>%
   # dplyr::filter(lubridate::year(solar.time) %in% c(2018,2019)) %>%
   ggplot()+
-  geom_line(aes(x = solar.time, y = DO.obs))+
+  geom_line(aes(x = solar.time, y = DO.obs, color = as.logical(outQF)))+
   theme_minimal()
 
 WLOU_met %>% 
   dplyr::filter(!is.na(solar.time)) %>%
   dplyr::filter(!as.logical(outQF)) %>%
-  dplyr::filter(lubridate::year(solar.time) %in% c(2018,2019)) %>%
+  # dplyr::filter(lubridate::year(solar.time) %in% c(2018,2019)) %>%
   saveRDS("./ignore/site-gpp-data/clean-met-files/WLOU_met.rds")
 
-
+WLOU_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2018) %>%
+  saveRDS("./data/derived_data/clean-met-files/WLOU2018_met.rds")
+WLOU_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2019) %>%
+  saveRDS("./data/derived_data/clean-met-files/WLOU2019_met.rds")
+WLOU_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2020)%>%
+  saveRDS("./data/derived_data/clean-met-files/WLOU2020_met.rds")
+WLOU_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2021)%>%
+  saveRDS("./data/derived_data/clean-met-files/WLOU2021_met.rds")
+WLOU_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2022)%>%
+  saveRDS("./data/derived_data/clean-met-files/WLOU2022_met.rds")
 # WLOU test 
 tz(WLOU_met$solar.time)
 

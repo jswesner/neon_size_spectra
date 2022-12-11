@@ -29,7 +29,9 @@ dpList = list(temperature = c("DP1.20053.001","DP1.00002.001"), # surface water 
                              "DP4.00130.001", # discharge
                              "DP1.20016.001", # depth/water surface height
                              "DP1.20053.001", # water temperature
-                             "DP1.20190.001") # rearation
+                             "DP1.20190.001", # rearation
+                             "DP1.20166.001", # epilithon
+                             "DP1.20191.001") # canopy cover
 )
 if(products == 'all'){
   dps = unname(unlist(dpList))

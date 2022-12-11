@@ -1,4 +1,9 @@
 source("./code/resources/01_load-packages.R")
+# debugonce(clean_DO)
+BLDE_DO = clean_DO(siteCode ='BLDE')
+clean_temp(siteCode = 'BLDE', return = FALSE)
+BLDE_clean_temp = readRDS(file = "./ignore/site-gpp-data/BLDE_clean_temp.rds")
+
 # debugonce(get_site_data)# CUPE metabolism script
 BLDE_met_full = get_site_data(siteCode = "BLDE")
 
@@ -7,28 +12,49 @@ BLDE_met_full = get_site_data(siteCode = "BLDE")
 BLDE_met_clean = clean_met_data(BLDE_met_full)
 # Quick plot to check out the data series
 BLDE_met_clean %>% 
-  dplyr::filter(!is.na(solar.time)) %>%
+  # dplyr::filter(!is.na(solar.time)) %>%
   dplyr::filter(!as.logical(outQF)) %>%
   ggplot()+
-  geom_line(aes(x = solar.time, y = DO.pctsat))+
+  geom_line(aes(x = solar.time, y = temp.water))+
   theme_minimal()
 
 plot_site("BLDE")
 
+rstudioapi::jobRunScript(
+  path = "./ignore/metab-models/BLDE_metModel.R",
+  name = "BLDE metMM",
+  workingDir = getwd(),
+  importEnv = FALSE,
+  exportEnv = FALSE
+)
 
-BLDE_met_clean %>% 
-  dplyr::filter(!is.na(solar.time)) %>%
-  dplyr::filter(!as.logical(outQF)) %>%
-  dplyr::filter(between(solar.time, as.POSIXct("2018-08-01 00:00:00"), as.POSIXct("2020-06-30 00:00:00")) | solar.time >= as.POSIXct("2021-05-01 00:00:00")) %>%
-  saveRDS("./data/derived_data/clean-met-files/BLDE_met.rds")
-
-
-
-
-
+BLDE_full_mle = readRDS("./ignore/metab-models/BLDE_full_mle.rds")
 
 
+BLDE_mle_params = get_params(BLDE_full_mle, uncertainty = 'ci') %>%
+  dplyr::mutate(GPP.daily = case_when(GPP.daily < 0 ~ 0,
+                                      GPP.daily > 72 ~ NA_real_,
+                                      TRUE ~ GPP.daily))
 
+BLDE_mle_params %>%
+  ggplot()+geom_line(aes(x = date, y = GPP.daily), color = 'green')
+
+
+
+BLDE_met2019 = BLDE_met_clean %>%
+  dplyr::filter(lubridate::year(solar.time) == 2019) %>%
+  saveRDS("./data/derived_data/clean-met-files/BLDE2019_met.rds")
+BLDE_met2020 = BLDE_met_clean %>%
+  dplyr::filter(lubridate::year(solar.time) == 2020)%>%
+  saveRDS("./data/derived_data/clean-met-files/BLDE2020_met.rds")
+
+BLDE_met2021 = BLDE_met_clean %>%
+  dplyr::filter(lubridate::year(solar.time) == 2021)%>%
+  saveRDS("./data/derived_data/clean-met-files/BLDE2021_met.rds")
+
+BLDE_met2022 = BLDE_met_clean %>%
+  dplyr::filter(lubridate::year(solar.time) == 2022)%>%
+  saveRDS("./data/derived_data/clean-met-files/BLDE2022_met.rds")
 
 #Basic StreamPULSE data processing pipeline
 #Updated 2020-05-11

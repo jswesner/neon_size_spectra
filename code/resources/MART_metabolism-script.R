@@ -1,21 +1,27 @@
 # MART metabolism script
 source("./code/resources/01_load-packages.R")
+# debugonce(clean_DO)
+MART_DO = clean_DO(siteCode ='MART')
+clean_temp(siteCode = 'MART', return = FALSE)
+MART_clean_temp = readRDS(file = "./ignore/site-gpp-data/MART_clean_temp.rds")
+
 # debugonce(get_site_data)
 MART_met = get_site_data(siteCode = "MART")
 
 # remove some data points above 25 which are anomolous
 # debugonce(clean_met_data)
-MART_met = clean_met_data(MART_met)
+MART_met_clean = clean_met_data(MART_met)
 # Quick plot to check out the data series
 # tz = attr(MART_met$solar.time,"tzone")
 
-MART_met %>% 
-  dplyr::filter(!is.na(solar.time)) %>%
-  dplyr::filter(!as.logical(outQF)) %>%
+MART_met_clean %>% 
+  # dplyr::filter(!is.na(solar.time)) %>%
+  # dplyr::filter(!as.logical(outQF)) %>%
   # dplyr::filter(lubridate::year(solar.time) %in% c(2018,2019)) %>%
   ggplot()+
-  geom_line(aes(x = solar.time, y = DO.obs))+
+  geom_line(aes(x = solar.time, y = DO.obs, color = as.logical(outQF)))+
   theme_minimal()
+plot_site("MART")
 
 MART_met %>% 
   dplyr::filter(!is.na(solar.time)) %>%
@@ -24,8 +30,26 @@ MART_met %>%
   saveRDS("./ignore/site-gpp-data/clean-met-files/MART_met.rds")
 
 
-# MART test 
-tz(MART_met$solar.time)
+MART_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2018) %>%
+  saveRDS("./data/derived_data/clean-met-files/MART2018_met.rds")
+MART_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2019) %>%
+  saveRDS("./data/derived_data/clean-met-files/MART2019_met.rds")
+MART_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2020)%>%
+  saveRDS("./data/derived_data/clean-met-files/MART2020_met.rds")
+MART_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2021)%>%
+  saveRDS("./data/derived_data/clean-met-files/MART2021_met.rds")
+MART_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2022)%>%
+  saveRDS("./data/derived_data/clean-met-files/MART2022_met.rds")
 
 
 MART_test = MART_met %>%

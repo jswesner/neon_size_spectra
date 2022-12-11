@@ -1,29 +1,54 @@
 # PRIN metabolism script
 source("./code/resources/01_load-packages.R")
+# debugonce(clean_DO)
+PRIN_DO = clean_DO(siteCode ='PRIN')
+clean_temp(siteCode = 'PRIN', return = FALSE)
+PRIN_clean_temp = readRDS(file = "./ignore/site-gpp-data/PRIN_clean_temp.rds")
+
 # debugonce(get_site_data)
 PRIN_met = get_site_data(siteCode = "PRIN")
 
 # remove some data points above 25 which are anomolous
 # debugonce(clean_met_data)
-PRIN_met = clean_met_data(PRIN_met)
+PRIN_met_clean = clean_met_data(PRIN_met, doPctCutoff = c(0,NA))
 # Quick plot to check out the data series
 # tz = attr(PRIN_met$solar.time,"tzone")
 
-PRIN_met %>% 
-  dplyr::filter(!is.na(solar.time)) %>%
-  dplyr::filter(!as.logical(outQF)) %>%
+PRIN_met_clean %>% 
+  # dplyr::filter(!is.na(solar.time)) %>%
+  # dplyr::filter(!as.logical(outQF)) %>%
   # dplyr::filter(lubridate::year(solar.time) %in% c(2018,2019)) %>%
   ggplot()+
-  geom_line(aes(x = solar.time, y = DO.obs))+
+  geom_line(aes(x = solar.time, y = DO.obs, color = as.logical(outQF)))+
   theme_minimal()
 
 PRIN_met %>% 
   dplyr::filter(!is.na(solar.time)) %>%
   dplyr::filter(!as.logical(outQF)) %>%
-  dplyr::filter(lubridate::year(solar.time) %in% c(2019,2020)) %>%
+  # dplyr::filter(lubridate::year(solar.time) %in% c(2019,2020)) %>%
   saveRDS("./ignore/site-gpp-data/clean-met-files/PRIN_met.rds")
+plot_site('PRIN')
 
-
+PRIN_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2018) %>%
+  saveRDS("./data/derived_data/clean-met-files/PRIN2018_met.rds")
+PRIN_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2019) %>%
+  saveRDS("./data/derived_data/clean-met-files/PRIN2019_met.rds")
+PRIN_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2020)%>%
+  saveRDS("./data/derived_data/clean-met-files/PRIN2020_met.rds")
+PRIN_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2021)%>%
+  saveRDS("./data/derived_data/clean-met-files/PRIN2021_met.rds")
+PRIN_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2022)%>%
+  saveRDS("./data/derived_data/clean-met-files/PRIN2022_met.rds")
 # PRIN test 
 tz(PRIN_met$solar.time)
 

@@ -1,26 +1,59 @@
 # CUPE metabolism script
 source("./code/resources/01_load-packages.R")
+# debugonce(clean_DO)
+CUPE_DO = clean_DO(siteCode ='CUPE')
+clean_temp(siteCode = 'CUPE', return = FALSE)
+CUPE_clean_temp = readRDS(file = "./ignore/site-gpp-data/CUPE_clean_temp.rds")
+
 # debugonce(get_site_data)
 CUPE_met = get_site_data(siteCode = "CUPE")
 
 # remove some data points above 25 which are anomolous
 # debugonce(clean_met_data)
-CUPE_met = clean_met_data(CUPE_met)
+CUPE_met_clean = clean_met_data(CUPE_met)
 # Quick plot to check out the data series
-CUPE_met %>% 
-  dplyr::filter(!is.na(solar.time)) %>%
+CUPE_met_clean %>% 
+  # dplyr::filter(!is.na(solar.time)) %>%
   dplyr::filter(!as.logical(outQF)) %>%
-  dplyr::filter(between(solar.time, as.POSIXct("2018-08-01 00:00:00"), as.POSIXct("2020-01-01 00:00:00"))) %>%
+  # dplyr::filter(between(solar.time, as.POSIXct("2018-01-01 00:00:00"), as.POSIXct("2019-01-01 00:00:00"))) %>%
+  # dplyr::mutate(DO.obs = case_when(all(solar.time > as.POSIXct("2018-07-01 00:00:00"), solar.time < as.POSIXct("2018-10-01 00:00:00"), DO.obs <8.5) ~ NA,
+  #                                  TRUE ~ DO.obs)) %>%
   ggplot()+
-  geom_line(aes(x = solar.time, y = DO.pctsat))+
+  geom_line(aes(x = solar.time, y = DO.obs))+
   theme_minimal()
 
+plot_site("CUPE")
 
 CUPE_met %>% 
   dplyr::filter(!is.na(solar.time)) %>%
   dplyr::filter(!as.logical(outQF)) %>%
   dplyr::filter(between(solar.time, as.POSIXct("2018-08-01 00:00:00"), as.POSIXct("2020-01-01 00:00:00"))) %>%
   saveRDS("./ignore/site-gpp-data/clean-met-files/CUPE_met.rds")
+
+CUPE_met_clean %>%
+  dplyr::filter(lubridate::year(solar.time) == 2018) %>%
+  dplyr::mutate(DO.obs = case_when(all(between(solar.time, as.POSIXct("2018-07-01 00:00:00"),as.POSIXct("2018-09-01 00:00:00")) & DO.obs > 8.5) ~ NA,
+                                           TRUE ~ DO.obs)) %>%
+  saveRDS("./data/derived_data/clean-met-files/CUPE2018_met.rds")
+
+CUPE_met_clean %>%
+  dplyr::filter(lubridate::year(solar.time) == 2019) %>%
+  saveRDS("./data/derived_data/clean-met-files/CUPE2019_met.rds")
+CUPE_met_clean %>%
+  dplyr::filter(lubridate::year(solar.time) == 2020)%>%
+  saveRDS("./data/derived_data/clean-met-files/CUPE2020_met.rds")
+
+CUPE_met_clean %>%
+  dplyr::filter(lubridate::year(solar.time) == 2021)%>%
+  saveRDS("./data/derived_data/clean-met-files/CUPE2021_met.rds")
+
+CUPE_met_clean %>%
+  dplyr::filter(lubridate::year(solar.time) == 2022)%>%
+  saveRDS("./data/derived_data/clean-met-files/CUPE2022_met.rds")
+
+
+
+
 
 # CUPE test 
 tz(CUPE_met$solar.time)
