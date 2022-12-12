@@ -22,6 +22,9 @@ stream_sites <- readRDS("data/raw_data/streams.rds")
 
 # these are large files, and may take a while to fully download dependent on web traffic and connection speed. 
 
+# 2022-12-12: not sure when the last time this download script was ran (maybe sometime in 2021?)
+# When I ran it again today (2022-12-12) there were more samples. My best guess is that not all of the collections from 2021 were on NEON data portal yet, but they are now. There were only 1-3 more samples per site, which would make sense if the 2021 data has been updated since the last download.  
+
 # download all macroinvertebrate colllection data from January 2016 to December 2021
 macro <- loadByProduct(dpID = "DP1.20120.001",
                        site = stream_sites, 
