@@ -1,20 +1,25 @@
 # POSE metabolism script
 source("./code/resources/01_load-packages.R")
+# debugonce(clean_DO)
+POSE_DO = clean_DO(siteCode ='POSE')
+clean_temp(siteCode = 'POSE', return = FALSE)
+POSE_clean_temp = readRDS(file = "./ignore/site-gpp-data/POSE_clean_temp.rds")
+
 # debugonce(get_site_data)
 POSE_met = get_site_data(siteCode = "POSE")
-
+plot_site('POSE')
 # remove some data points above 25 which are anomolous
 # debugonce(clean_met_data)
-POSE_met = clean_met_data(POSE_met)
+POSE_met_clean = clean_met_data(POSE_met)
 # Quick plot to check out the data series
 # tz = attr(POSE_met$solar.time,"tzone")
 
-POSE_met %>% 
-  dplyr::filter(!is.na(solar.time)) %>%
+POSE_met_clean %>% 
+  # dplyr::filter(!is.na(solar.time)) %>%
   dplyr::filter(!as.logical(outQF)) %>%
   # dplyr::filter(lubridate::year(solar.time) %in% c(2018,2019)) %>%
   ggplot()+
-  geom_line(aes(x = solar.time, y = DO.obs))+
+  geom_line(aes(x = solar.time, y = DO.obs, color = as.logical(outQF)))+
   theme_minimal()
 
 POSE_met %>% 
@@ -23,7 +28,26 @@ POSE_met %>%
   dplyr::filter(lubridate::year(solar.time) %in% c(2019,2020)) %>%
   saveRDS("./ignore/site-gpp-data/clean-met-files/POSE_met.rds")
 
-
+POSE_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2018) %>%
+  saveRDS("./data/derived_data/clean-met-files/POSE2018_met.rds")
+POSE_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2019) %>%
+  saveRDS("./data/derived_data/clean-met-files/POSE2019_met.rds")
+POSE_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2020)%>%
+  saveRDS("./data/derived_data/clean-met-files/POSE2020_met.rds")
+POSE_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2021)%>%
+  saveRDS("./data/derived_data/clean-met-files/POSE2021_met.rds")
+POSE_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2022)%>%
+  saveRDS("./data/derived_data/clean-met-files/POSE2022_met.rds")
 # POSE test 
 tz(POSE_met$solar.time)
 

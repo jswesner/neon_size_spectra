@@ -1,20 +1,24 @@
 # REDB metabolism script
 source("./code/resources/01_load-packages.R")
+# debugonce(clean_DO)
+REDB_DO = clean_DO(siteCode ='REDB')
+clean_temp(siteCode = 'REDB', return = FALSE)
+REDB_clean_temp = readRDS(file = "./ignore/site-gpp-data/REDB_clean_temp.rds")
+REDB_clean_DO = readRDS(file = "./ignore/site-gpp-data/REDB_clean_DO.rds")
 # debugonce(get_site_data)
 REDB_met = get_site_data(siteCode = "REDB")
 
 # remove some data points above 25 which are anomolous
 # debugonce(clean_met_data)
-REDB_met = clean_met_data(REDB_met)
+REDB_met_clean = clean_met_data(REDB_met)
 # Quick plot to check out the data series
 # tz = attr(REDB_met$solar.time,"tzone")
 
-REDB_met %>% 
-  dplyr::filter(!is.na(solar.time)) %>%
-  dplyr::filter(!as.logical(outQF)) %>%
+REDB_met_clean %>% 
+  # dplyr::filter(!as.logical(outQF)) %>%
   # dplyr::filter(lubridate::year(solar.time) %in% c(2018,2019)) %>%
   ggplot()+
-  geom_line(aes(x = solar.time, y = DO.obs))+
+  geom_line(aes(x = solar.time, y = DO.obs, color = as.logical(outQF)))+
   theme_minimal()
 
 REDB_met %>% 
@@ -23,6 +27,26 @@ REDB_met %>%
   dplyr::filter(lubridate::year(solar.time) %in% c(2018,2019)) %>%
   saveRDS("./ignore/site-gpp-data/clean-met-files/REDB_met.rds")
 
+REDB_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2018) %>%
+  saveRDS("./data/derived_data/clean-met-files/REDB2018_met.rds")
+REDB_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2019) %>%
+  saveRDS("./data/derived_data/clean-met-files/REDB2019_met.rds")
+REDB_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2020)%>%
+  saveRDS("./data/derived_data/clean-met-files/REDB2020_met.rds")
+REDB_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2021)%>%
+  saveRDS("./data/derived_data/clean-met-files/REDB2021_met.rds")
+REDB_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2022)%>%
+  saveRDS("./data/derived_data/clean-met-files/REDB2022_met.rds")
 
 # REDB test 
 tz(REDB_met$solar.time)

@@ -1,29 +1,54 @@
 # MCRA metabolism script
 source("./code/resources/01_load-packages.R")
+debugonce(clean_DO)
+clean_DO(siteCode ='MCRA', doLims = c(12,25), return = FALSE)
+clean_temp(siteCode = 'MCRA', return = FALSE)
+MCRA_clean_temp = readRDS(file = "./ignore/site-gpp-data/MCRA_clean_temp.rds")
+
 # debugonce(get_site_data)
 MCRA_met = get_site_data(siteCode = "MCRA")
+plot_site('MCRA')
 
 # remove some data points above 25 which are anomolous
 # debugonce(clean_met_data)
-MCRA_met = clean_met_data(MCRA_met)
+MCRA_met_clean = clean_met_data(MCRA_met)
 # Quick plot to check out the data series
 # tz = attr(MCRA_met$solar.time,"tzone")
 
-MCRA_met %>% 
+MCRA_met_clean %>% 
   dplyr::filter(!is.na(solar.time)) %>%
-  dplyr::filter(!as.logical(outQF)) %>%
+  # dplyr::filter(!as.logical(outQF)) %>%
   # dplyr::filter(lubridate::year(solar.time) %in% c(2018,2019)) %>%
   ggplot()+
-  geom_line(aes(x = solar.time, y = DO.obs))+
+  geom_line(aes(x = solar.time, y = DO.obs, color = as.logical(outQF)))+
   theme_minimal()
 
 MCRA_met %>% 
   dplyr::filter(!is.na(solar.time)) %>%
   dplyr::filter(!as.logical(outQF)) %>%
-  dplyr::filter(lubridate::year(solar.time) %in% c(2018,2019)) %>%
+  # dplyr::filter(lubridate::year(solar.time) %in% c(2018,2019)) %>%
   saveRDS("./ignore/site-gpp-data/clean-met-files/MCRA_met.rds")
 
-
+MCRA_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2018) %>%
+  saveRDS("./data/derived_data/clean-met-files/MCRA2018_met.rds")
+MCRA_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2019) %>%
+  saveRDS("./data/derived_data/clean-met-files/MCRA2019_met.rds")
+MCRA_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2020)%>%
+  saveRDS("./data/derived_data/clean-met-files/MCRA2020_met.rds")
+MCRA_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2021)%>%
+  saveRDS("./data/derived_data/clean-met-files/MCRA2021_met.rds")
+MCRA_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2022)%>%
+  saveRDS("./data/derived_data/clean-met-files/MCRA2022_met.rds")
 # MCRA test 
 tz(MCRA_met$solar.time)
 

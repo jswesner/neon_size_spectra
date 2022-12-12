@@ -1,31 +1,53 @@
 # LEWI metabolism script
 source("./code/resources/01_load-packages.R")
+# debugonce(clean_DO)
+LEWI_DO = clean_DO(siteCode ='LEWI')
+clean_temp(siteCode = 'LEWI', return = FALSE)
+LEWI_clean_temp = readRDS(file = "./ignore/site-gpp-data/LEWI_clean_temp.rds")
+
 # debugonce(get_site_data)
 LEWI_met = get_site_data(siteCode = "LEWI")
 
 # remove some data points above 25 which are anomolous
 # debugonce(clean_met_data)
-LEWI_met = clean_met_data(LEWI_met)
+LEWI_met_clean = clean_met_data(LEWI_met)
 # Quick plot to check out the data series
 # tz = attr(LEWI_met$solar.time,"tzone")
 
-LEWI_met %>% 
-  dplyr::filter(!is.na(solar.time)) %>%
+LEWI_met_clean %>% 
+  # dplyr::filter(!is.na(solar.time)) %>%
   dplyr::filter(!as.logical(outQF)) %>%
-  dplyr::filter(lubridate::year(solar.time) %in% c(2018,2019)) %>%
+  # dplyr::filter(lubridate::year(solar.time) %in% c(2018,2019)) %>%
   ggplot()+
-  geom_line(aes(x = solar.time, y = DO.pctsat))+
+  geom_line(aes(x = solar.time, y = DO.obs, color = as.logical(outQF)))+
   theme_minimal()
+# 
+# LEWI_met %>% 
+#   dplyr::filter(!is.na(solar.time)) %>%
+#   dplyr::filter(!as.logical(outQF)) %>%
+#   dplyr::filter(lubridate::year(solar.time) %in% c(2018,2019)) %>%
+#   saveRDS("./ignore/site-gpp-data/clean-met-files/LEWI_met.rds")
 
-LEWI_met %>% 
-  dplyr::filter(!is.na(solar.time)) %>%
+LEWI_met_clean %>%
   dplyr::filter(!as.logical(outQF)) %>%
-  dplyr::filter(lubridate::year(solar.time) %in% c(2018,2019)) %>%
-  saveRDS("./ignore/site-gpp-data/clean-met-files/LEWI_met.rds")
-
-
-# LEWI test 
-tz(LEWI_met$solar.time)
+  dplyr::filter(lubridate::year(solar.time) == 2018) %>%
+  saveRDS("./data/derived_data/clean-met-files/LEWI2018_met.rds")
+LEWI_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2019) %>%
+  saveRDS("./data/derived_data/clean-met-files/LEWI2019_met.rds")
+LEWI_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2020)%>%
+  saveRDS("./data/derived_data/clean-met-files/LEWI2020_met.rds")
+LEWI_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2021)%>%
+  saveRDS("./data/derived_data/clean-met-files/LEWI2021_met.rds")
+LEWI_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2022)%>%
+  saveRDS("./data/derived_data/clean-met-files/LEWI2022_met.rds")
 
 
 LEWI_test = LEWI_met %>%

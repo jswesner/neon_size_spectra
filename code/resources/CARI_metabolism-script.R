@@ -1,6 +1,11 @@
 # CARI metabolism script
 source("./code/resources/01_load-packages.R")
-# debugonce(get_site_data)
+# debugonce(clean_DO)
+CARI_DO = clean_DO(siteCode ='CARI')
+clean_temp(siteCode = 'CARI', return = FALSE)
+CARI_clean_temp = readRDS(file = "./ignore/site-gpp-data/CARI_clean_temp.rds")
+
+debugonce(get_site_data)
 CARI_met = get_site_data(siteCode = "CARI")
 
 # remove some data points above 25 which are anomolous
@@ -10,7 +15,7 @@ CARI_met = clean_met_data(CARI_met)
 # tz = attr(CARI_met$solar.time,"tzone")
 
 CARI_met %>% 
-  dplyr::filter(!is.na(solar.time)) %>%
+  # dplyr::filter(!is.na(solar.time)) %>%
   dplyr::filter(!as.logical(outQF)) %>%
   # dplyr::filter(lubridate::year(solar.time) %in% c(2018,2019)) %>%
   ggplot()+

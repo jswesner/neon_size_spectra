@@ -1,20 +1,27 @@
 # MCDI metabolism script
 source("./code/resources/01_load-packages.R")
+# debugonce(clean_DO)
+MCDI_DO = clean_DO(siteCode ='MCDI')
+clean_temp(siteCode = 'MCDI', return = FALSE)
+MCDI_clean_temp = readRDS(file = "./ignore/site-gpp-data/MCDI_clean_temp.rds")
+
 # debugonce(get_site_data)
 MCDI_met = get_site_data(siteCode = "MCDI")
 
+plot_site('MCDI')
+
 # remove some data points above 25 which are anomolous
 # debugonce(clean_met_data)
-MCDI_met = clean_met_data(MCDI_met)
+MCDI_met_clean = clean_met_data(MCDI_met, doCutOff = 23, doPctCutoff = c(00,NA))
 # Quick plot to check out the data series
 # tz = attr(MCDI_met$solar.time,"tzone")
 
-MCDI_met %>% 
-  dplyr::filter(!is.na(solar.time)) %>%
-  dplyr::filter(!as.logical(outQF)) %>%
+MCDI_met_clean %>% 
+  # dplyr::filter(!is.na(solar.time)) %>%
+  # dplyr::filter(!as.logical(outQF)) %>%
   # dplyr::filter(lubridate::year(solar.time) %in% c(2018,2019)) %>%
   ggplot()+
-  geom_line(aes(x = solar.time, y = DO.obs))+
+  geom_line(aes(x = solar.time, y = DO.obs, color = as.logical(outQF)))+
   theme_minimal()
 
 MCDI_met %>% 
@@ -22,6 +29,28 @@ MCDI_met %>%
   dplyr::filter(!as.logical(outQF)) %>%
   dplyr::filter(lubridate::year(solar.time) %in% c(2019,2020)) %>%
   saveRDS("./ignore/site-gpp-data/clean-met-files/MCDI_met.rds")
+
+
+MCDI_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2018) %>%
+  saveRDS("./data/derived_data/clean-met-files/MCDI2018_met.rds")
+MCDI_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2019) %>%
+  saveRDS("./data/derived_data/clean-met-files/MCDI2019_met.rds")
+MCDI_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2020)%>%
+  saveRDS("./data/derived_data/clean-met-files/MCDI2020_met.rds")
+MCDI_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2021)%>%
+  saveRDS("./data/derived_data/clean-met-files/MCDI2021_met.rds")
+MCDI_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2022)%>%
+  saveRDS("./data/derived_data/clean-met-files/MCDI2022_met.rds")
 
 
 # MCDI test 
