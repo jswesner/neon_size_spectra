@@ -62,11 +62,11 @@ neon_size_spectra/
       |─── mean-annual_analysis.R
       |─── annual_analysis.stan
       |─── annual_analysis.R
-      |─── model_fits/
+      |─── model-fits/
         |─── mean-annual_fit.rds
         |─── annual_fit.rds
   |─── manuscript/
-    |─── temp_gpp_isd/
+    |─── isd-temp-gpp/
       |─── figures/
         |─── 01_make-figures.R
         |─── 02_make-SI-figures.R
