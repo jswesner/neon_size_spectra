@@ -1,6 +1,11 @@
 # COMO metabolism script
 source("./code/resources/01_load-packages.R")
-debugonce(get_site_data)
+debugonce(clean_DO)
+COMO_DO = clean_DO(siteCode ='COMO')
+clean_temp(siteCode = 'COMO', return = FALSE)
+COMO_clean_temp = readRDS(file = "./ignore/site-gpp-data/COMO_clean_temp.rds")
+
+# debugonce(get_site_data)
 COMO_met = get_site_data(siteCode = "COMO")
 
 # remove some data points above 25 which are anomolous
@@ -10,7 +15,7 @@ COMO_met = clean_met_data(COMO_met)
 # tz = attr(COMO_met$solar.time,"tzone")
 
 COMO_met %>% 
-  dplyr::filter(!is.na(solar.time)) %>%
+  # dplyr::filter(!is.na(solar.time)) %>%
   dplyr::filter(!as.logical(outQF)) %>%
   # dplyr::filter(lubridate::year(solar.time) %in% c(2018,2019)) %>%
   ggplot()+

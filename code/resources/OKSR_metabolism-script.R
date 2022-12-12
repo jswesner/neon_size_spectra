@@ -1,20 +1,25 @@
 # OKSR metabolism script
 source("./code/resources/01_load-packages.R")
+# debugonce(clean_DO)
+clean_DO(siteCode ='OKSR', doLims = c(7.5,25), return = FALSE)
+clean_temp(siteCode = 'OKSR', return = FALSE)
+OKSR_clean_temp = readRDS(file = "./ignore/site-gpp-data/OKSR_clean_temp.rds")
+
 # debugonce(get_site_data)
 OKSR_met = get_site_data(siteCode = "OKSR")
-
+plot_site('OKSR')
 # remove some data points above 25 which are anomolous
 # debugonce(clean_met_data)
-OKSR_met = clean_met_data(OKSR_met)
+OKSR_met_clean = clean_met_data(OKSR_met)
 # Quick plot to check out the data series
 # tz = attr(OKSR_met$solar.time,"tzone")
 
 OKSR_met %>% 
-  dplyr::filter(!is.na(solar.time)) %>%
-  dplyr::filter(!as.logical(outQF)) %>%
+  # dplyr::filter(!is.na(solar.time)) %>%
+  # dplyr::filter(!as.logical(outQF)) %>%
   # dplyr::filter(lubridate::year(solar.time) %in% c(2018,2019)) %>%
   ggplot()+
-  geom_line(aes(x = solar.time, y = DO.obs))+
+  geom_line(aes(x = solar.time, y = DO.obs, color = as.logical(outQF)))+
   theme_minimal()
 
 OKSR_met %>% 
@@ -23,6 +28,27 @@ OKSR_met %>%
   dplyr::filter(lubridate::year(solar.time) %in% c(2019,2020)) %>%
   saveRDS("./ignore/site-gpp-data/clean-met-files/OKSR_met.rds")
 
+
+OKSR_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2018) %>%
+  saveRDS("./data/derived_data/clean-met-files/OKSR2018_met.rds")
+OKSR_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2019) %>%
+  saveRDS("./data/derived_data/clean-met-files/OKSR2019_met.rds")
+OKSR_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2020)%>%
+  saveRDS("./data/derived_data/clean-met-files/OKSR2020_met.rds")
+OKSR_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2021)%>%
+  saveRDS("./data/derived_data/clean-met-files/OKSR2021_met.rds")
+OKSR_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2022)%>%
+  saveRDS("./data/derived_data/clean-met-files/OKSR2022_met.rds")
 
 # OKSR test 
 tz(OKSR_met$solar.time)

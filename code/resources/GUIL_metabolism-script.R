@@ -1,28 +1,54 @@
 # GUIL metabolism script
 source("./code/resources/01_load-packages.R")
-# debugonce(get_site_data)
+# debugonce(clean_DO)
+# GUIL_DO = clean_DO(siteCode ='GUIL')
+clean_temp(siteCode = 'GUIL', return = FALSE)
+GUIL_clean_DO = readRDS(file = "./ignore/site-gpp-data/GUIL_clean_DO.rds")
+GUIL_clean_temp = readRDS(file = "./ignore/site-gpp-data/GUIL_clean_temp.rds")
+debugonce(get_site_data)
 GUIL_met = get_site_data(siteCode = "GUIL")
 
 # remove some data points above 25 which are anomolous
 # debugonce(clean_met_data)
-GUIL_met = clean_met_data(GUIL_met)
+GUIL_met_clean = clean_met_data(GUIL_met)
 # Quick plot to check out the data series
 
-tz = attr(GUIL_met$solar.time,"tzone")
+plot_site("GUIL")
 
-GUIL_met %>% 
-  dplyr::filter(!is.na(solar.time)) %>%
+GUIL_met_clean %>% 
   dplyr::filter(!as.logical(outQF)) %>%
-  dplyr::filter(lubridate::year(solar.time) %in% c(2018,2019)) %>%
+  # dplyr::filter(lubridate::year(solar.time) %in% c(2018,2019)) %>%
   ggplot()+
-  geom_line(aes(x = solar.time, y = DO.pctsat))+
+  geom_line(aes(x = solar.time, y = DO.obs))+
   theme_minimal()
 
 GUIL_met %>% 
   dplyr::filter(!is.na(solar.time)) %>%
   dplyr::filter(!as.logical(outQF)) %>%
-  dplyr::filter(lubridate::year(solar.time) %in% c(2018,2019)) %>%
+  # dplyr::filter(lubridate::year(solar.time) %in% c(2018,2019)) %>%
   saveRDS("./ignore/site-gpp-data/clean-met-files/GUIL_met.rds")
+
+GUIL_met_clean %>%
+  dplyr::filter(lubridate::year(solar.time) == 2018) %>%
+  saveRDS("./data/derived_data/clean-met-files/GUIL2018_met.rds")
+GUIL_met_clean %>%
+  dplyr::filter(lubridate::year(solar.time) == 2019) %>%
+  saveRDS("./data/derived_data/clean-met-files/GUIL2019_met.rds")
+GUIL_met_clean %>%
+  dplyr::filter(lubridate::year(solar.time) == 2020)%>%
+  saveRDS("./data/derived_data/clean-met-files/GUIL2020_met.rds")
+GUIL_met_clean %>%
+  dplyr::filter(lubridate::year(solar.time) == 2021)%>%
+  saveRDS("./data/derived_data/clean-met-files/GUIL2021_met.rds")
+GUIL_met_clean %>%
+  dplyr::filter(lubridate::year(solar.time) == 2022)%>%
+  saveRDS("./data/derived_data/clean-met-files/GUIL2022_met.rds")
+
+
+
+
+
+
 
 
 # GUIL test 

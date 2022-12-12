@@ -1,17 +1,30 @@
 # KING metabolism script
 source("./code/resources/01_load-packages.R")
+debugonce(clean_DO)
+clean_DO(siteCode ='KING', doDiffLims = c(0.001,0.999), return = FALSE)
+clean_temp(siteCode = 'KING', return = FALSE)
+KING_clean_temp = readRDS(file = "./ignore/site-gpp-data/KING_clean_temp.rds")
 debugonce(get_site_data)
 KING_met = get_site_data(siteCode = "KING")
 
+# identify(
+  
+plot(x = KING_met$solar.time, y = KING_met$DO.obs, type = 'l')
+points(x = KING_met$solar.time, y = rep(0,nrow(KING_met)))
+identify(x = KING_met$solar.time,y = rep(0,nrow(KING_met)),n = 2)
+# , 2)
+
+?identify
+
 # remove some data points above 25 which are anomolous
 # debugonce(clean_met_data)
-KING_met = clean_met_data(KING_met)
+KING_met_clean = clean_met_data(KING_met)
 # Quick plot to check out the data series
 # tz = attr(KING_met$solar.time,"tzone")
 
-KING_met %>% 
+KING_met_clean %>% 
   dplyr::filter(!is.na(solar.time)) %>%
-  dplyr::filter(!as.logical(outQF)) %>%
+  # dplyr::filter(!as.logical(outQF)) %>%
   # dplyr::filter(lubridate::year(solar.time) %in% c(2018,2019)) %>%
   ggplot()+
   geom_line(aes(x = solar.time, y = DO.obs))+
@@ -23,29 +36,45 @@ KING_met %>%
   dplyr::filter(lubridate::year(solar.time) %in% c(2019,2020)) %>%
   saveRDS("./ignore/site-gpp-data/clean-met-files/KING_met.rds")
 
+KING_met_clean %>%
+  # dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2018) %>%
+  saveRDS("./data/derived_data/clean-met-files/KING2018_met.rds")
+KING_met_clean %>%
+  # dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2019) %>%
+  saveRDS("./data/derived_data/clean-met-files/KING2019_met.rds")
+KING_met_clean %>%
+  # dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2020)%>%
+  saveRDS("./data/derived_data/clean-met-files/KING2020_met.rds")
+KING_met_clean %>%
+  # dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2021)%>%
+  saveRDS("./data/derived_data/clean-met-files/KINGB2021_met.rds")
+KING_met_clean %>%
+  dplyr::filter(lubridate::year(solar.time) == 2022)%>%
+  saveRDS("./data/derived_data/clean-met-files/KING2022_met.rds")
 
-# KING test 
-tz(KING_met$solar.time)
 
 
-KING_test = KING_met %>%
-  dplyr::filter(between(solar.time, as.POSIXct("2017-10-03 00:00:00"), as.POSIXct("2017-10-15 04:00:00")))
+
 
 KING_test %>%
  
 ## run a quick version of the 
-bayes_name <- mm_name(type='bayes', pool_K600='binned', err_obs_iid=TRUE,
-                      err_proc_iid=FALSE, err_proc_GPP = TRUE, ode_method = "trapezoid")
+bayes_name <- mm_name(type='bayes', pool_K600='complete', err_obs_iid=TRUE,
+                      err_proc_iid=TRUE, err_proc_GPP = TRUE, ode_method = "trapezoid")
 bayes_specs <- specs(bayes_name)
 # bayes_specs
 # Model specifications:
-#   model_name                 b_Kn_oipi_tr_plrckm.stan                                                         
-# engine                     stan                                                                             
-# split_dates                FALSE                                                                            
-# keep_mcmcs                 TRUE                                                                             
-# keep_mcmc_data             TRUE                                                                             
-# day_start                  4                                                                                
-# day_end                    28                                                                               
+#   model_name                 b_Kn_oipi_tr_plrckm.stan                                   
+# engine                     stan                                                         
+# split_dates                FALSE                                   
+# keep_mcmcs                 TRUE                                                         
+# keep_mcmc_data             TRUE                                                         
+# day_start                  4                                                           
+# day_end                    28                                                         
 # day_tests                  full_day, even_timesteps, complete_data, pos_discharge, pos_depth                
 # required_timestep          NA                                                                               
 # GPP_daily_mu               3.1                                                                              

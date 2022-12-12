@@ -1,5 +1,10 @@
 # MAYF metabolism script
 source("./code/resources/01_load-packages.R")
+# debugonce(clean_DO)
+MAYF_DO = clean_DO(siteCode ='MAYF')
+clean_temp(siteCode = 'MAYF', return = FALSE)
+MAYF_clean_temp = readRDS(file = "./ignore/site-gpp-data/MAYF_clean_temp.rds")
+
 # debugonce(get_site_data)
 MAYF_met_full = get_site_data(siteCode = "MAYF")
 
@@ -12,12 +17,12 @@ plot_site("MAYF")
 # Quick plot to check out the data series
 # tz = attr(MAYF_met$solar.time,"tzone")
 
-MAYF_met %>% 
-  dplyr::filter(!is.na(solar.time)) %>%
-  dplyr::filter(!as.logical(outQF)) %>%
+MAYF_met_clean %>% 
+  # dplyr::filter(!is.na(solar.time)) %>%
+  # dplyr::filter(!as.logical(outQF)) %>%
   # dplyr::filter(lubridate::year(solar.time) %in% c(2018,2019)) %>%
   ggplot()+
-  geom_line(aes(x = solar.time, y = DO.obs))+
+  geom_line(aes(x = solar.time, y = DO.obs, color = as.logical(outQF)))+
   theme_minimal()
 
 MAYF_met_clean %>% 
@@ -26,9 +31,29 @@ MAYF_met_clean %>%
   dplyr::filter(lubridate::year(solar.time) >= 2018) %>%
   saveRDS("./data/derived_data/clean-met-files/MAYF_met.rds")
 
-plot_site("MAYF")
-# MAYF test 
 
+MAYF_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2018) %>%
+  saveRDS("./data/derived_data/clean-met-files/MAYF2018_met.rds")
+MAYF_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2019) %>%
+  saveRDS("./data/derived_data/clean-met-files/MAYF2019_met.rds")
+MAYF_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2020)%>%
+  saveRDS("./data/derived_data/clean-met-files/MAYF2020_met.rds")
+MAYF_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2021)%>%
+  saveRDS("./data/derived_data/clean-met-files/MAYF2021_met.rds")
+MAYF_met_clean %>%
+  dplyr::filter(!as.logical(outQF)) %>%
+  dplyr::filter(lubridate::year(solar.time) == 2022)%>%
+  saveRDS("./data/derived_data/clean-met-files/MAYF2022_met.rds")
+
+# MAYF test 
 
 MAYF_test = MAYF_met %>%
   dplyr::filter(between(solar.time, as.POSIXct("2017-10-03 00:00:00"), as.POSIXct("2017-10-15 04:00:00")))
