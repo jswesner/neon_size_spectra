@@ -53,7 +53,7 @@ neon_size_spectra/
       |─── mean-annual-data.rds
       |─── annual-data.rds
   |─── code/
-    |─── custom_functions/
+    |─── custom-functions/
       |─── LW_coef.R
       |─── est_dw.R
       |─── etc..
