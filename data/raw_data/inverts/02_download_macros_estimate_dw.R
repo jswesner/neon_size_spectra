@@ -1,38 +1,40 @@
 # Download Macroinvertebrate data and estimate dry weights
 
+# libraries
 library(neonUtilities)
 library(tidyverse)
 library(lubridate)
 
-source("code/custom-functions/est_dw.R")
-
+# custom functions
+# LW_coef() matches taxon-specific length-weight coefficients from the smallest (Genus) to higher levers of taxonomy (family or order)
 source("code/custom-functions/LW_coef.R")
 
+# est_dw() estimates dry weights after length-weight coefficients are added
+source("code/custom-functions/est_dw.R")
+
+# Load necessary data files
 # load Length Weight coefficient table (used in part C below)
 coeff <- read.csv("data/raw_data/macro_lw_coeffs.csv")
 
-# need to set this as a local variable
-# emailed Junker on 12/12/22
-neon_token <- source("C:/Users/jfpom/Documents/Wesner/NEON documents/neon_token_source.R")
-
+# NEON site name codes
 stream_sites <- readRDS("data/raw_data/streams.rds")
 
 
 # 1) Download data ---------------------------------------------------------
 
-# these are large files, and may take a while to fully download dependent on web traffic and connection speed. 
+# these are large files, and may take a while to fully download dependent on web traffic connection speed, and the number of locally available cores. 
 
 # 2022-12-12: not sure when the last time this download script was ran (maybe sometime in 2021?)
 # When I ran it again today (2022-12-12) there were more samples. My best guess is that not all of the collections from 2021 were on NEON data portal yet, but they are now. There were only 1-3 more samples per site, which would make sense if the 2021 data has been updated since the last download.  
 
 # download all macroinvertebrate colllection data from January 2016 to December 2021
-macro <- loadByProduct(dpID = "DP1.20120.001",
-                       site = stream_sites, 
-                       startdate = "2016-01",
-                       enddate = "2021-12",
-                       check.size = FALSE,
-                       token = neon_token$value,
-                       nCores = 4)
+macro <- loadByProduct(
+  dpID = "DP1.20120.001",
+  site = stream_sites, 
+  startdate = "2016-01",
+  enddate = "2021-12",
+  check.size = FALSE,
+  nCores = 4)
 
 
 # 2) Add LW coefficients, estimate dry weights  ------------------------------------
