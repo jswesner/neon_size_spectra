@@ -1,3 +1,4 @@
+rm(list = ls())
 source("./code/resources/01_load-packages.R")
 theme_set(theme_minimal())
 #ARIK
@@ -10,25 +11,27 @@ rstudioapi::jobRunScript(
 )
 #BIGC
 rstudioapi::jobRunScript(
-  path = "./code/resources/metModelsMLE/BIGC_metModel.R",
+  path = here::here("code/resources/metModelsMLE/BIGC_metModel.R"),
   name = "BIGC metMM",
-  workingDir = getwd(),
+  workingDir = here::here(),
   importEnv = FALSE,
   exportEnv = FALSE
 )
 # BLDE
 rstudioapi::jobRunScript(
-  path = "./code/resources/metModelsMLE/BLDE_metModel.R",
+  path = here::here("code/resources/metModelsMLE/BLDE_metModel.R"),
   name = "BLDE metMM",
-  workingDir = getwd(),
+  workingDir = here::here(),
   importEnv = FALSE,
   exportEnv = FALSE
 )
+
+
 # BLUE
 rstudioapi::jobRunScript(
   path = "./code/resources/metModelsMLE/BLUE_metModel.R",
   name = "BLUE metMM",
-  workingDir = getwd(),
+  workingDir = here::here(),
   importEnv = FALSE,
   exportEnv = FALSE
 )
@@ -36,7 +39,7 @@ rstudioapi::jobRunScript(
 rstudioapi::jobRunScript(
   path = "./code/resources/metModelsMLE/CARI_metModel.R",
   name = "CARI metMM",
-  workingDir = getwd(),
+  workingDir = here::here(),
   importEnv = FALSE,
   exportEnv = FALSE
 )
@@ -50,9 +53,9 @@ rstudioapi::jobRunScript(
 )
 # CUPE
 rstudioapi::jobRunScript(
-  path = "./code/resources/metModelsMLE/CUPE_metModel.R",
+  path = here::here("code/resources/metModelsMLE/CUPE_metModel.R"),
   name = "CUPE metMM",
-  workingDir = getwd(),
+  workingDir = here::here(),
   importEnv = FALSE,
   exportEnv = FALSE
 )

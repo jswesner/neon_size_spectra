@@ -3,27 +3,30 @@
 # add in units and confirm
 # finalize workflow
 rm(list = ls())
-source("./code/resources/01_load-packages.R")
+source(here::here("code/resources/01_load-packages.R"))
 
 # exclude streams with GPP models still under constructions
-streamsExclude = c('LECO','MCRA','COMO','WLOU','BLUE')
+streamsExclude = c()#c('LECO','MCRA','COMO','WLOU','BLUE')
 
 streamsMod = streams[streams %ni% streamsExclude]
 
 # load in mle models
+# 
+# mleFiles = list.files(path = "./ignore/metab-models/", pattern = ".*_full_mle.rds", full.names = TRUE) %>% unlist
+mleFiles = list.files(path = "./ignore/metab-models/", pattern = ".*mleEnsemble.rds", full.names = TRUE) %>% unlist
 
-mleFiles = list.files(path = "./ignore/metab-models/", pattern = ".*_full_mle.rds", full.names = TRUE) %>% unlist
 
-mleModels = mleFiles %>% purrr::map(~readRDS(.x) %>% pluck('metab_daily') %>% dplyr::select(date, matches('GPP'))) %>% setNames(.,gsub("./ignore/metab-models/(.*_full_mle).rds","\\1",mleFiles)) %>% bind_rows(.id = "siteID")
+# mleModels = mleFiles %>% purrr::map(~readRDS(.x) %>% pluck('metab_daily') %>% dplyr::select(date, matches('GPP'))) %>% setNames(.,gsub("./ignore/metab-models/(.*_full_mle).rds","\\1",mleFiles)) %>% bind_rows(.id = "siteID")
+mleModels = mleFiles %>% purrr::map(~readRDS(.x) %>% dplyr::select(date, matches('GPP'))) %>% setNames(.,gsub("./ignore/metab-models/(\\w{4})mleEnsemble.rds","\\1",mleFiles)) %>% bind_rows(.id = "siteID")
 
 gppSumm = mleModels %>% ungroup %>% 
   # mutate(siteID = gsub("(\\w{4})_full_mle","\\1",siteID))) %>% 
-  mutate(siteID = stringr::str_sub(siteID, 1,4)) %>%
+  # mutate(siteID = stringr::str_sub(siteID, 1,4)) %>%
   dplyr::group_by(siteID) %>%
-  summarise(mean_GPP = mean(GPP, na.rm = TRUE))
+  dplyr::summarise(mean_GPP = mean(GPP, na.rm = TRUE))
 
 gppFull = mleModels %>% ungroup %>%
-  dplyr::mutate(siteID = as.factor(gsub("(\\w{4})_full_mle","\\1",siteID))) %>% 
+  # dplyr::mutate(siteID = as.factor(gsub("(\\w{4})_full_mle","\\1",siteID))) %>% 
   dplyr::mutate(GPP = ifelse(GPP < 0, NA, GPP)) %>% 
   dplyr::filter(!is.na(GPP)) %>% 
   group_by(siteID) %>% 
@@ -37,7 +40,7 @@ gppFull = mleModels %>% ungroup %>%
          gpp_100 = GPP/100,
          year = lubridate::year(date),
          year_f = as.factor(year)) %>%
-  dplyr::select(siteID, date, year_f, jday_c_100, gpp_c)
+  dplyr::select(siteID, date, year_f, jday_c_100, gpp_100)
 
 
 gppFull %>% ggplot+
