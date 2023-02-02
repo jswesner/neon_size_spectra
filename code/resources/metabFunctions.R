@@ -31,11 +31,10 @@ slice_min_max <- function(df, order_by = value, n = 1) {
   
 }
 
-#' @name clean_DO
+#' @title clean_DO
 #'
 #'
-
-clean_DO = function(siteCode = NA,startDate = NULL, endDate = NULL, doLims = c(0,30), return = TRUE, doDiffLims = c(0.001,0.999),...){
+clean_DO = function(siteCode = NA,startDate = NULL, endDate = NULL, doLims = c(0,30), doDiffLims = c(0.001,0.999), return = TRUE, save = TRUE,...){
   require(tidyverse)
   require(lutz)
   library(lubridate)
@@ -48,7 +47,7 @@ clean_DO = function(siteCode = NA,startDate = NULL, endDate = NULL, doLims = c(0
                                   lon = unlist(latlong[which(latlong$site == siteCode), 'long']),
                                   method = 'accurate')
   ## Get site files
-  fileList = list.files("./ignore/site-gpp-data/", paste0(siteCode,"_DO.*.rds"), full.names = TRUE)
+  fileList = list.files("./ignore/site-gpp-data/", paste0(siteCode,"_DO.rds"), full.names = TRUE)
   DOList = fileList %>%
     purrr::map(readRDS)
   oldColNames = c(
@@ -124,14 +123,19 @@ clean_DO = function(siteCode = NA,startDate = NULL, endDate = NULL, doLims = c(0
   
   cat("\nNumber of missing observations in downstream sensor with non-na in other sensors is ",missingDO)
   
+  if(save){
   saveRDS(doDf, file = paste0("./ignore/site-gpp-data/",siteCode,"_clean_DO.rds"))
+  }
   
   if(return){
   return(doDf)
   }
 }
 
-clean_temp = function(siteCode = NA,startDate = NULL, endDate = NULL, tempLims = c(0,50), return = TRUE,...){
+#' @title clean_temp
+#'
+#'
+clean_temp = function(siteCode = NA,startDate = NULL, endDate = NULL, tempLims = c(0,50), return = TRUE, save = TRUE,...){
   require(tidyverse)
   require(lutz)
   library(lubridate)
@@ -144,7 +148,7 @@ clean_temp = function(siteCode = NA,startDate = NULL, endDate = NULL, tempLims =
                                   lon = unlist(latlong[which(latlong$site == siteCode), 'long']),
                                   method = 'accurate')
   ## Get site files
-  fileList = list.files("./ignore/site-gpp-data/", paste0(siteCode,".*temp.*.rds"), full.names = TRUE)
+  fileList = list.files("./ignore/site-gpp-data/", paste0(siteCode,".*30min_temp.rds"), full.names = TRUE)
   tempList = fileList %>%
     purrr::map(readRDS)
   oldColNames = c(
@@ -216,9 +220,111 @@ clean_temp = function(siteCode = NA,startDate = NULL, endDate = NULL, tempLims =
     dplyr::select(missing) %>% unlist %>% sum
   
   cat("\nNumber of missing observations in downstream sensor with non-na in other sensors is ",missingTEMP)
-  
-  saveRDS(tempDf, file = paste0("./ignore/site-gpp-data/",siteCode,"_clean_temp.rds"))
+  if(save){
+    saveRDS(tempDf, file = paste0("./ignore/site-gpp-data/",siteCode,"_clean_temp.rds"))
+  }
   if(return) return(tempDf)
+}
+
+#' @title clean_Q
+#'
+#'
+clean_Q = function(siteCode = NA,startDate = NULL, endDate = NULL, QLims = c(0,30), QDiffLims = c(0.001,0.999), return = TRUE, save = TRUE,...){
+  require(tidyverse)
+  require(lutz)
+  library(lubridate)
+  
+  latlong = read_csv(file = "./data/site_latlong.csv")
+  siteLatLong = latlong[which(latlong$site == siteCode),]
+  
+  ## estimate the timezone 
+  siteTZ = lutz::tz_lookup_coords(lat = unlist(latlong[which(latlong$site == siteCode), 'lat']),
+                                  lon = unlist(latlong[which(latlong$site == siteCode), 'long']),
+                                  method = 'accurate')
+  ## Get site files
+  fileList = list.files("./ignore/site-gpp-data/", paste0(siteCode,"_dischargeQ.rds"), full.names = TRUE)
+  QList = fileList %>%
+    purrr::map(readRDS)
+  oldColNames = c(
+    "timePeriod",
+    "dissolvedOxygen",
+    "surfWaterTempMean",
+    "maxpostDischarge",
+    "staPresMean"
+  )
+  
+  newColNames = c(
+    "startDateTime",
+    "Q.obs",
+    "temp.water",
+    "discharge",
+    "air.pressure"
+  )
+  
+  columnKeyVal = setNames(newColNames,oldColNames)
+  
+  ### Q
+  sensorNames = QList %>% flatten %>% names(.)
+  
+  QDfmod = QList %>% 
+    flatten %>%
+    purrr::map(~.x %>%
+                 plyr::rename(replace = columnKeyVal,
+                              warn_missing = FALSE) %>%
+                 dplyr::mutate(startDateTime = as.POSIXct(startDateTime, format = "%Y-%m-%d %H:%M:%S", tz = siteTZ),
+                               startDateTime = ceiling_date(startDateTime, 'minute')) %>%
+                 dplyr::select(startDateTime, Q.obs) %>%
+                 dplyr::mutate(diff = c(NA,diff(Q.obs))) %>%
+                 dplyr::mutate(Q.obs = ifelse(between(diff, quantile(diff, QDiffLims[1], na.rm = TRUE), quantile(diff, QDiffLims[2], na.rm = TRUE)), Q.obs, NA)) %>%
+                 dplyr::select(-diff)) %>%
+    reduce(merge, by = 'startDateTime', all = TRUE) %>%
+    setNames(.,nm = c('startDateTime', paste0("Q_",sensorNames)))
+  
+  QFullDf = QDfmod %>%
+    dplyr::mutate(day = as.Date(startDateTime, tz = siteTZ)) %>%
+    group_by(day) %>%
+    dplyr::mutate(fullFlag = case_when(all(is.na(across(matches('Q')))) ~ FALSE,
+                                       TRUE ~ TRUE)) %>%
+    dplyr::select(day, fullFlag) %>%
+    group_by(day) %>%
+    dplyr::summarise(fullFlag = unique(fullFlag))
+  
+  # combine and remove days with all NAs  
+  QDf = QDfmod %>%
+    dplyr::mutate(day = as.Date(startDateTime)) %>%
+    left_join(QFullDf, by = 'day') %>%
+    dplyr::filter(fullFlag) %>%
+    dplyr::filter(!is.na(startDateTime)) %>%
+    dplyr::select(startDateTime, day, matches('Q'))
+  
+  
+  QDates =  QDf%>% dplyr::select(day) %>% reduce(c) %>% range %>% purrr::map(~paste0(.x, "00:00:00") %>% as.POSIXct(., format = "%Y-%m-%d %H:%M:%S", tz = siteTZ)) %>% reduce(c)
+  fullTime = data.frame(startDateTime = seq(QDates[1], QDates[2], by = 'mins'))
+  
+  QDf = fullTime %>%
+    left_join(QDf, by = 'startDateTime') %>%
+    dplyr::mutate(across(matches('Q'), ~ifelse(between(.x, QLims[1],QLims[2]), .x, NA))) %>%
+    dplyr::mutate(across(matches('Q'), ~zoo::na.approx(.x, maxgap = 100, na.rm = FALSE))) %>%
+    dplyr::mutate(timePeriod = cut(startDateTime, breaks = "15 min")) %>%
+    group_by(timePeriod) %>%
+    dplyr::summarise(across(matches('Q'), ~mean(.x, na.rm = TRUE))) %>% 
+    dplyr::mutate(timePeriod = as.POSIXct(timePeriod, format = "%Y-%m-%d %H:%M:%S", tz = siteTZ)) %>%
+    ungroup %>%
+    dplyr::mutate(hour = lubridate::hour(timePeriod))
+  
+  missingQ = QDf %>% dplyr::mutate(missing := case_when(is.na(!!as.name(paste0("Q_",sensorNames[length(sensorNames)]))) & any(!is.na(!!as.name(paste0("Q_",sensorNames[(length(sensorNames)-1)])))) ~ 1,
+                                                          TRUE ~ 0)) %>%
+    dplyr::select(missing) %>% unlist %>% sum
+  
+  cat("\nNumber of missing observations in downstream sensor with non-na in other sensors is ",missingQ)
+  
+  if(save){
+    saveRDS(QDf, file = paste0("./ignore/site-gpp-data/",siteCode,"_clean_Q.rds"))
+  }
+  
+  if(return){
+    return(QDf)
+  }
 }
 
 #' @title get_site_data
@@ -429,9 +535,6 @@ clean_met_data = function(siteData = NULL, doCutOff = 25, doProbThresh = 0.95, t
 #' @title plot_site
 #'
 #'
-
-#'
-#'
 #'
 plot_site = function(siteCode = NULL,...){
   library(tidyverse)
@@ -461,15 +564,14 @@ plot_site = function(siteCode = NULL,...){
 # debugonce(plot_site)
 # plot_site('KING')
 
-
-#'
+#' @title plot_met_series
 #'
 #'
 plot_met_series = function(df = NULL, selCols = c("solar.time","DO.obs","DO.pctsat","temp.water","discharge"),...){
   require(ggplot2)
   require(magrittr)
-  require(plyr)
   require(dplyr)
+  require(plyr)
   require(viridis)
   plotDf = df %>%
     dplyr::select(any_of(selCols)) %>%
@@ -488,10 +590,261 @@ plot_met_series = function(df = NULL, selCols = c("solar.time","DO.obs","DO.pcts
   return(p)
 }
 
+#' @title run_metab_multimodel
+#'
+#'
+run_metab_multimodel = function(siteCode = NULL, metDf = NULL, kLim = 4e+05, return = FALSE, save = TRUE, parallel = FALSE, badDates = NULL, refitKmod = FALSE,...){
+  if(!is.null(siteCode) & is.null(metDf)){
+  metFull = get_site_data(siteCode) %>%
+    dplyr::select(-DO.pctsat)
+  if(!is.null(badDates)){
+    metFull = metFull %>%
+      dplyr::filter(as.Date(solar.time) %ni% as.Date(badDates))
+  }
+  } else if(is.null(siteCode) & !is.null(metDf)){
+    warning("Warning: No `siteCode` provided. No empirical K-model will be used.")
+    metFull = metDf
+  } else if(is.null(siteCode) & is.null(metDf)){
+    stop("Error: no `siteCode` or `metDf` provided")
+  } else if(!is.null(siteCode) & !is.null(metDf)){
+    warning("Warning: both `siteCode` and `metDf` are provided. We will consider `metDf` as the data and use `siteCode` to search for empirical K-model.")
+    metFull = metDf
+  }
+  
+  # Empirical K-model check
+  kmodName = paste0("./ignore/site-gpp-data/",siteCode,"_kGAM.rds")
+  
+  kmod = tryCatch(
+    {
+    readRDS(kmodName)
+    },
+    error = function(cond){
+      message("There is no empirical K model.")
+      return(NULL)
+    })
+  if(is.null(kmod)|is.character(kmod)){
+    warning("No empirical K models were found.")
+    discharge.daily = metFull %>%
+      dplyr::mutate(date = as.Date(solar.time)) %>%
+      group_by(date) %>%
+      dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE),
+                       model = NA) 
+    discharge.daily$K600.daily = NA
+  } else if(any(grepl("gam", class(kmod)))){
+    
+    discharge.daily = metFull %>%
+      dplyr::mutate(date = as.Date(solar.time)) %>%
+      group_by(date) %>%
+      dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE),
+                       model = 'empirical-gam') 
+    
+    discharge.daily$K600.daily = exp(predict(kmod, newdata = discharge.daily))
+    
+  } else if(all(grepl("lm", class(kmod)))){
+    if(any(grepl('log', rlang::f_rhs(kmod$terms)))){
+      discharge.daily = metFull %>%
+        dplyr::mutate(date = as.Date(solar.time)) %>%
+        group_by(date) %>%
+        dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE),
+                         model = 'empirical-lm') 
+      
+      discharge.daily$K600.daily = exp(predict(kmod, newdata = discharge.daily))
+    } else{
+      discharge.daily = metFull %>%
+        dplyr::mutate(date = as.Date(solar.time)) %>%
+        group_by(date) %>%
+        dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE),
+                         model = 'empirical-lm') 
+      
+      discharge.daily$K600.daily = predict(kmod, newdata = discharge.daily)
+    }
+    
+  }
+  
+  ## set all mle model specs
+  mle_specs <- specs(mm_name(type = "mle"))
+  mle_specs_sat <- specs(mm_name(type = "mle", GPP_fun = 'satlight'))
+  mle_specs_satq10 <- specs(mm_name(type = "mle", GPP_fun = 'satlight', ER_fun = 'q10temp'))
+  
+  # run models on raw data
+  mm1 <- metab_mle(mle_specs, data = metFull, info = list(name = "mm1", model = "raw"))
+  mm1_sat <- metab_mle(mle_specs_sat, data = metFull, info = list(name = "mm1_sat", model = "raw"))
+  mm1_satq10 <- metab_mle(mle_specs_satq10, data = metFull, info = list(name = "mm1_satq10", model = "raw"))
+
+  # fit different k models
+  k600_mm1 <- get_params(mm1, uncertainty = 'ci') %>%
+    select(date, GPP.daily, K600.daily, K600.daily.lower, K600.daily.upper) %>%
+    left_join(discharge.daily %>% dplyr::select(date, discharge.daily))
+  
+  km1 <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'loess'), predictors = 'discharge.daily', other_args = list(span = 0.6),
+                            day_start = -1, day_end = 23), data_daily = k600_mm1 %>% select(-GPP.daily))
+  km2 <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'lm'),
+                            day_start = -1, day_end = 23), data_daily = k600_mm1 %>% select(-GPP.daily))
+  km3 <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'mean'),
+                            day_start = -1, day_end = 23), data_daily = k600_mm1 %>% select(-GPP.daily))
+  km4 <- metab_night(data = metFull)
+  # 
+  k600_mm2 <- get_params(km1) %>% 
+    select(date, K600.daily) %>%  
+    dplyr::mutate(model = 'loess') %>%
+    bind_rows(get_params(km2) %>%
+                select(date, K600.daily) %>%  
+                dplyr::mutate(model = 'lm')) %>%
+    bind_rows(get_params(km3) %>%
+                select(date, K600.daily) %>%
+                dplyr::mutate(model = 'mean')) %>%
+    bind_rows(get_params(km4) %>%
+                select(date, K600.daily) %>%
+                dplyr::mutate(model = 'night')) %>%
+    bind_rows(discharge.daily %>% select(date, model, K600.daily)) %>%
+    left_join(discharge.daily %>% dplyr::select(date, discharge.daily))
+
+  # fit metab models with varying k models
+  # if(parallel){
+  #   modelNames = c('mm2','mm3','mm4','mm5')
+  #   modelTypes = c('loess','lm','mean','night')
+  #   mmList = furrr::future_map2(modelTypes,modelNames, ~metab_mle(mle_specs, data = metFull,data_daily = k600_mm2 %>% dplyr::filter( model == .x) %>% dplyr::select(date, K600.daily), info = list(name = .y, model = .x)))
+  #   return(mmList)
+  # } else{
+  mm2 <- metab_mle(mle_specs, data = metFull, data_daily = k600_mm2 %>% dplyr::filter(model == 'loess') %>% dplyr::select(date, K600.daily),info = list(name = "mm2", model = "loess"))
+  
+  mm3 <- metab_mle(mle_specs, data = metFull, data_daily = k600_mm2 %>% dplyr::filter(model == 'lm') %>% dplyr::select(date, K600.daily),info = list(name = "mm3", model = "lm"))
+  
+  mm4 <- metab_mle(mle_specs, data = metFull, data_daily = k600_mm2 %>% dplyr::filter(model == 'mean') %>% dplyr::select(date, K600.daily),info = list(name = "mm4", model = "mean"))
+  
+  mm5 <- metab_mle(mle_specs, data = metFull, data_daily = k600_mm2 %>% dplyr::filter(model == 'night') %>% dplyr::select(date, K600.daily),info = list(name = "mm5", model = "night"))
+  # return(list(mm2,mm3,mm4,mm5))
+  # }
+  #fit saturation models
+  k600_mm1_sat <- get_params(mm1_sat, uncertainty = 'ci') %>%
+    left_join(predict_metab(mm1_sat) %>% select(date, GPP.daily = 'GPP')) %>%
+    select(date, GPP.daily, K600.daily, K600.daily.lower, K600.daily.upper) %>%
+    left_join(discharge.daily %>% dplyr::select(date, discharge.daily))
+  
+  km1_sat <- tryCatch({
+    metab_Kmodel(specs(mm_name('Kmodel', engine = 'loess'), predictors = 'discharge.daily', other_args = list(span = 0.6),
+                                day_start = -1, day_end = 23), data_daily = k600_mm1_sat%>% select(-GPP.daily))
+  }, error = function(e){
+    metab_Kmodel(specs(mm_name('Kmodel', engine = 'loess'), predictors = 'discharge.daily', other_args = list(span = 0.6),
+                       day_start = -1, day_end = 23), data_daily = k600_mm1%>% select(-GPP.daily))
+    })
+  
+km2_sat <- tryCatch({
+    metab_Kmodel(specs(mm_name('Kmodel', engine = 'lm'),
+                                day_start = -1, day_end = 23), data_daily = k600_mm1_sat%>% select(-GPP.daily))
+  }, error = function(e){
+    metab_Kmodel(specs(mm_name('Kmodel', engine = 'lm'),
+                       day_start = -1, day_end = 23), data_daily = k600_mm1%>% select(-GPP.daily))
+  })
+  
+  km3_sat <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'mean'),
+                                day_start = -1, day_end = 23), data_daily = k600_mm1_sat%>% select(-GPP.daily))
+  
+  # 
+  k600_mm2_sat <- get_params(km1_sat) %>% 
+    select(date, K600.daily) %>%  
+    dplyr::mutate(model = 'loess') %>%
+    bind_rows(get_params(km2_sat) %>%
+                select(date, K600.daily) %>%  
+                dplyr::mutate(model = 'lm')) %>%
+    bind_rows(get_params(km3_sat) %>%
+                select(date, K600.daily) %>%
+                dplyr::mutate(model = 'mean')) %>%
+    bind_rows(get_params(km4) %>%
+                select(date, K600.daily) %>%
+                dplyr::mutate(model = 'night')) %>%
+    bind_rows(discharge.daily %>% select(date, model, K600.daily)) %>%
+    left_join(discharge.daily %>% dplyr::select(date, discharge.daily))
+  
+  mm2_sat <- metab_mle(mle_specs_sat, data = metFull, data_daily = k600_mm2_sat %>% dplyr::filter(model == 'loess') %>% dplyr::select(date, K600.daily),info = list(name = "mm2_sat", model = "loess"))
+  
+  mm3_sat <- metab_mle(mle_specs_sat, data = metFull, data_daily = k600_mm2_sat %>% dplyr::filter(model == 'lm') %>% dplyr::select(date, K600.daily),info = list(name = "mm3_sat", model = "lm"))
+  
+  mm4_sat <- metab_mle(mle_specs_sat, data = metFull, data_daily = k600_mm2_sat %>% dplyr::filter(model == 'mean') %>% dplyr::select(date, K600.daily),info = list(name = "mm4_sat", model = "mean"))
+  
+  mm5_sat <- metab_mle(mle_specs_sat, data = metFull, data_daily = k600_mm2_sat %>% dplyr::filter(model == 'night') %>% dplyr::select(date, K600.daily),info = list(name = "mm5_sat", model = "night"))
+  
+  ## fit saturation + q10 models
+  # identify negative values
+  k600_mm1_satq10 <- get_params(mm1_satq10, uncertainty = 'ci') %>%
+    left_join(predict_metab(mm1_sat) %>% select(date, GPP.daily = 'GPP')) %>%
+    select(date, GPP.daily, K600.daily, K600.daily.lower, K600.daily.upper) %>%
+    left_join(discharge.daily %>% dplyr::select(date, discharge.daily)) 
+  
+  k600_mm1_satq10 = k600_mm1_satq10 %>%
+    dplyr::filter(K600.daily < kLim,
+                  GPP.daily > 0)
+  # 
+  km1_satq10 <- tryCatch({
+    metab_Kmodel(specs(mm_name('Kmodel', engine = 'loess'), predictors = 'discharge.daily', other_args = list(span = 0.6),
+                                   day_start = -1, day_end = 23), data_daily = k600_mm1_satq10 %>% select(-GPP.daily))
+  }, error = function(e){
+    metab_Kmodel(specs(mm_name('Kmodel', engine = 'loess'), predictors = 'discharge.daily', other_args = list(span = 0.6),
+                       day_start = -1, day_end = 23), data_daily = k600_mm1 %>% select(-GPP.daily))
+  })
+  
+km2_satq10 <- tryCatch({
+  metab_Kmodel(specs(mm_name('Kmodel', engine = 'lm'),
+                                   day_start = -1, day_end = 23), data_daily = k600_mm1_satq10%>% select(-GPP.daily))
+}, error = function(e){
+  metab_Kmodel(specs(mm_name('Kmodel', engine = 'lm'),
+                     day_start = -1, day_end = 23), data_daily = k600_mm1 %>% select(-GPP.daily))
+})
+  
+  km3_satq10 <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'mean'),
+                                   day_start = -1, day_end = 23), data_daily = k600_mm1_satq10 %>% select(-GPP.daily))
+  # 
+  k600_mm2_satq10 <- get_params(km1_satq10) %>% 
+    select(date, K600.daily) %>%  
+    dplyr::mutate(model = 'loess') %>%
+    bind_rows(get_params(km2_satq10) %>%
+                select(date, K600.daily) %>%  
+                dplyr::mutate(model = 'lm')) %>%
+    bind_rows(get_params(km3_satq10) %>%
+                select(date, K600.daily) %>%
+                dplyr::mutate(model = 'mean')) %>%
+    bind_rows(get_params(km4) %>%
+                select(date, K600.daily) %>%
+                dplyr::mutate(model = 'night')) %>%
+    bind_rows(discharge.daily %>% select(date, model, K600.daily)) %>%
+    left_join(discharge.daily %>% dplyr::select(date, discharge.daily))
+  
+ 
+  mm2_satq10 <- metab_mle(mle_specs_satq10, data = metFull, data_daily = k600_mm2_satq10 %>% dplyr::filter(model == 'loess') %>% dplyr::select(date, K600.daily),info = list(name = "mm2_satq10", model = "loess"))
+  
+  mm3_satq10 <- metab_mle(mle_specs_satq10, data = metFull, data_daily = k600_mm2_satq10 %>% dplyr::filter(model == 'lm') %>% dplyr::select(date, K600.daily), info = list(name = "mm3_satq10", model = "lm"))
+  
+  mm4_satq10 <- metab_mle(mle_specs_satq10, data = metFull, data_daily = k600_mm2_satq10 %>% dplyr::filter(model == 'mean') %>% dplyr::select(date, K600.daily),info = list(name = "mm4_satq10", model = "mean"))
+  
+  mm5_satq10 <- metab_mle(mle_specs_satq10, data = metFull, data_daily = k600_mm2_sat %>% dplyr::filter(model == 'night') %>% dplyr::select(date, K600.daily),info = list(name = "mm5_satq10", model = "night"))
+  browser()
+  # run empirical models if they exist
+  if(!any(is.character(kmod) |is.null(kmod))){
+    # fit all the empirical models if emprical k model exists
+    mm6 <- metab_mle(mle_specs, data = metFull, data_daily = k600_mm2 %>% dplyr::filter(grepl('empirical', model)) %>% dplyr::select(date, K600.daily),info = list(name = "mm6", model = k600_mm2 %>% dplyr::filter(grepl('empirical', model)) %>% select(model) %>% unlist %>% unique))
+    
+    mm6_sat <- metab_mle(mle_specs_sat, data = metFull, data_daily = k600_mm2_sat %>% dplyr::filter(grepl('empirical', model)) %>% dplyr::select(date, K600.daily),info = list(name = "mm6_sat", model = k600_mm2 %>% dplyr::filter(grepl('empirical', model)) %>% select(model) %>% unlist %>% unique))
+    
+    mm6_satq10 <- metab_mle(mle_specs_satq10, data = metFull, data_daily = k600_mm2_sat %>% dplyr::filter(grepl('empirical', model)) %>% dplyr::select(date, K600.daily), info = list(name = "mm6_satq10", model = k600_mm2 %>% dplyr::filter(grepl('empirical', model)) %>% select(model) %>% unlist %>% unique))
+  }
+  
+  # identify fit models
+  modList = ls()[grep("^mm\\d{1}.*", ls())] %>% purrr::map(~eval(as.symbol(.x))) 
+  
+  # save model fits
+  if(save){
+    save(modList, file = paste0("./ignore/metab-models/mleModLists/",siteCode,"mlemods.Rdata"))
+  }
+  # return model fits
+  if(return){
+    return(modList)
+  }
+}
+
 #'
 #'
 #'
-calc_mod_RSME = function(metObj = NULL, relative = FALSE, ...){
+calc_mod_RMSE = function(metObj = NULL, relative = FALSE, ...){
   data = metObj$data 
   
   if(relative){
@@ -501,8 +854,8 @@ calc_mod_RSME = function(metObj = NULL, relative = FALSE, ...){
       unlist %>% na.omit
     
     n = length(error)
-    rrsme = sqrt(sum((error/mean(data$obs, na.rm = TRUE))^2)/n)*100
-    return(round(rrsme,2))
+    rrmse = sqrt(sum((error/mean(data$obs, na.rm = TRUE))^2)/n)*100
+    return(round(rrmse,2))
     
   } else{
     error = data %>%
@@ -511,10 +864,21 @@ calc_mod_RSME = function(metObj = NULL, relative = FALSE, ...){
       unlist %>% na.omit
     
     n = length(error)
-    rsme = sqrt(sum(error^2))/n
-  return(rsme)
+    rmse = sqrt(sum(error^2))/n
+  return(rmse)
   }
 }
+
+#'
+#'
+#'
+calc_mod_dev = function(metObj = NULL,...){
+  data = metObj$data 
+  
+  dev = NULL
+
+    return(dev)
+  }
 
 #'
 #'
@@ -522,10 +886,10 @@ calc_mod_RSME = function(metObj = NULL, relative = FALSE, ...){
 pick_model = function(df, ...){
   if(any(unlist(df$GPPtot) <= 0)){
     dfMod = df[which(df$GPPtot > 0),]
-  } else if(abs(range(df$RSME)[1] - range(df$RSME)[2]) < 3){
+  } else if(abs(range(df$RMSE)[1] - range(df$RMSE)[2]) < 3){
     topMod = 'mm3'
   } else{
-    topMod = df %>% slice_min(RSME) %>% select(modelID) %>% unlist %>% as.character
+    topMod = df %>% slice_min(RMSE) %>% select(modelID) %>% unlist %>% as.character
   }
   return(topMod)
 }
@@ -555,9 +919,7 @@ count_positive_dates = function(mm,...){
 #'
 calc_gpp_mean = function(mm, PQ = 1.28, scaler = NULL,...){
   metab = mm@metab_daily
-  gppTot = sum(metab$GPP, na.rm = TRUE)
-  days = length(which(!is.na(metab$GPP)))
-  
+
   if(is.null(scaler)){
     gppMean = mean(metab$GPP, na.rm = TRUE) * ((1/PQ)*(12/32))
   } else{
@@ -565,33 +927,35 @@ calc_gpp_mean = function(mm, PQ = 1.28, scaler = NULL,...){
     gppMean = eval(parse(text = gppEqn))
   }
   
-  return(gppMean)
+  return(round(gppMean,3))
 }
 
 #'
 #'
 #'
-slim_models = function(df,RSMEcutoff = 0.7,...){
-  meanGPPunits = grep("g C m-2 y-1", attr(df$meanGPP,"comment"))
-  highRRSME = quantile(df$RSME, RSMEcutoff)
+slim_models = function(df,RMSEcutoff = 0.7,...){
+  meanGPPunits = grepl("g C m-2 y-1", attr(df$meanGPP,"comment"))
+  highRRMSE = quantile(df$RMSE, RMSEcutoff)
   
   
   if(meanGPPunits){
     
     dfSlim = df %>%
       dplyr::filter(between(meanGPP, 0, 5000))
-    if(nrow(dfSlim) < 5){
+    if(nrow(dfSlim %>%
+            dplyr::filter(RMSE < highRRMSE)) < 5){
       return(dfSlim)
     } else{ dfSlim %>%
-          dplyr::filter(RSME < RSMEcutoff)
+          dplyr::filter(RMSE < highRRMSE)
       }
   } else{
     dfSlim = df %>%
       dplyr::filter(between(meanGPP, 0, 5000/365))
-    if(nrow(dfSlim) < 5){
+    if(nrow(dfSlim %>%
+            dplyr::filter(RMSE < highRRMSE)) < 5){
       return(dfSlim)
     } else{ dfSlim %>%
-        dplyr::filter(RSME < RSMEcutoff)
+        dplyr::filter(RMSE < highRRMSE)
     }
   }
 }
@@ -601,11 +965,11 @@ slim_models = function(df,RSMEcutoff = 0.7,...){
 #'
 calc_max_k = function(mm,...){
   if(all(is.na(mm@fit$K600.daily))){
-    k600vec = mm@data_daily$K600.daily
-    max(k600vec, na.rm = TRUE)
+    k600vec = mm@data_daily$K600.daily[which(mm@data_daily$K600.daily > 0)] %>% na.omit %>% .[!is.infinite(.)]
+    round(max(k600vec, na.rm = TRUE),5)
   } else{
-    k600vec = mm@fit$K600.daily
-    max(k600vec, na.rm = TRUE)
+    k600vec = mm@fit$K600.daily[which(mm@fit$K600.daily > 0)] %>% na.omit %>% .[!is.infinite(.)]
+    round(max(k600vec, na.rm = TRUE),5)
   }
 }
 
@@ -645,11 +1009,150 @@ calc_k600 = function(df, LRcol = "slopeNormClean",...){
   reaRateConv <- (Sc_O2_25/Sc_SF6_25) ^ (-0.5)
   
   df %>%
-    mutate(kSF6 = !!rlang::sym(LRcol) * (btwStaDist/peakMaxVelocity)*-1*86400) %>%# m^-1 * m/s * -1 for negative slope and 86400 for number of seconds in a day
-    mutate(kO2 = kSF6 * reaRateConv * meanDepth) %>%  #Calculate the gas transfer velocity for oxygen# d^-1 * m
-    mutate(sc02 = A_O2 - B_O2 * meanTemp + C_O2 * meanTemp^2 - D_O2 * meanTemp^3,#Normalize to schmidt number of 600
+    dplyr::mutate(kSF6 = !!rlang::sym(LRcol) * (btwStaDist/peakMaxVelocity)*-1*86400) %>%# m^-1 * m/s * -1 for negative slope and 86400 for number of seconds in a day
+    dplyr::mutate(kO2 = kSF6 * reaRateConv * meanDepth) %>%  #Calculate the gas transfer velocity for oxygen# d^-1 * m
+    dplyr::mutate(sc02 = A_O2 - B_O2 * meanTemp + C_O2 * meanTemp^2 - D_O2 * meanTemp^3,#Normalize to schmidt number of 600
            k = (Sc_CO2/sc02)^(-0.5)* kO2,#Equation 1, Wanninkhof (1992) "little k"
            K600 = k/meanDepth) %>% # d^-1 "Big K"
     dplyr::mutate(across(c(k,K600), ~ifelse(.x < 0, NA, .x)))
+  
+}
+
+#' @title get_metab_info
+#' @param mm mixing model object.
+#' @param values string. string of 
+get_metab_info = function(mm = NULL, values = NULL,...){
+  if(is.character(mm)) mm = as.symbol(mm)
+  if(is.null(mm@info)) stop("'Info' slot of mm is empty")
+  mmInfo = mm@info
+  if(is.null(values)){
+    mmInfoDf = bind_rows(mmInfo)
+    return(mmInfoDf)
+  } else{
+    mmInfoDf = bind_rows(mmInfo) %>% select(any_of(values))
+    return(mmInfoDf)
+  }
+}
+
+#' @title quiet
+#' @description 
+#' `quiet` stops output of all warnings and messages of a function
+#'
+#'
+quiet <- function(x) { 
+  sink(tempfile()) 
+  on.exit(sink()) 
+  invisible(force(x)) 
+}
+
+#'
+#'
+#'
+#'
+corrER_K = function(mm,...){
+  
+  if(all(is.na(mm@fit$K600.daily))){
+    mmDf= mm@metab_daily %>%
+      dplyr::select(date, ER) %>%
+      left_join(mm@data_daily %>% dplyr::select(date, k600 = 'K600.daily'), by = 'date') %>%
+      na.omit
+  } else{
+    
+    mmDf= mm@metab_daily %>%
+      dplyr::select(date, ER) %>%
+      left_join(mm@fit %>% dplyr::select(date, k600 = 'K600.daily'), by = 'date') %>%
+      na.omit
+  }
+  cor(mmDf$ER,mmDf$k600, use = 'complete.obs',...)
+}
+
+#'
+#'
+#'
+#'
+find_best_fit = function(mmDf = NULL,...){
+  minRMSE = which(mmDf$RMSE == min(mmDf$RMSE))
+  if(length(minRMSE) == 1){
+    return(mmDf[minRMSE,])
+  } else{
+    slimDf1 = mmDf[minRMSE,]
+    minNegGPP = which(slimDf1$negativeGPP == min(slimDf1$negativeGPP))
+    if(length(minNegGPP) == 1){
+      return(slimDf1[minNegGPP,])
+    } else{
+        slimDf2 = slimDf1[minNegGPP,]
+        minPosER = which(slimDf2$positiveER == min(slimDf2$positiveER))
+        if(length(minPosER) == 1){
+          return(slimDf2[minPosER,])
+        } else{return(slimDf2[runif(1,min = 1, max = nrow(slimDf2)),])}
+      }
+  }
+  
+}
+
+#'
+#'
+#'
+weight_model_preds = function(mm = NULL, weight = NULL,...){
+  modName = get_metab_info(mm, values = 'name')
+  
+  modWtDf = mm@metab_daily %>% 
+    as.data.frame %>% 
+    dplyr::select(date, matches("GPP")) %>% 
+    dplyr::mutate(GPP = case_when(GPP > 100 ~ NA_real_,
+                                  GPP <= 0 ~ NA_real_,
+                                  TRUE ~ GPP)) %>% 
+    dplyr::mutate(GPP.lower = as.numeric(GPP.lower),
+                  GPP.lower = case_when(is.na(GPP) ~ NA_real_,
+                                        is.na(GPP.lower) ~ NA_real_,
+                                        GPP.lower <= 0 ~ 0.001,
+                                        TRUE ~ GPP.lower)) %>% 
+    dplyr::mutate(GPP.upper = as.numeric(GPP.upper),
+                  GPP.upper = case_when(is.na(GPP) ~ NA_real_,
+                                        is.na(GPP.upper) ~ NA_real_,
+                                        GPP.upper <= 0 ~ 0.1,
+                                        TRUE ~ GPP.upper)) %>% 
+    dplyr::mutate(across(matches("GPP"), ~.x*weight)) %>% 
+    dplyr::rename_with(~str_c(as.character(modName),"_",.), .cols = matches("GPP")) %>% 
+    group_by(date) %>% 
+    pivot_longer(-date, names_to = "variable", values_to = "value")
+  
+  return(modWtDf)
+
+}
+
+#'
+#'
+#'
+build_ensemble_mod = function(mmDf = NULL, ...){
+
+  modsDf = mmDf %>% 
+    dplyr::mutate(dRMSE = min(RMSE, na.rm = TRUE) - RMSE,
+                  RMSEwt = exp(0.5*dRMSE)/sum(exp(0.5*dRMSE), na.rm = TRUE))
+  if(round(sum(modsDf$RMSEwt, na.rm = TRUE),4) != 1) stop("Error: weights do not sum to one (1).")
+  
+  mods = unlist(modsDf$modelID)
+  weights = unlist(modsDf$RMSEwt)
+  
+  ensembleList = purrr::map2(mods, weights, ~weight_model_preds(mm = eval(as.symbol(.x)), weight = .y)) 
+  
+keepNAsum = function(x = NULL,...){
+  if(all(is.na(x))){
+    y = NA_real_
+  } else{
+    y = sum(x, na.rm = TRUE)
+  }
+}
+  
+  ensemble = ensembleList %>% 
+    bind_rows %>% 
+    dplyr::mutate(statValue = gsub(".*_(GPP.*)$", "\\1", variable)) %>% 
+    group_by(date, statValue) %>% 
+    dplyr::summarise(value = keepNAsum(value)) %>% 
+    group_by(date) %>% 
+    pivot_wider(names_from = "statValue", values_from = "value") %>% 
+    dplyr::select(date, GPP, GPP.lower, GPP.upper)
+
+  return(ensemble)
   
 }

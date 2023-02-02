@@ -1,0 +1,180 @@
+---
+title: '`r params$site` GPP model report' 
+date: "`r format(Sys.Date(), '%Y-%m-%d')`"
+output: pdf_document
+knit: (function(inputFile, encoding){
+        out_dir <- "reports";
+        rmarkdown::render(inputFile,
+        encoding = encoding,
+        output_dir = file.path(dirname(inputFile), out_dir))})
+---
+
+
+```{r init setup, echo=FALSE, warnings = FALSE, message=FALSE}
+
+here::i_am("code/resources/metModelsMLE/MLE-model-report-template.Rmd")
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.pos = 'H')
+
+# load functions
+quiet(source(here::here("./code/resources/01_load-packages.R")))
+```
+
+```{r view metabolism data series, fig.cap="Full metabolism data streams."}
+plot_met_series(get_site_data(siteCode))
+```
+
+```{r load objects}
+
+modList_sub = unlist(lapply(modList, function(x) !is.data.frame(x)))
+modList = modList[modList_sub]
+
+modListNames = purrr::map(modList, ~get_metab_info(.x, 'name')) %>% unlist
+modList = setNames(modList, nm = modListNames)
+
+quiet(list2env(modList, environment()))
+
+```
+
+The process for building a model suite and selecting a model is iterative. More details for data cleaning will be added here later.
+
+```{r model assessment, }
+
+modelIDList = purrr::map(names(modList), ~get_metab_info(eval(as.symbol(.x)), values = 'name'))
+modelTypeList = purrr::map(names(modList), ~get_metab_info(eval(as.symbol(.x)), values = 'model'))
+RMSEList = purrr::map(modList, ~calc_mod_RMSE(plot_DO_preds(.x), relative = TRUE))
+negativeList = purrr::map(modList, ~count_negative_dates(.x))
+positiveList = purrr::map(modList, ~count_positive_dates(.x))
+maxKList = purrr::map(modList, ~calc_max_k(.x))
+gppMeanList = purrr::map(modList, ~calc_gpp_mean(.x, scaler = "*365"))
+corrER_KList = purrr::map(modList, ~corrER_K(.x))
+
+mods = data.frame(
+  modelID = unlist(modelIDList),
+  modelType = unlist(modelTypeList),
+  RMSE = unlist(RMSEList),
+  negativeGPP = unlist(negativeList),
+  positiveER = unlist(positiveList),
+  maxK = unlist(maxKList),
+  ER.Kcorr = unlist(corrER_KList),
+  meanGPP = unlist(gppMeanList)
+)
+
+comment(mods$meanGPP) <- "g C m-2 y-1"
+
+knitr::kable(mods, row.names = FALSE, digits = 3, format="latex",caption = "Full model output for all MLE models. 'modelID' represents the model identifier and also information regarding the assumed equations for GPP\\/ER. Unmodified models (e.g., 'mm1') represent the default `mm\\_specs` of linear GPP\\~light relationship. Saturating models (e.g., 'mm1sat`) assume a saturating GPP\\~light relationship. Lastly, Q10 models (e.g., 'mm1satq10') assume a saturating function of GPP\\~light and an exponential function of GPP\\~Temp. 'modelType' represents how daily K600 values are calculated, whether they are modeled simultaneously with GPP and ER (e.g., 'raw'), modeled as a function of daily discharge with varying relationships (e.g., 'loess', 'lm', 'mean'), modeled from observed night observation (e.g., 'night'), or from empirical gas release estimates (e.g., 'empirical\\-gam'). The empirical models are further identified by the model used to relate discharge to k, whether GAM or LM. 'RSME' represents the estimated relative root mean square error between observed and modeled dissolved oxygen concentrations standardized to the mean. 'negativeGPP' and 'positiveER' represent the number of days when daily estimates of GPP or ER are negative and positive, respectively. 'meanGPP' is the estimated mean GPP. This value can be scaled to different timeframes or units (i.e., carbon or oxygen) and must be check based on attributes of 'meanGPP'. 'maxK' is the maximum estimated daily k600 value.") %>% 
+   kableExtra::add_footnote(.,label = "GPPmean = g C m-2 y-1") %>%
+   kableExtra::kable_styling(latex_options=c("scale_down","hold_position"))
+
+```
+
+We undergo a process to slim these models down based on a number of criteria. First, we throw out values that have very high estimates of GPP (> 1.5x maximum annual values observed in Berhnardt et al. 2022 Figure 1, ~5000 g C m^-2^ y^-1^). Next, any models that have especially poor fits are excluded. In this case I automatically exclude any models that are in the upper 30% percentile of RMSE based on the model set, unless this is fewer than 5 models. This slimmed model set is the group I choose from after one final visual assessment. 
+
+```{r model slimming}
+# debugonce(slim_models)
+modsDf = slim_models(mods)
+knitr::kable(modsDf, row.names = FALSE, digits = 3,format="latex",caption = "Slimmed model output for all MLE models. 'modelID' represents the model identifier and also information regarding the assumed equations for GPP\\/ER. Unmodified models (e.g., 'mm1') represent the default `mm\\_specs` of linear GPP\\~light relationship. Saturating models (e.g., 'mm1sat`) assume a saturating GPP\\-light relationship. Lastly, Q10 models (e.g., 'mm1satq10') assume a saturating function of GPP\\~light and an exponential function of GPP\\-Temp. 'modelType' represents how daily K600 values are calculated, whether they are modeled simultaneously with GPP and ER (e.g., 'raw'), modeled as a function of daily discharge with varying relationships (e.g., 'loess', 'lm', 'mean'), modeled from observed night observation (e.g., 'night'), or from empirical gas release estimates (e.g., 'empirical\\--gam'). The empirical models are further identified by the model used to relate discharge to k, whether GAM or LM. 'RSME' represents the estimated relative root mean square error between observed and modeled dissolved oxygen concentrations standardized to the mean. 'negativeGPP' and 'positiveER' represent the number of days when daily estimates of GPP or ER are negative and positive, respectively. 'meanGPP' is the estimated mean GPP. This value can be scaled to different timeframes or units (i.e., carbon or oxygen) and must be check based on attributes of 'meanGPP'. 'maxK' is the maximum estimated daily k600 value.") %>%
+  kableExtra::add_footnote(.,label = "GPPmean = g C m-2 y-1") %>%
+  kableExtra::kable_styling(latex_options=c("scale_down","hold_position"))
+
+```
+
+```{r model distance}
+
+bestMod = find_best_fit(modsDf)
+bestModName = bestMod %>% select(modelID) %>% unlist
+modsNames = modsDf %>% select(modelID) %>% unlist
+
+modDist = dist(as.matrix(modsDf %>% select(RMSE, negativeGPP, positiveER, meanGPP, maxK))) %>% as.matrix
+colnames(modDist) <- rownames(modDist) <- modsNames
+
+otherModel = names(modDist[,bestModName] %>% which.max)
+
+exModList = list(eval(as.symbol(bestModName)),
+                 eval(as.symbol(otherModel))) %>%
+  setNames(., nm = c(bestModName,otherModel))
+
+# quiet(list2env(exModList, environment()))
+
+```
+
+I do a visual assessment of the slimmed model set to see how they compare and identify any days where the fit is especially poor across dates. To do this, I first chose the 'best' model of the set: 
+
+`r paste0("The 'best' model is: ",as.name(bestModName))`
+
+I then compute the model that is most different than the 'best' model and plot the metabolism estimates for each to visually assess.
+
+`r paste0("The most distant from best is: ",as.name(otherModel))`
+
+These plots are used to assess any dates that are especially bad (e.g., negative GPP, positive ER, very high GPP, etc.) across all models. This dates identified below for the 'top' model and are excluded from the analysis. 
+
+```{r plot models, fig.cap="'Best' model fit."}
+
+mmPlot = streamMetabolizer::plot_metab_preds(eval(as.symbol(bestModName)))
+mmPlot
+```
+
+The most distant of the best models. Days between this model and above that are both bad are likely very difficult days to fit. Depending on how many of them there are we need to remove them or take a look at the QC flags or the timeseries data to decide if they should be thrown out.
+
+```{r plot dist model, fig.cap="Most distant model."}
+streamMetabolizer::plot_metab_preds(eval(as.symbol(otherModel)))
+
+```
+
+The number of dates and proportion of bad dates within the best model are:
+
+```{r excluded dates}
+
+mmDf = mmPlot$data
+
+nas = sum(is.na(mmDf$GPP))
+non_nas = sum(!is.na(mmDf$GPP))
+ mmDf %>%
+   summarise(lowGPP = sum(GPP < -0.1, na.rm = TRUE),
+             lowGPPperc = lowGPP/non_nas*100,
+             highGPP = sum(GPP > 40, na.rm = TRUE),
+             highGPPperc = highGPP/non_nas*100,
+             NAs = sum(nas)) %>%
+   knitr::kable(.,row.names = FALSE, digits = 3, format="latex")%>% 
+   kableExtra::kable_styling(latex_options=c("hold_position"))
+
+```
+
+From here we assess any data removal and rerun until reasonably clean model outputs are achieved and a final model is chosen based on minimizing 'negativeGPP' and 'postiveER' and assessing the reasonableness of 'maxK'. 
+
+Lastly, we then take the top model suite and build an average model based on model fit, RMSE. To do so, we first remove models that have very high correlations between ER and K (i.e., $r \geq 0.80$) as these models are largely driven by variability in the estimates in K. Then we create a model weight based on relative model fit, *dRMSE*, the difference in relative root mean squared error from the best fitting model based on *RMSE* for a set of models, *m*, is:
+
+$$w_i = exp(\frac{1}{2}dRMSE_i)/\sum_{j=1}^{m} exp(\frac{1}{2}dRMSE_j)$$
+
+From this, we create a weighted average model for GPP estimates, plotted below.
+
+```{r view ensemble}
+
+ensembleName = here::here(paste0("ignore/metab-models/",siteCode,"mleEnsemble.rds"))
+
+ensembleMods = modsDf %>% 
+  dplyr::filter(round(abs(ER.Kcorr),2) <= 0.80 | is.na(ER.Kcorr)) %>% 
+  dplyr::mutate(dRMSE = min(RMSE, na.rm = TRUE) - RMSE,
+                RMSEwt = exp(0.5*dRMSE)/sum(exp(0.5*dRMSE), na.rm = TRUE))
+
+ensembleMods %>% 
+   knitr::kable(., row.names = FALSE, digits = 3, format="latex")%>% 
+   kableExtra::kable_styling(latex_options=c("scale_down","hold_position"))
+
+```
+
+```{r model averaging}
+# debugonce(build_ensemble_mod)
+# debugonce(weight_model_preds)
+avgMod = build_ensemble_mod(ensembleMods) 
+
+saveRDS(avgMod, file = ensembleName)
+
+avgMod %>% 
+ggplot() +
+  geom_ribbon(aes(x = date, ymin = GPP.lower, ymax = GPP.upper), color = NA, fill = 'grey', alpha = 0.5)+
+  geom_line(aes(x = date, y = GPP), color = 'black')+
+  geom_smooth(aes(x = date, y = GPP), color = 'forestgreen', span = 0.1)+
+  coord_cartesian(ylim = c(0, NA))
+
+```
+

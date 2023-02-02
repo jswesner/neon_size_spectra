@@ -60,3 +60,4 @@ Backup of *.doc*
 ### use this for large compilations of resource data
 ignore/
 
+*.log

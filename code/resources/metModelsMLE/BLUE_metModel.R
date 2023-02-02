@@ -1,303 +1,337 @@
 rm(list = ls())
-source("./code/resources/01_load-packages.R")
-BLUE_met_full = get_site_data(siteCode = "BLUE") %>%
-  dplyr::select(-DO.pctsat)
+here::i_am("code/resources/metModelsMLE/BLUE_metModel.R")
+source(here::here("code/resources/01_load-packages.R"))
+# 
+rerun = FALSE
+if(rerun){
+# debugonce(run_metab_multimodel)
+BLUEbadDates = c(seq(as.Date("2018-12-14"), as.Date("2019-01-02"), by = 1),
+                   seq(as.Date("2021-05-18"), as.Date("2021-07-08"), by = 1),
+                   seq(as.Date("2021-11-01"), as.Date("2021-12-30"), by = 1))
+tictoc::tic();run_metab_multimodel(siteCode = "BLUE", metDf = NULL, return = FALSE, save = TRUE, badDate = BLUEbadDates, parallel = FALSE);tictoc::toc()
+}
+siteCode = 'BLUE'
+load(file = here::here("ignore/metab-models/mleModLists/BLUEmlemods.Rdata"))
+params = list(site = siteCode,
+              modList = modList)
 
-discharge.daily = BLUE_met_full %>%
-  dplyr::mutate(date = as.Date(solar.time)) %>%
-  group_by(date) %>%
-  dplyr::summarise(discharge = mean(discharge, na.rm = TRUE))
 
-## 
-mle_specs <- specs(mm_name(type = "mle"))
-mm1 <- metab_mle(mle_specs, data = BLUE_met_full)
+rmarkdown::render(here::here("code/resources/metModelsMLE/MLE-model-report-template.Rmd"),
+                  output_format = "pdf_document",
+                  output_dir = here::here("code/resources/metModelsMLE/reports"),
+                  output_file = paste0(siteCode,"_MLE-report.pdf"),
+                  knit_root_dir = here::here(),
+                  params = list(site = siteCode,
+                                modList = modList),
+                  clean = TRUE)
 
-k600_mm1 <- get_params(mm1, uncertainty = 'ci') %>%
-  select(date, K600.daily, K600.daily.lower, K600.daily.upper) %>%
-  left_join(BLUE_met_full %>%
-              dplyr::mutate(date = as.Date(solar.time)) %>%
-              group_by(date) %>%
-              dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE)))
-
-k600_mm1 %>%
-  ggplot()+
-  geom_point(aes(x = discharge.daily+0.001, y = K600.daily)) +
-  coord_trans('log10') 
-  
+#### 
+# BLUE_met_full = get_site_data(siteCode = "BLUE") %>%
+#   dplyr::select(-DO.pctsat)
+# 
+# discharge.daily = BLUE_met_full %>%
+#   dplyr::mutate(date = as.Date(solar.time)) %>%
+#   group_by(date) %>%
+#   dplyr::summarise(discharge = mean(discharge, na.rm = TRUE))
+# 
+# ## 
+# mle_specs <- specs(mm_name(type = "mle"))
+# mm1 <- metab_mle(mle_specs, data = BLUE_met_full, info = list(name = 'mm1', model ='raw'))
+# 
+# k600_mm1 <- get_params(mm1, uncertainty = 'ci') %>%
+#   select(date, K600.daily, K600.daily.lower, K600.daily.upper) %>%
+#   left_join(BLUE_met_full %>%
+#               dplyr::mutate(date = as.Date(solar.time)) %>%
+#               group_by(date) %>%
+#               dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE)))
+# 
+# k600_mm1 %>%
+#   ggplot()+
+#   geom_point(aes(x = discharge.daily+0.001, y = K600.daily)) +
+#   coord_trans('log10') 
+#   
+# # 
+# # 
+# km1 <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'loess'),
+#                           day_start = -1, day_end = 23), data_daily = k600_mm1)
+# km2 <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'lm'),
+#                           day_start = -1, day_end = 23), data_daily = k600_mm1)
+# km3 <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'mean'),
+#                           day_start = -1, day_end = 23), data_daily = k600_mm1)
+# km4 <- metab_night()
+# # 
+# k600_mm2 <- get_params(km1) %>% 
+#   select(date, K600.daily) %>%  
+#   dplyr::mutate(model = 'loess') %>%
+#   bind_rows(get_params(km2) %>%
+#               select(date, K600.daily) %>%  
+#               dplyr::mutate(model = 'lm')) %>%
+#   bind_rows(get_params(km3) %>%
+#               select(date, K600.daily) %>%
+#               dplyr::mutate(model = 'mean')) %>%
+#   left_join(ARIK_met_full %>%
+#               dplyr::mutate(date = as.Date(solar.time)) %>%
+#               group_by(date) %>%
+#               dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE)))
+# 
+# k600_mm2 %>%
+#   ggplot()+
+#   geom_point(aes(x = discharge.daily+0.001, y = K600.daily)) +
+#   coord_trans('log10') +
+#   facet_wrap(~model, scales = 'free_y')
+# # 
+# mm2 <- metab_mle(mle_specs, data = ARIK_met_full, data_daily = k600_mm2 %>% dplyr::filter(model == 'loess') %>% dplyr::select(date, K600.daily))
+# 
+# mm3 <- metab_mle(mle_specs, data = ARIK_met_full, data_daily = k600_mm2 %>% dplyr::filter(model == 'lm') %>% dplyr::select(date, K600.daily))
+# 
+# mm4 <- metab_mle(mle_specs, data = ARIK_met_full, data_daily = k600_mm2 %>% dplyr::filter(model == 'mean') %>% dplyr::select(date, K600.daily))
+# ## 
+# mle_specs_sat <- specs(mm_name(type = "mle", GPP_fun = 'satlight'))
+# mm1_sat <- metab_mle(mle_specs_sat, data = BLUE_met_full)
+# 
+# # identify negative values
+# k600_mm1_sat <- get_params(mm1_sat, uncertainty = 'ci') %>%
+#   left_join(predict_metab(mm1_sat) %>% select(date, GPP.daily = 'GPP')) %>%
+#   select(date, GPP.daily, K600.daily, K600.daily.lower, K600.daily.upper) %>%
+#   left_join(BLUE_met_full %>%
+#               dplyr::mutate(date = as.Date(solar.time)) %>%
+#               group_by(date) %>%
+#               dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE))) #%>%
+# # dplyr::filter(GPP.daily >0,
+# #              K600.daily < 500) %>% dplyr::select(-GPP.daily)
+# 
+# k600_mm1_sat %>%
+#   ggplot()+
+#   geom_point(aes(x = discharge.daily+0.001, y = K600.daily)) +
+#   coord_trans('log10')
+# 
+# k600_mm1_sat %>%
+#   ggplot()+
+#   geom_point(aes(x = GPP.daily, K600.daily))
+# 
+# k600_mm1_sat = k600_mm1_sat %>%
+#   # dplyr::filter(between(K600.daily,0, 400)) #%>%
+#   dplyr::filter(GPP.daily >= 1)
+# 
+# #
+# km1_sat <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'loess'), predictors = 'discharge.daily', other_args = list(span = 0.6),
+#                               day_start = -1, day_end = 23), data_daily = k600_mm1_sat%>% select(-GPP.daily))
+# 
+# km2_sat <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'lm'),
+#                               day_start = -1, day_end = 23), data_daily = k600_mm1_sat%>% select(-GPP.daily))
+# 
+# km3_sat <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'mean'),
+#                               day_start = -1, day_end = 23), data_daily = k600_mm1_sat%>% select(-GPP.daily))
+# # 
+# k600_mm1_sat <- get_params(km1_sat) %>% 
+#   select(date, K600.daily) %>%  
+#   dplyr::mutate(model = 'loess') %>%
+#   bind_rows(get_params(km2_sat) %>%
+#               select(date, K600.daily) %>%  
+#               dplyr::mutate(model = 'lm')) %>%
+#   bind_rows(get_params(km3_sat) %>%
+#               select(date, K600.daily) %>%
+#               dplyr::mutate(model = 'mean')) %>%
+#   left_join(BLUE_met_full %>%
+#               dplyr::mutate(date = as.Date(solar.time)) %>%
+#               group_by(date) %>%
+#               dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE)))
+# 
+# k600_mm1_sat %>%
+#   ggplot()+
+#   geom_point(aes(x = discharge.daily+0.001, y = K600.daily)) +
+#   coord_trans('log10') +
+#   facet_wrap(~model, scales = 'free_y')
+# # 
+# mm2_sat <- metab_mle(mle_specs_sat, data = BLUE_met_full, data_daily = k600_mm1_sat %>% dplyr::filter(model == 'loess') %>% dplyr::select(date, K600.daily))
+# 
+# mm3_sat <- metab_mle(mle_specs_sat, data = BLUE_met_full, data_daily = k600_mm1_sat %>% dplyr::filter(model == 'lm') %>% dplyr::select(date, K600.daily))
+# 
+# mm4_sat <- metab_mle(mle_specs_sat, data = BLUE_met_full, data_daily = k600_mm1_sat %>% dplyr::filter(model == 'mean') %>% dplyr::select(date, K600.daily))
+# 
+# ## satq10temp
+# mle_specs_satq10 <- specs(mm_name(type = "mle", GPP_fun = 'satlight', ER_fun = 'q10temp'))
+# mm1_satq10 <- metab_mle(mle_specs_satq10, data = BLUE_met_full)
+# 
+# # identify negative values
+# k600_mm1_satq10 <- get_params(mm1_satq10, uncertainty = 'ci') %>%
+#   left_join(predict_metab(mm1_sat) %>% select(date, GPP.daily = 'GPP')) %>%
+#   select(date, GPP.daily, K600.daily, K600.daily.lower, K600.daily.upper) %>%
+#   left_join(BLUE_met_full %>%
+#               dplyr::mutate(date = as.Date(solar.time)) %>%
+#               group_by(date) %>%
+#               dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE))) #%>%
+# # dplyr::filter(GPP.daily >0,
+# #              K600.daily < 500) %>% dplyr::select(-GPP.daily)
+# 
+# k600_mm1_satq10 %>%
+#   ggplot()+
+#   geom_point(aes(x = discharge.daily+0.001, y = K600.daily)) +
+#   coord_trans('log10')
+# 
+# k600_mm1_satq10 %>%
+#   ggplot()+
+#   geom_point(aes(x = GPP.daily, K600.daily))+
+#   coord_cartesian(ylim = c(NA, 500))
+# # 
+# km1_satq10 <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'loess'), predictors = 'discharge.daily', other_args = list(span = 0.6),
+#                                  day_start = -1, day_end = 23), data_daily = k600_mm1_satq10 %>% select(-GPP.daily))
+# 
+# km2_satq10 <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'lm'),
+#                                  day_start = -1, day_end = 23), data_daily = k600_mm1_satq10%>% select(-GPP.daily))
+# 
+# km3_satq10 <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'mean'),
+#                                  day_start = -1, day_end = 23), data_daily = k600_mm1_satq10 %>% select(-GPP.daily))
+# # 
+# k600_mm1_satq10 <- get_params(km1_satq10) %>% 
+#   select(date, K600.daily) %>%  
+#   dplyr::mutate(model = 'loess') %>%
+#   bind_rows(get_params(km2_satq10) %>%
+#               select(date, K600.daily) %>%  
+#               dplyr::mutate(model = 'lm')) %>%
+#   bind_rows(get_params(km3_satq10) %>%
+#               select(date, K600.daily) %>%
+#               dplyr::mutate(model = 'mean')) %>%
+#   left_join(BLUE_met_full %>%
+#               dplyr::mutate(date = as.Date(solar.time)) %>%
+#               group_by(date) %>%
+#               dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE)))
+# 
+# k600_mm1_satq10 %>%
+#   ggplot()+
+#   geom_point(aes(x = discharge.daily+0.001, y = K600.daily)) +
+#   coord_trans('log10') +
+#   facet_wrap(~model, scales = 'free_y')
+# # 
+# mm2_satq10 <- metab_mle(mle_specs_satq10, data = BLUE_met_full, data_daily = k600_mm1_satq10 %>% dplyr::filter(model == 'loess') %>% dplyr::select(date, K600.daily))
+# 
+# mm3_satq10 <- metab_mle(mle_specs_satq10, data = BLUE_met_full, data_daily = k600_mm1_satq10 %>% dplyr::filter(model == 'lm') %>% dplyr::select(date, K600.daily))
+# 
+# mm4_satq10 <- metab_mle(mle_specs_satq10, data = BLUE_met_full, data_daily = k600_mm1_satq10 %>% dplyr::filter(model == 'mean') %>% dplyr::select(date, K600.daily))
+# ####
+# ## satlightq10tempGPP-----
+# mle_specs_satq10gpp <- specs(mm_name(type = "mle", GPP_fun = 'satlightq10temp'))
+# mm1_satq10gpp <- metab_mle(mle_specs_satq10gpp, data = BLUE_met_full)
+# 
+# # identify negative values
+# k600_mm1_satq10gpp <- get_params(mm1_satq10gpp, uncertainty = 'ci') %>%
+#   left_join(predict_metab(mm1_satq10gpp) %>% select(date, GPP.daily = 'GPP')) %>%
+#   select(date, GPP.daily, K600.daily, K600.daily.lower, K600.daily.upper) %>%
+#   left_join(BLUE_met_full %>%
+#               dplyr::mutate(date = as.Date(solar.time)) %>%
+#               group_by(date) %>%
+#               dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE))) #%>%
+# # dplyr::filter(GPP.daily >0,
+# #              K600.daily < 500) %>% dplyr::select(-GPP.daily)
 # 
 # 
-km1 <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'loess'),
-                          day_start = -1, day_end = 23), data_daily = k600_mm1)
-km2 <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'lm'),
-                          day_start = -1, day_end = 23), data_daily = k600_mm1)
-km3 <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'mean'),
-                          day_start = -1, day_end = 23), data_daily = k600_mm1)
+# k600_mm1_satq10gpp %>%
+#   ggplot()+
+#   geom_point(aes(x = discharge.daily+0.001, y = K600.daily)) +
+#   coord_trans('log10')
+# # 
+# km1_satq10gpp <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'loess'),
+#                                     day_start = -1, day_end = 23), data_daily = k600_mm1_satq10gpp %>% select(-GPP.daily))
 # 
-k600_mm2 <- get_params(km1) %>% 
-  select(date, K600.daily) %>%  
-  dplyr::mutate(model = 'loess') %>%
-  bind_rows(get_params(km2) %>%
-              select(date, K600.daily) %>%  
-              dplyr::mutate(model = 'lm')) %>%
-  bind_rows(get_params(km3) %>%
-              select(date, K600.daily) %>%
-              dplyr::mutate(model = 'mean')) %>%
-  left_join(ARIK_met_full %>%
-              dplyr::mutate(date = as.Date(solar.time)) %>%
-              group_by(date) %>%
-              dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE)))
-
-k600_mm2 %>%
-  ggplot()+
-  geom_point(aes(x = discharge.daily+0.001, y = K600.daily)) +
-  coord_trans('log10') +
-  facet_wrap(~model, scales = 'free_y')
+# km2_satq10gpp <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'lm'),
+#                                     day_start = -1, day_end = 23), data_daily = k600_mm1_satq10gpp %>% select(-GPP.daily))
 # 
-mm2 <- metab_mle(mle_specs, data = ARIK_met_full, data_daily = k600_mm2 %>% dplyr::filter(model == 'loess') %>% dplyr::select(date, K600.daily))
-
-mm3 <- metab_mle(mle_specs, data = ARIK_met_full, data_daily = k600_mm2 %>% dplyr::filter(model == 'lm') %>% dplyr::select(date, K600.daily))
-
-mm4 <- metab_mle(mle_specs, data = ARIK_met_full, data_daily = k600_mm2 %>% dplyr::filter(model == 'mean') %>% dplyr::select(date, K600.daily))
-## 
-mle_specs_sat <- specs(mm_name(type = "mle", GPP_fun = 'satlight'))
-mm1_sat <- metab_mle(mle_specs_sat, data = BLUE_met_full)
-
-# identify negative values
-k600_mm1_sat <- get_params(mm1_sat, uncertainty = 'ci') %>%
-  left_join(predict_metab(mm1_sat) %>% select(date, GPP.daily = 'GPP')) %>%
-  select(date, GPP.daily, K600.daily, K600.daily.lower, K600.daily.upper) %>%
-  left_join(BLUE_met_full %>%
-              dplyr::mutate(date = as.Date(solar.time)) %>%
-              group_by(date) %>%
-              dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE))) #%>%
-# dplyr::filter(GPP.daily >0,
-#              K600.daily < 500) %>% dplyr::select(-GPP.daily)
-
-k600_mm1_sat %>%
-  ggplot()+
-  geom_point(aes(x = discharge.daily+0.001, y = K600.daily)) +
-  coord_trans('log10')
-
-k600_mm1_sat %>%
-  ggplot()+
-  geom_point(aes(x = GPP.daily, K600.daily))
-
-k600_mm1_sat = k600_mm1_sat %>%
-  # dplyr::filter(between(K600.daily,0, 400)) #%>%
-  dplyr::filter(GPP.daily >= 1)
-
-#
-km1_sat <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'loess'), predictors = 'discharge.daily', other_args = list(span = 0.6),
-                              day_start = -1, day_end = 23), data_daily = k600_mm1_sat%>% select(-GPP.daily))
-
-km2_sat <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'lm'),
-                              day_start = -1, day_end = 23), data_daily = k600_mm1_sat%>% select(-GPP.daily))
-
-km3_sat <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'mean'),
-                              day_start = -1, day_end = 23), data_daily = k600_mm1_sat%>% select(-GPP.daily))
+# km3_satq10gpp <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'mean'),
+#                                     day_start = -1, day_end = 23), data_daily = k600_mm1_satq10gpp %>% select(-GPP.daily))
+# # 
+# k600_mm1_satq10gpp <- get_params(km1_satq10gpp) %>% 
+#   select(date, K600.daily) %>%  
+#   dplyr::mutate(model = 'loess') %>%
+#   bind_rows(get_params(km2_satq10gpp) %>%
+#               select(date, K600.daily) %>%  
+#               dplyr::mutate(model = 'lm')) %>%
+#   bind_rows(get_params(km3_satq10gpp) %>%
+#               select(date, K600.daily) %>%
+#               dplyr::mutate(model = 'mean')) %>%
+#   left_join(BLUE_met_full %>%
+#               dplyr::mutate(date = as.Date(solar.time)) %>%
+#               group_by(date) %>%
+#               dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE)))
 # 
-k600_mm1_sat <- get_params(km1_sat) %>% 
-  select(date, K600.daily) %>%  
-  dplyr::mutate(model = 'loess') %>%
-  bind_rows(get_params(km2_sat) %>%
-              select(date, K600.daily) %>%  
-              dplyr::mutate(model = 'lm')) %>%
-  bind_rows(get_params(km3_sat) %>%
-              select(date, K600.daily) %>%
-              dplyr::mutate(model = 'mean')) %>%
-  left_join(BLUE_met_full %>%
-              dplyr::mutate(date = as.Date(solar.time)) %>%
-              group_by(date) %>%
-              dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE)))
-
-k600_mm1_sat %>%
-  ggplot()+
-  geom_point(aes(x = discharge.daily+0.001, y = K600.daily)) +
-  coord_trans('log10') +
-  facet_wrap(~model, scales = 'free_y')
+# k600_mm1_satq10gpp %>%
+#   ggplot()+
+#   geom_point(aes(x = discharge.daily+0.001, y = K600.daily)) +
+#   coord_trans('log10') +
+#   facet_wrap(~model, scales = 'free_y')
+# # 
+# mm2_satq10gpp <- metab_mle(mle_specs_satq10gpp, data = BLUE_met_full, data_daily = k600_mm1_satq10gpp %>% dplyr::filter(model == 'loess') %>% dplyr::select(date, K600.daily))
 # 
-mm2_sat <- metab_mle(mle_specs_sat, data = BLUE_met_full, data_daily = k600_mm1_sat %>% dplyr::filter(model == 'loess') %>% dplyr::select(date, K600.daily))
-
-mm3_sat <- metab_mle(mle_specs_sat, data = BLUE_met_full, data_daily = k600_mm1_sat %>% dplyr::filter(model == 'lm') %>% dplyr::select(date, K600.daily))
-
-mm4_sat <- metab_mle(mle_specs_sat, data = BLUE_met_full, data_daily = k600_mm1_sat %>% dplyr::filter(model == 'mean') %>% dplyr::select(date, K600.daily))
-
-## satq10temp
-mle_specs_satq10 <- specs(mm_name(type = "mle", GPP_fun = 'satlight', ER_fun = 'q10temp'))
-mm1_satq10 <- metab_mle(mle_specs_satq10, data = BLUE_met_full)
-
-# identify negative values
-k600_mm1_satq10 <- get_params(mm1_satq10, uncertainty = 'ci') %>%
-  left_join(predict_metab(mm1_sat) %>% select(date, GPP.daily = 'GPP')) %>%
-  select(date, GPP.daily, K600.daily, K600.daily.lower, K600.daily.upper) %>%
-  left_join(BLUE_met_full %>%
-              dplyr::mutate(date = as.Date(solar.time)) %>%
-              group_by(date) %>%
-              dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE))) #%>%
-# dplyr::filter(GPP.daily >0,
-#              K600.daily < 500) %>% dplyr::select(-GPP.daily)
-
-k600_mm1_satq10 %>%
-  ggplot()+
-  geom_point(aes(x = discharge.daily+0.001, y = K600.daily)) +
-  coord_trans('log10')
-
-k600_mm1_satq10 %>%
-  ggplot()+
-  geom_point(aes(x = GPP.daily, K600.daily))+
-  coord_cartesian(ylim = c(NA, 500))
+# mm3_satq10gpp <- metab_mle(mle_specs_satq10gpp, data = BLUE_met_full, data_daily = k600_mm1_satq10gpp %>% dplyr::filter(model == 'lm') %>% dplyr::select(date, K600.daily))
 # 
-km1_satq10 <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'loess'), predictors = 'discharge.daily', other_args = list(span = 0.6),
-                                 day_start = -1, day_end = 23), data_daily = k600_mm1_satq10 %>% select(-GPP.daily))
-
-km2_satq10 <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'lm'),
-                                 day_start = -1, day_end = 23), data_daily = k600_mm1_satq10%>% select(-GPP.daily))
-
-km3_satq10 <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'mean'),
-                                 day_start = -1, day_end = 23), data_daily = k600_mm1_satq10 %>% select(-GPP.daily))
+# mm4_satq10gpp <- metab_mle(mle_specs_satq10gpp, data = BLUE_met_full, data_daily = k600_mm1_satq10gpp %>% dplyr::filter(model == 'mean') %>% dplyr::select(date, K600.daily))
 # 
-k600_mm1_satq10 <- get_params(km1_satq10) %>% 
-  select(date, K600.daily) %>%  
-  dplyr::mutate(model = 'loess') %>%
-  bind_rows(get_params(km2_satq10) %>%
-              select(date, K600.daily) %>%  
-              dplyr::mutate(model = 'lm')) %>%
-  bind_rows(get_params(km3_satq10) %>%
-              select(date, K600.daily) %>%
-              dplyr::mutate(model = 'mean')) %>%
-  left_join(BLUE_met_full %>%
-              dplyr::mutate(date = as.Date(solar.time)) %>%
-              group_by(date) %>%
-              dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE)))
-
-k600_mm1_satq10 %>%
-  ggplot()+
-  geom_point(aes(x = discharge.daily+0.001, y = K600.daily)) +
-  coord_trans('log10') +
-  facet_wrap(~model, scales = 'free_y')
+# ## satlightq10tempall
+# mle_specs_satq10all <- specs(mm_name(type = "mle", GPP_fun = 'satlightq10temp', ER_fun = 'q10temp'))
+# mm1_satq10all <- metab_mle(mle_specs_satq10all, data = BLUE_met_full)
 # 
-mm2_satq10 <- metab_mle(mle_specs_satq10, data = BLUE_met_full, data_daily = k600_mm1_satq10 %>% dplyr::filter(model == 'loess') %>% dplyr::select(date, K600.daily))
-
-mm3_satq10 <- metab_mle(mle_specs_satq10, data = BLUE_met_full, data_daily = k600_mm1_satq10 %>% dplyr::filter(model == 'lm') %>% dplyr::select(date, K600.daily))
-
-mm4_satq10 <- metab_mle(mle_specs_satq10, data = BLUE_met_full, data_daily = k600_mm1_satq10 %>% dplyr::filter(model == 'mean') %>% dplyr::select(date, K600.daily))
-####
-## satlightq10tempGPP-----
-mle_specs_satq10gpp <- specs(mm_name(type = "mle", GPP_fun = 'satlightq10temp'))
-mm1_satq10gpp <- metab_mle(mle_specs_satq10gpp, data = BLUE_met_full)
-
-# identify negative values
-k600_mm1_satq10gpp <- get_params(mm1_satq10gpp, uncertainty = 'ci') %>%
-  left_join(predict_metab(mm1_satq10gpp) %>% select(date, GPP.daily = 'GPP')) %>%
-  select(date, GPP.daily, K600.daily, K600.daily.lower, K600.daily.upper) %>%
-  left_join(BLUE_met_full %>%
-              dplyr::mutate(date = as.Date(solar.time)) %>%
-              group_by(date) %>%
-              dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE))) #%>%
-# dplyr::filter(GPP.daily >0,
-#              K600.daily < 500) %>% dplyr::select(-GPP.daily)
-
-
-k600_mm1_satq10gpp %>%
-  ggplot()+
-  geom_point(aes(x = discharge.daily+0.001, y = K600.daily)) +
-  coord_trans('log10')
+# # identify negative values
+# k600_mm1_satq10all <- get_params(mm1_satq10all, uncertainty = 'ci') %>%
+#   left_join(predict_metab(mm1_satq10all) %>% select(date, GPP.daily = 'GPP')) %>%
+#   select(date, GPP.daily, K600.daily, K600.daily.lower, K600.daily.upper) %>%
+#   left_join(BLUE_met_full %>%
+#               dplyr::mutate(date = as.Date(solar.time)) %>%
+#               group_by(date) %>%
+#               dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE))) #%>%
+# # dplyr::filter(GPP.daily >0,
+# #              K600.daily < 500) %>% dplyr::select(-GPP.daily)
 # 
-km1_satq10gpp <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'loess'),
-                                    day_start = -1, day_end = 23), data_daily = k600_mm1_satq10gpp %>% select(-GPP.daily))
-
-km2_satq10gpp <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'lm'),
-                                    day_start = -1, day_end = 23), data_daily = k600_mm1_satq10gpp %>% select(-GPP.daily))
-
-km3_satq10gpp <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'mean'),
-                                    day_start = -1, day_end = 23), data_daily = k600_mm1_satq10gpp %>% select(-GPP.daily))
 # 
-k600_mm1_satq10gpp <- get_params(km1_satq10gpp) %>% 
-  select(date, K600.daily) %>%  
-  dplyr::mutate(model = 'loess') %>%
-  bind_rows(get_params(km2_satq10gpp) %>%
-              select(date, K600.daily) %>%  
-              dplyr::mutate(model = 'lm')) %>%
-  bind_rows(get_params(km3_satq10gpp) %>%
-              select(date, K600.daily) %>%
-              dplyr::mutate(model = 'mean')) %>%
-  left_join(BLUE_met_full %>%
-              dplyr::mutate(date = as.Date(solar.time)) %>%
-              group_by(date) %>%
-              dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE)))
-
-k600_mm1_satq10gpp %>%
-  ggplot()+
-  geom_point(aes(x = discharge.daily+0.001, y = K600.daily)) +
-  coord_trans('log10') +
-  facet_wrap(~model, scales = 'free_y')
+# k600_mm1_satq10all %>%
+#   ggplot()+
+#   geom_point(aes(x = discharge.daily+0.001, y = K600.daily)) +
+#   coord_trans('log10')
+# # 
+# km1_satq10all <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'loess'),
+#                                     day_start = -1, day_end = 23), data_daily = k600_mm1_satq10all %>% select(-GPP.daily))
 # 
-mm2_satq10gpp <- metab_mle(mle_specs_satq10gpp, data = BLUE_met_full, data_daily = k600_mm1_satq10gpp %>% dplyr::filter(model == 'loess') %>% dplyr::select(date, K600.daily))
-
-mm3_satq10gpp <- metab_mle(mle_specs_satq10gpp, data = BLUE_met_full, data_daily = k600_mm1_satq10gpp %>% dplyr::filter(model == 'lm') %>% dplyr::select(date, K600.daily))
-
-mm4_satq10gpp <- metab_mle(mle_specs_satq10gpp, data = BLUE_met_full, data_daily = k600_mm1_satq10gpp %>% dplyr::filter(model == 'mean') %>% dplyr::select(date, K600.daily))
-
-## satlightq10tempall
-mle_specs_satq10all <- specs(mm_name(type = "mle", GPP_fun = 'satlightq10temp', ER_fun = 'q10temp'))
-mm1_satq10all <- metab_mle(mle_specs_satq10all, data = BLUE_met_full)
-
-# identify negative values
-k600_mm1_satq10all <- get_params(mm1_satq10all, uncertainty = 'ci') %>%
-  left_join(predict_metab(mm1_satq10all) %>% select(date, GPP.daily = 'GPP')) %>%
-  select(date, GPP.daily, K600.daily, K600.daily.lower, K600.daily.upper) %>%
-  left_join(BLUE_met_full %>%
-              dplyr::mutate(date = as.Date(solar.time)) %>%
-              group_by(date) %>%
-              dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE))) #%>%
-# dplyr::filter(GPP.daily >0,
-#              K600.daily < 500) %>% dplyr::select(-GPP.daily)
-
-
-k600_mm1_satq10all %>%
-  ggplot()+
-  geom_point(aes(x = discharge.daily+0.001, y = K600.daily)) +
-  coord_trans('log10')
+# km2_satq10all <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'lm'),
+#                                     day_start = -1, day_end = 23), data_daily = k600_mm1_satq10all %>% select(-GPP.daily))
 # 
-km1_satq10all <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'loess'),
-                                    day_start = -1, day_end = 23), data_daily = k600_mm1_satq10all %>% select(-GPP.daily))
-
-km2_satq10all <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'lm'),
-                                    day_start = -1, day_end = 23), data_daily = k600_mm1_satq10all %>% select(-GPP.daily))
-
-km3_satq10all <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'mean'),
-                                    day_start = -1, day_end = 23), data_daily = k600_mm1_satq10all %>% select(-GPP.daily))
+# km3_satq10all <- metab_Kmodel(specs(mm_name('Kmodel', engine = 'mean'),
+#                                     day_start = -1, day_end = 23), data_daily = k600_mm1_satq10all %>% select(-GPP.daily))
+# # 
+# k600_mm1_satq10all <- get_params(km1_satq10all) %>% 
+#   select(date, K600.daily) %>%  
+#   dplyr::mutate(model = 'loess') %>%
+#   bind_rows(get_params(km2_satq10all) %>%
+#               select(date, K600.daily) %>%  
+#               dplyr::mutate(model = 'lm')) %>%
+#   bind_rows(get_params(km3_satq10all) %>%
+#               select(date, K600.daily) %>%
+#               dplyr::mutate(model = 'mean')) %>%
+#   left_join(BLUE_met_full %>%
+#               dplyr::mutate(date = as.Date(solar.time)) %>%
+#               group_by(date) %>%
+#               dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE)))
 # 
-k600_mm1_satq10all <- get_params(km1_satq10all) %>% 
-  select(date, K600.daily) %>%  
-  dplyr::mutate(model = 'loess') %>%
-  bind_rows(get_params(km2_satq10all) %>%
-              select(date, K600.daily) %>%  
-              dplyr::mutate(model = 'lm')) %>%
-  bind_rows(get_params(km3_satq10all) %>%
-              select(date, K600.daily) %>%
-              dplyr::mutate(model = 'mean')) %>%
-  left_join(BLUE_met_full %>%
-              dplyr::mutate(date = as.Date(solar.time)) %>%
-              group_by(date) %>%
-              dplyr::summarise(discharge.daily = mean(discharge, na.rm = TRUE)))
-
-k600_mm1_satq10all %>%
-  ggplot()+
-  geom_point(aes(x = discharge.daily+0.001, y = K600.daily)) +
-  coord_trans('log10') +
-  facet_wrap(~model, scales = 'free_y')
+# k600_mm1_satq10all %>%
+#   ggplot()+
+#   geom_point(aes(x = discharge.daily+0.001, y = K600.daily)) +
+#   coord_trans('log10') +
+#   facet_wrap(~model, scales = 'free_y')
+# # 
+# mm2_satq10all <- metab_mle(mle_specs_satq10all, data = BLUE_met_full, data_daily = k600_mm1_satq10all %>% dplyr::filter(model == 'loess') %>% dplyr::select(date, K600.daily))
 # 
-mm2_satq10all <- metab_mle(mle_specs_satq10all, data = BLUE_met_full, data_daily = k600_mm1_satq10all %>% dplyr::filter(model == 'loess') %>% dplyr::select(date, K600.daily))
-
-mm3_satq10all <- metab_mle(mle_specs_satq10all, data = BLUE_met_full, data_daily = k600_mm1_satq10all %>% dplyr::filter(model == 'lm') %>% dplyr::select(date, K600.daily))
-
-mm4_satq10all <- metab_mle(mle_specs_satq10all, data = BLUE_met_full, data_daily = k600_mm1_satq10all %>% dplyr::filter(model == 'mean') %>% dplyr::select(date, K600.daily))
-####
-
-modList = ls()[grep("^mm\\d{1}.*", ls())] %>% purrr::map(~eval(as.symbol(.x)))
-save(modList, file = "./ignore/metab-models/mleModLists/BLUEmlemods.Rdata")
-
+# mm3_satq10all <- metab_mle(mle_specs_satq10all, data = BLUE_met_full, data_daily = k600_mm1_satq10all %>% dplyr::filter(model == 'lm') %>% dplyr::select(date, K600.daily))
+# 
+# mm4_satq10all <- metab_mle(mle_specs_satq10all, data = BLUE_met_full, data_daily = k600_mm1_satq10all %>% dplyr::filter(model == 'mean') %>% dplyr::select(date, K600.daily))
+# ####
+# 
+# modList = ls()[grep("^mm\\d{1}.*", ls())] %>% purrr::map(~eval(as.symbol(.x)))
+# save(modList, file = "./ignore/metab-models/mleModLists/BLUEmlemods.Rdata")
+# 
+# siteCode = 'BLUE'
+# rmarkdown::render(here::here("./code/resources/metModelsMLE/MLE-model-report-template.Rmd"),
+#                   output_format = "pdf_document",
+#                   output_dir = here::here("./code/resources/metModelsMLE/reports"),
+#                   output_file = paste0(siteCode,"-MLE-report.pdf"),
+#                   params = list(site = siteCode,
+#                                 modList = modList))
 # # model assessment
 # rm(list = ls())
 # source("./code/resources/01_load-packages.R")
