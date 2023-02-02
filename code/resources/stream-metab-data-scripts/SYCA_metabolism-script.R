@@ -1,7 +1,7 @@
 # SYCA metabolism script
 rm(list = ls())
 source("./code/resources/01_load-packages.R")
-# debugonce(clean_DO)
+debugonce(clean_DO)
 SYCA_DO = clean_DO(siteCode ='SYCA', save = FALSE, return = TRUE);names(SYCA_DO)
 SYCA_DO_xts = xts(SYCA_DO[,grep("DO_*",names(SYCA_DO))], order.by = SYCA_DO$timePeriod)
 dygraph(SYCA_DO_xts, main = "SYCA DOs") %>% dyRangeSelector()
@@ -11,10 +11,14 @@ SYCA101badDates = c(seq(as.Date("2019-09-23"), as.Date("2019-10-03"), by = 1),
                     seq(as.Date("2020-01-12"), as.Date("2020-01-14"), by = 1),
                     seq(as.Date("2020-02-11"), as.Date("2020-02-14"), by = 1),
                     seq(as.Date("2020-03-13"), as.Date("2020-06-01"), by = 1),
-                    as.Date("2022-08-11"))
+                    seq(as.Date("2021-07-15"), as.Date("2021-07-16"), by = 1),
+                    seq(as.Date("2021-07-22"), as.Date("2021-08-12"), by = 1),
+                    seq(as.Date("2022-08-05"), as.Date("2022-08-11"), by = 1))
 
 SYCA102badDates = c(seq(as.Date("2019-02-10"), as.Date("2019-02-12"), by = 1),
                     seq(as.Date("2019-09-23"), as.Date("2019-10-03"), by = 1),
+                    seq(as.Date("2019-11-29"), as.Date("2019-12-16"), by = 1),
+                    seq(as.Date("2019-12-29"), as.Date("2020-01-14"), by = 1), #make 101 here
                     seq(as.Date("2020-10-19"), as.Date("2020-11-21"), by = 1),
                     seq(as.Date("2021-07-17"), as.Date("2021-07-21"), by = 1),
                     seq(as.Date("2021-07-23"), as.Date("2021-10-06"), by = 1),
@@ -26,17 +30,21 @@ SYCA_DO = SYCA_DO %>%
 
 # bad correlation
 lm101to102= lm(DO_102 ~ DO_101, data = SYCA_DO);summary(lm101to102);plot(DO_102 ~ DO_101, data = SYCA_DO)
+gam101to102 = mgcv::gam(DO_102 ~ s(DO_101, bs = 'tp') + s(hour, bs = 'cc', k = 24), data = SYCA_DO);gam.check(gam101to102)
 
 # pretty bad correlation
 # fill with predicted values
-SYCA_DO$pred1 = predict(lm101to102, newdata = data.frame(DO_101 = SYCA_DO$DO_101))
+SYCA_DO$pred1 = predict(lm101to102, newdata = data.frame(DO_101 = SYCA_DO$DO_101));plot(SYCA_DO$DO_101,SYCA_DO$DO_102);abline(0,1)
+SYCA_DO$pred2 = predict(gam101to102, newdata = data.frame(DO_101 = SYCA_DO$DO_101, hour = SYCA_DO$hour))
+
+plot(SYCA_DO$DO_102~SYCA_DO$pred2);abline(0,1)
 
 SYCA_clean_DO = SYCA_DO %>%
-  dplyr::mutate(DO.obs = case_when(is.na(DO_102) & !is.na(DO_101) ~ pred1,
+  dplyr::mutate(DO.obs = case_when(is.na(DO_102) & !is.na(DO_101) ~ pred2,
                                    is.na(DO_102) & is.na(DO_101) ~ NA_real_,
                                    TRUE ~ DO_102)) %>%
   dplyr::select(timePeriod, DO_102 = "DO.obs", hour)
-plot(ts(SYCA_clean_DO$DO_102))
+dygraph(xts(SYCA_clean_DO$DO_102, order.by = SYCA_clean_DO$timePeriod))
 
 saveRDS(SYCA_clean_DO, file = here::here("ignore/site-gpp-data/SYCA_clean_DO.rds"))
 rm(list = ls())

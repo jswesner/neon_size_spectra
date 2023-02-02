@@ -1,4 +1,5 @@
 # BLUE metabolism script
+rm(list = ls())
 source("./code/resources/01_load-packages.R")
 theme_set(theme_minimal())
 
@@ -12,7 +13,7 @@ BLUEbadDates = c(seq(as.Date("2018-12-14"), as.Date("2019-01-02"), by = 1),
                  seq(as.Date("2021-05-18"), as.Date("2021-07-08"), by = 1),
                  seq(as.Date("2021-11-01"), as.Date("2021-12-30"), by = 1))
 BLUE_clean_DO = BLUE_DO %>% 
-  select(timePeriod, DO_102 = DO_112, hour) %>% 
+  select(timePeriod, DO_102 ="DO_112", hour) %>% 
   dplyr::mutate(DO_102 = case_when(as.Date(timePeriod) %in% BLUEbadDates ~ NA_real_,
                                    TRUE ~ DO_102)) 
 plot(ts(BLUE_clean_DO$DO_102))
@@ -26,16 +27,15 @@ dygraph(BLUE_temp_xts, main = "BLUE temp_112") %>% dyRangeSelector()
 BLUE_clean_temp = BLUE_temp %>% 
   dplyr::mutate(temp_112 = case_when(is.na(temp_112) & !is.na(temp_102) ~ temp_102,
                                      TRUE ~ temp_112)) %>% 
-  select(timePeriod, temp_102 = temp_112, hour) %>% 
+  select(timePeriod, temp_102 = "temp_112", hour) %>% 
   dplyr::mutate(temp_102 = case_when(as.Date(timePeriod) %in% seq(as.Date("2021-02-22"),as.Date("2021-02-24"), by = 1) ~ NA_real_,
                                      TRUE ~ temp_102)) 
 plot(ts(BLUE_clean_temp$temp_102))
 saveRDS(BLUE_clean_temp, file = here::here("ignore/site-gpp-data/BLUE_clean_temp.rds"))
 
-
 # check to see that the file columns make sense
-BLUE_clean_temp = readRDS(file = "./ignore/site-gpp-data/BLUE_clean_temp.rds")
-BLUE_clean_DO = readRDS("./ignore/site-gpp-data/BLUE_clean_DO.rds")
+BLUE_clean_temp = readRDS(file = "./ignore/site-gpp-data/BLUE_clean_temp.rds");names(BLUE_clean_DO)
+BLUE_clean_DO = readRDS("./ignore/site-gpp-data/BLUE_clean_DO.rds");names(BLUE_clean_temp)
 debugonce(get_site_data)
 BLUE_met = get_site_data(siteCode = "BLUE")
 

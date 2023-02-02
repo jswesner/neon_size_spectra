@@ -11,7 +11,6 @@ streamsExclude = c()#c('LECO','MCRA','COMO','WLOU','BLUE')
 streamsMod = streams[streams %ni% streamsExclude]
 
 # load in mle models
-# 
 # mleFiles = list.files(path = "./ignore/metab-models/", pattern = ".*_full_mle.rds", full.names = TRUE) %>% unlist
 mleFiles = list.files(path = "./ignore/metab-models/", pattern = ".*mleEnsemble.rds", full.names = TRUE) %>% unlist
 
@@ -27,10 +26,10 @@ gppSumm = mleModels %>% ungroup %>%
 
 gppFull = mleModels %>% ungroup %>%
   # dplyr::mutate(siteID = as.factor(gsub("(\\w{4})_full_mle","\\1",siteID))) %>% 
-  dplyr::mutate(GPP = ifelse(GPP < 0, NA, GPP)) %>% 
+  dplyr::mutate(GPP = ifelse(GPP < 0.0001, NA, GPP)) %>% 
   dplyr::filter(!is.na(GPP)) %>% 
   group_by(siteID) %>% 
-  mutate(mean_GPP = mean(GPP, na.rm = TRUE),
+  dplyr::mutate(mean_GPP = mean(GPP, na.rm = TRUE),
          sd_gpp = sd(GPP, na.rm = TRUE),
          jday = lubridate::yday(date),
          mean_jday = mean(jday),  
@@ -38,14 +37,17 @@ gppFull = mleModels %>% ungroup %>%
          # gpp_c_100 = (GPP - median_GPP)/100,
          # gpp_c = scale(GPP, center = TRUE, scale = TRUE),
          gpp_100 = GPP/100,
+         log_gpp_100 = log(gpp_100),
+         gpp_10 = GPP/10,
          year = lubridate::year(date),
          year_f = as.factor(year)) %>%
-  dplyr::select(siteID, date, year_f, jday_c_100, gpp_100)
+  dplyr::select(siteID, date, year_f, jday_c_100, GPP,  gpp_100, gpp_10, log_gpp_100)
 
 
 gppFull %>% ggplot+
   geom_point(aes(x = jday_c_100, y = gpp_100, color = siteID)) +
   geom_smooth(aes(x = jday_c_100, y =  gpp_100, color = siteID, group = year_f), method = 'loess', span = 0.5, se=F)+
+  coord_cartesian(ylim = c(0,NA))+
   viridis::scale_color_viridis(discrete = TRUE)+
   facet_wrap(~siteID, scales = 'free_y')+
   theme(legend.position = 'none')
@@ -54,9 +56,9 @@ library(brms)
 
 gpp_c_split = split(gppFull, f = gppFull$siteID)
 
-brm_gpp_fit <- brm_multiple(gpp_100 ~ 
+brm_gpp_fit <- brm_multiple(GPP ~ 
                   s(jday_c_100) + (1|year_f),
-                family = Gamma(link = "log"),
+                family = Gamma(link = "log"),#inverse.gaussian(link="log"),#gaussian(),
                 data = gpp_c_split,
                 prior = 
                   c(prior(normal(0, 2),
@@ -67,10 +69,10 @@ brm_gpp_fit <- brm_multiple(gpp_100 ~
                           class = "sds"),
                     prior(exponential(1),
                           class = "sd")),
-                iter = 1000, chains = 2, combine = FALSE, 
+                iter = 1000, chains = 2, combine = FALSE,
                 backend = 'cmdstanr')
 
-saveRDS(brm_gpp, "./data/derived_data/brm_gpp_fit.rds")
+saveRDS(brm_gpp_fit, "./data/derived_data/brm_gpp_fit.rds")
 
 ##
 gpp_conditionals <- NULL
@@ -78,7 +80,9 @@ brm_gpp_fit <- setNames(brm_gpp_fit, nm = names(gpp_c_split))
 for(i in 1:length(brm_gpp_fit)){
    # brm_gpp_fit[[i]]$data %>%
      # distinct(tibble) %>%
-     tibble(jday_c_100 = 1:365) %>%
+     tibble(jday = 1:365) %>%
+     dplyr::mutate(mean_jday = mean(jday),
+                   jday_c_100 = (jday -mean_jday)/100) %>% 
      tidybayes::add_epred_draws(brm_gpp_fit[[i]],
                                re_formula = NA,
                                ndraws = 500) %>%
@@ -87,30 +91,37 @@ for(i in 1:length(brm_gpp_fit)){
    gpp_conditionals <- rbind(gpp_conditionals, posts_tidy)
                                   
  }
- plot(conditional_effects(brm_gpp_fit[[13]]), points = T)
+
+for(i in seq_along(names(brm_gpp_fit))){
+  plot(conditional_effects(brm_gpp_fit[[i]]), points = T)
+}
+plot(conditional_effects(brm_gpp_fit[['SYCA']]), points = TRUE)
 
 gpp_means = gpp_conditionals %>%
-   rename(siteID = 'model') %>% 
-   mutate(.epred = .epred*100) %>% 
-   left_join(gppFull %>% group_by(siteID) %>% 
-             mutate(day_min = min(jday_c_100),
-                   day_max = max(jday_c_100)) %>% 
-             distinct(siteID, day_min, day_max)) %>% 
-   mutate(.epred = case_when(jday_c_100 < day_min ~ 0,
+   dplyr::rename(siteID = 'model') %>% 
+   dplyr::mutate(.epred = .epred) %>%
+   left_join(gppFull %>% group_by(siteID) %>%
+             dplyr::mutate(day_min = min(jday_c_100),
+                   day_max = max(jday_c_100)) %>%
+             distinct(siteID, day_min, day_max)) %>%
+   dplyr::mutate(.epred = case_when(jday_c_100 < day_min ~ 0,
                              jday_c_100 > day_max ~ 0,
-                             TRUE ~ .epred)) %>% 
+                             TRUE ~ .epred)) %>%
    group_by(siteID, .draw) %>% 
-   summarize(total_gpp = sum(.epred)) %>% 
-   summarize(mean = mean(total_gpp),
+   dplyr::summarize(total_gpp = sum(.epred)) %>% 
+   dplyr::summarize(mean = mean(total_gpp),
              sd = sd(total_gpp))
 
-saveRDS(file = "./data/derived_data/gpp_means.rds")
+saveRDS(gpp_means, file = "./data/derived_data/gpp_means.rds")
+
+gpp_means %>% 
+  dplyr::mutate(cv = sd/mean) %>% print(n = 24)
 
 library(janitor)
 library(readr)
 
 new_names <- list_of_data %>% 
-  select(-names(fit$data[1])) %>% 
+  select(-names(brm_gpp_fit$data[1])) %>% 
   select(-cond__, -effect1__, -effect2__, -estimate__, -se__, -lower__, -upper__) %>% remove_empty("cols")
 
 
