@@ -1,0 +1,5 @@
+uid,domainID,siteID,namedLocation,passStartTime,passEndTime,passNumber,eventID,taxonID,scientificName,morphospeciesID,bulkFishCount,actualOrEstimated,identificationQualifier,identifiedBy,remarks
+"89091549-ea95-4573-b909-20077da8f02b","D01","HOPB","HOPB.AOS.fish.point.06","2017-11-03T16:35Z","2017-11-03T17:10Z",3,"HOPB.20171103.06.3.e-fisher","RHIATR","Rhinichthys atratulus",,1,"actual",,"thillman@battelleecology.org",
+"bbd6caed-72b6-473a-adb1-67981419f7b6","D01","HOPB","HOPB.AOS.fish.point.10","2017-11-08T17:10Z","2017-11-08T18:00Z",1,"HOPB.20171108.10.1.e-fisher","RHIATR","Rhinichthys atratulus",,10,"actual",,"adavila@battelleecology.org",
+"784c9518-b0f4-427a-b622-dcef0b6a4335","D01","HOPB","HOPB.AOS.fish.point.10","2017-11-08T19:15Z","2017-11-08T19:50Z",2,"HOPB.20171108.10.2.e-fisher","RHIATR","Rhinichthys atratulus",,36,"actual",,"adavila@battelleecology.org",
+"4f6aea6d-6938-4a08-9f4a-d5bd706e4d7a","D01","HOPB","HOPB.AOS.fish.point.10","2017-11-08T20:20Z","2017-11-08T21:00Z",3,"HOPB.20171108.10.3.e-fisher","RHIATR","Rhinichthys atratulus",,21,"actual",,"adavila@battelleecology.org",

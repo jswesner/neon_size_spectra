@@ -1,0 +1,3 @@
+uid,domainID,siteID,namedLocation,passStartTime,passEndTime,passNumber,eventID,taxonID,scientificName,morphospeciesID,bulkFishCount,actualOrEstimated,identificationQualifier,identifiedBy,remarks
+"69a18c98-1a42-4d5e-90ca-a710ee983f0d","D07","WALK","WALK.AOS.fish.point.02","2018-03-20T17:07Z","2018-03-20T17:55Z",1,"WALK.20180320.02.1.e-fisher","RHIATR","Rhinichthys atratulus",,21,"actual",,"abradner@battelleecology.org",
+"760bd35a-0a21-4eb4-b8ac-a827c91e1c7e","D07","WALK","WALK.AOS.fish.point.06","2018-03-29T13:00Z","2018-03-29T14:05Z",1,"WALK.20180329.06.1.e-fisher","RHIATR","Rhinichthys atratulus",,17,"actual",,"abradner@battelleecology.org",

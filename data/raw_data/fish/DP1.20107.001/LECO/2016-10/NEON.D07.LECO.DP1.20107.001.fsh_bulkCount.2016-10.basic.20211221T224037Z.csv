@@ -1,0 +1,4 @@
+uid,domainID,siteID,namedLocation,passStartTime,passEndTime,passNumber,eventID,taxonID,scientificName,morphospeciesID,bulkFishCount,actualOrEstimated,identificationQualifier,identifiedBy,remarks
+"c01f5dda-40f8-47e7-8e9b-192d35835cd4","D07","LECO","LECO.AOS.fish.point.01","2016-10-17T16:00Z","2016-10-17T20:45Z",1,"LECO.20161017.01.1.e-fisher","ONCMYK","Oncorhynchus mykiss",,1,"actual",,"abradner@battelleecology.org",
+"64f08644-64ce-4ec8-823b-40aba0081b09","D07","LECO","LECO.AOS.fish.point.04","2016-10-18T16:30Z","2016-10-18T20:00Z",1,"LECO.20161018.04.1.e-fisher","RHIATR","Rhinichthys atratulus",,1,"actual",,"abradner@battelleecology.org",
+"31f8b8ef-4e00-48fc-9c8d-fc395fe3adfd","D07","LECO","LECO.AOS.fish.point.09","2016-10-19T14:15Z","2016-10-19T15:15Z",1,"LECO.20161019.09.1.e-fisher","RHIATR","Rhinichthys atratulus",,1,"actual",,"abradner@battelleecology.org",

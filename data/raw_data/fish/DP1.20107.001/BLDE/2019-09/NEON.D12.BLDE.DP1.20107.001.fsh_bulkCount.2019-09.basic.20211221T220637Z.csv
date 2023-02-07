@@ -1,0 +1,5 @@
+uid,domainID,siteID,namedLocation,passStartTime,passEndTime,passNumber,eventID,taxonID,scientificName,morphospeciesID,bulkFishCount,actualOrEstimated,identificationQualifier,identifiedBy,remarks
+"a4bb556f-b66d-451d-b1ec-17be1afd74f9","D12","BLDE","BLDE.AOS.fish.point.03","2019-09-24T17:04Z","2019-09-24T17:24Z",2,"BLDE.20190924.03.2.e-fisher","SALFON","Salvelinus fontinalis",,18,"actual",,"0000-0003-0371-727X",
+"2ca0cdc7-de19-4217-b4be-97457d05aa64","D12","BLDE","BLDE.AOS.fish.point.03","2019-09-24T18:05Z","2019-09-24T18:29Z",3,"BLDE.20190924.03.3.e-fisher","SALFON","Salvelinus fontinalis",,11,"actual",,"0000-0003-0371-727X",
+"5c989e25-be01-4b42-84c6-1580905fcb24","D12","BLDE","BLDE.AOS.fish.point.06","2019-09-25T18:12Z","2019-09-25T18:29Z",3,"BLDE.20190925.06.3.e-fisher","SALFON","Salvelinus fontinalis",,13,"actual",,"0000-0003-0371-727X",
+"1441cbf5-ca6b-4422-bfa0-552bae0adcee","D12","BLDE","BLDE.AOS.fish.point.10","2019-09-26T17:08Z","2019-09-26T18:20Z",1,"BLDE.20190926.10.1.e-fisher","SALFON","Salvelinus fontinalis",,1,"actual",,"0000-0003-0371-727X",

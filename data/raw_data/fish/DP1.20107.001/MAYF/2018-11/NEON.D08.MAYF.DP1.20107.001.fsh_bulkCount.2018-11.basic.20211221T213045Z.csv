@@ -1,0 +1,8 @@
+uid,domainID,siteID,namedLocation,passStartTime,passEndTime,passNumber,eventID,taxonID,scientificName,morphospeciesID,bulkFishCount,actualOrEstimated,identificationQualifier,identifiedBy,remarks
+"db5153b8-fa3e-4419-bdb0-05cae986acae","D08","MAYF","MAYF.AOS.fish.point.02","2018-11-26T18:28Z","2018-11-26T19:42Z",2,"MAYF.20181126.02.2.e-fisher","NOTBAI","Notropis baileyi",,20,"actual",,"jgalloway@battelleecology.org",
+"6919ec9d-1447-4485-90f1-78cc3dc4e745","D08","MAYF","MAYF.AOS.fish.point.02","2018-11-26T20:12Z","2018-11-26T21:20Z",3,"MAYF.20181126.02.3.e-fisher","NOTBAI","Notropis baileyi",,10,,,"jgalloway@battelleecology.org",
+"6975fa72-7a4a-47c3-aad0-b1d03c77bbb3","D08","MAYF","MAYF.AOS.fish.point.07","2018-11-28T15:12Z","2018-11-28T16:52Z",1,"MAYF.20181128.07.1.e-fisher","NOTBAI","Notropis baileyi",,26,"actual",,"jgalloway@battelleecology.org",
+"2346047a-2b61-408a-98d9-968eee6880aa","D08","MAYF","MAYF.AOS.fish.point.07","2018-11-28T17:45Z","2018-11-28T19:00Z",2,"MAYF.20181128.07.2.e-fisher","NOTBAI","Notropis baileyi",,19,"actual",,"jgalloway@battelleecology.org",
+"aa2e364f-085b-44d3-858f-3366e361e205","D08","MAYF","MAYF.AOS.fish.point.07","2018-11-28T19:36Z","2018-11-28T20:52Z",3,"MAYF.20181128.07.3.e-fisher","NOTBAI","Notropis baileyi",,10,"actual",,"jgalloway@battelleecology.org",
+"8074c93d-a371-400f-97bd-64280edd7172","D08","MAYF","MAYF.AOS.fish.point.09","2018-11-29T17:30Z","2018-11-29T19:33Z",2,"MAYF.20181129.09.2.e-fisher","NOTBAI","Notropis baileyi",,2,"actual",,"jgalloway@battelleecology.org",
+"b4ffd3c1-6274-49a4-91c4-a9efaacc420a","D08","MAYF","MAYF.AOS.fish.point.09","2018-11-29T20:11Z","2018-11-29T21:22Z",3,"MAYF.20181129.09.3.e-fisher","NOTBAI","Notropis baileyi",,10,"actual",,"jgalloway@battelleecology.org",

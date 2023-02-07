@@ -1,0 +1,7 @@
+uid,domainID,siteID,namedLocation,passStartTime,passEndTime,passNumber,eventID,taxonID,scientificName,morphospeciesID,bulkFishCount,actualOrEstimated,identificationQualifier,identifiedBy,remarks
+"5995d66e-ec85-4ee4-99b1-23742b09f592","D11","PRIN","PRIN.AOS.fish.point.06","2019-11-19T17:59Z","2019-11-19T18:31Z",1,"PRIN.20191119.06.1.e-fisher","GAMAFF","Gambusia affinis",,78,"actual",,"0000-0002-2086-5736",
+"4d83df89-86c7-4836-8258-4d2331512ccd","D11","PRIN","PRIN.AOS.fish.point.07","2019-11-19T19:50Z","2019-11-19T20:17Z",1,"PRIN.20191119.07.1.e-fisher","GAMAFF","Gambusia affinis",,124,"actual",,"0000-0002-2086-5736",
+"5b67ce51-dd8a-4660-b114-12c9e670a03f","D11","PRIN","PRIN.AOS.fish.point.07","2019-11-19T21:08Z","2019-11-19T21:30Z",2,"PRIN.20191119.07.2.e-fisher","FUNNOT","Fundulus notatus",,8,"actual",,"0000-0002-2086-5736",
+"bc7cd17c-d3d5-4cac-8eca-c4fb13dd098b","D11","PRIN","PRIN.AOS.fish.point.07","2019-11-19T21:08Z","2019-11-19T21:30Z",2,"PRIN.20191119.07.2.e-fisher","GAMAFF","Gambusia affinis",,167,"actual",,"0000-0002-2086-5736",
+"fda82130-d9d4-40a8-a8e1-663d03240021","D11","PRIN","PRIN.AOS.fish.point.07","2019-11-19T22:01Z","2019-11-19T22:21Z",3,"PRIN.20191119.07.3.e-fisher","GAMAFF","Gambusia affinis",,30,"actual",,"0000-0002-2086-5736",
+"5b50513f-a461-4336-b59d-b1961d503f7b","D11","PRIN","PRIN.AOS.fish.point.07","2019-11-19T22:01Z","2019-11-19T22:21Z",3,"PRIN.20191119.07.3.e-fisher","FUNNOT","Fundulus notatus",,6,"actual",,"0000-0002-2086-5736",

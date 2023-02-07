@@ -1,0 +1,7 @@
+uid,domainID,siteID,namedLocation,passStartTime,passEndTime,passNumber,eventID,taxonID,scientificName,morphospeciesID,bulkFishCount,actualOrEstimated,identificationQualifier,identifiedBy,remarks
+"d98c0c6d-18f1-43a2-b454-75a499d71801","D06","MCDI","MCDI.AOS.fish.point.04","2020-11-02T15:30Z","2020-11-02T16:01Z",1,"MCDI.20201102.04.1.e-fisher","ETHSPE","Etheostoma spectabile",,60,"actual",,"0000-0003-1449-7081",
+"50572f53-b07a-4311-8bc0-d60aa59018eb","D06","MCDI","MCDI.AOS.fish.point.04","2020-11-02T15:30Z","2020-11-02T16:01Z",1,"MCDI.20201102.04.1.e-fisher","CAMANO","Campostoma anomalum",,34,"actual",,"0000-0003-1449-7081",
+"08c01663-527c-438e-83d2-e44bbc0f231f","D06","MCDI","MCDI.AOS.fish.point.04","2020-11-02T18:00Z","2020-11-02T18:30Z",2,"MCDI.20201102.04.2.e-fisher","ETHSPE","Etheostoma spectabile",,179,"actual",,"0000-0003-1449-7081",
+"e88e52cc-df11-4601-b09e-d6dd1114cc9a","D06","MCDI","MCDI.AOS.fish.point.04","2020-11-02T18:00Z","2020-11-02T18:30Z",2,"MCDI.20201102.04.2.e-fisher","CAMANO","Campostoma anomalum",,78,"actual",,"0000-0003-1449-7081",
+"132a1b55-bb48-479f-a03c-0e5aefc160bc","D06","MCDI","MCDI.AOS.fish.point.04","2020-11-02T19:38Z","2020-11-02T20:07Z",3,"MCDI.20201102.04.3.e-fisher","ETHSPE","Etheostoma spectabile",,72,"actual",,"0000-0003-1449-7081",
+"dd353970-0b34-4417-88a7-e390c9ce9e83","D06","MCDI","MCDI.AOS.fish.point.04","2020-11-02T19:38Z","2020-11-02T20:07Z",3,"MCDI.20201102.04.3.e-fisher","CAMANO","Campostoma anomalum",,62,"actual",,"0000-0003-1449-7081",

@@ -1,0 +1,4 @@
+uid,domainID,siteID,namedLocation,passStartTime,passEndTime,passNumber,eventID,taxonID,scientificName,morphospeciesID,bulkFishCount,actualOrEstimated,identificationQualifier,identifiedBy,remarks
+"c5db226c-039c-4162-8f3e-266e8fb90d74","D16","MART","MART.AOS.fish.point.01","2018-10-15T16:59Z","2018-10-15T17:50Z",1,"MART.20181015.01.1.e-fisher","SALSP2","Salmonidae sp.",,14,"actual",,"dstetson@neoninc.org",
+"080eb683-d2af-4bdd-9f38-cf5e6780a70c","D16","MART","MART.AOS.fish.point.03","2018-10-16T17:04Z","2018-10-16T17:41Z",1,"MART.20181016.03.1.e-fisher","SALSP2","Salmonidae sp.",,27,"actual",,"dstetson@neoninc.org",
+"c971f9ad-2da2-4a60-af6c-354761ab3da2","D16","MART","MART.AOS.fish.point.04","2018-10-18T16:25Z","2018-10-18T17:35Z",1,"MART.20181018.04.1.e-fisher","SALSP2","Salmonidae sp.",,33,"actual",,"dstetson@neoninc.org",

@@ -1,0 +1,4 @@
+uid,domainID,siteID,namedLocation,passStartTime,passEndTime,passNumber,eventID,taxonID,scientificName,morphospeciesID,bulkFishCount,actualOrEstimated,identificationQualifier,identifiedBy,remarks
+"576bad9a-5a36-4ab7-afca-bb13f5028c2d","D10","ARIK","ARIK.AOS.fish.point.06","2017-04-11T18:20Z","2017-04-11T18:57Z",2,"ARIK.20170411.06.2.e-fisher","ETHSPE","Etheostoma spectabile",,34,"actual",,"hschartel@battelleecology.org",
+"d53d3f77-8d59-43f7-9f8d-8feb21e48e6c","D10","ARIK","ARIK.AOS.fish.point.06","2017-04-11T20:00Z","2017-04-11T20:26Z",3,"ARIK.20170411.06.3.e-fisher","ETHSPE","Etheostoma spectabile",,31,"actual",,"hschartel@battelleecology.org",
+"d883d789-0481-4864-a4a4-6a866642b30d","D10","ARIK","ARIK.AOS.fish.point.10","2017-04-11T21:55Z","2017-04-11T22:32Z",1,"ARIK.20170411.10.1.e-fisher","ETHSPE","Etheostoma spectabile",,17,"actual",,"hschartel@battelleecology.org",

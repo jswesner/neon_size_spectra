@@ -1,0 +1,3 @@
+uid,domainID,siteID,namedLocation,passStartTime,passEndTime,passNumber,eventID,taxonID,scientificName,morphospeciesID,bulkFishCount,actualOrEstimated,identificationQualifier,identifiedBy,remarks
+"4b3c6439-c664-4fcc-b58f-d18c09141b30","D07","WALK","WALK.AOS.fish.point.02","2020-03-18T17:43Z","2020-03-18T18:55Z",1,"WALK.20200318.02.1.e-fisher","RHIATR","Rhinichthys atratulus",,15,"actual",,"0000-0002-6187-2510",
+"cb0ff3af-fd7b-43ab-b0eb-0bf57b9eab09","D07","WALK","WALK.AOS.fish.point.05","2020-03-20T12:40Z","2020-03-20T13:57Z",1,"WALK.20200320.05.1.e-fisher","RHIATR","Rhinichthys atratulus",,8,"actual",,"0000-0002-6187-2510",

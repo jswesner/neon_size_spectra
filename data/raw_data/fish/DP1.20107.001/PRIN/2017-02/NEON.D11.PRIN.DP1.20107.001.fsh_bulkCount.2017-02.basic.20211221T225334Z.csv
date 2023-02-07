@@ -1,0 +1,4 @@
+uid,domainID,siteID,namedLocation,passStartTime,passEndTime,passNumber,eventID,taxonID,scientificName,morphospeciesID,bulkFishCount,actualOrEstimated,identificationQualifier,identifiedBy,remarks
+"85a4450b-9e69-4da5-821a-ca5580911da2","D11","PRIN","PRIN.AOS.fish.point.05","2017-02-27T20:01Z","2017-02-27T20:50Z",1,"PRIN.20170227.05.1.e-fisher","GAMAFF","Gambusia affinis",,1,"actual",,"lhostert@battelleecology.org",
+"63d23e54-2c18-4356-baf8-8b8c5f3f038b","D11","PRIN","PRIN.AOS.fish.point.03","2017-02-28T20:35Z","2017-02-28T20:59Z",3,"PRIN.20170228.03.3.e-fisher","GAMAFF","Gambusia affinis",,6,"actual",,"lhostert@battelleecology.org",
+"fd6d7b4f-fee7-4213-a468-41a6f6c6ef05","D11","PRIN","PRIN.AOS.fish.point.03","2017-02-28T20:35Z","2017-02-28T20:59Z",3,"PRIN.20170228.03.3.e-fisher","FUNNOT","Fundulus notatus",,24,"actual",,"lhostert@battelleecology.org",

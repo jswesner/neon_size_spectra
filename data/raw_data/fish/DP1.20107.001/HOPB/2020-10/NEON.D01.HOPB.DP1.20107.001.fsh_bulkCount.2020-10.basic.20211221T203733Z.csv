@@ -1,0 +1,5 @@
+uid,domainID,siteID,namedLocation,passStartTime,passEndTime,passNumber,eventID,taxonID,scientificName,morphospeciesID,bulkFishCount,actualOrEstimated,identificationQualifier,identifiedBy,remarks
+"9d83928d-2871-4c48-beab-081aa79c93db","D01","HOPB","HOPB.AOS.fish.point.07","2020-10-28T13:55Z","2020-10-28T14:43Z",1,"HOPB.20201028.07.1.e-fisher","RHIATR","Rhinichthys atratulus",,33,"actual",,"0000-0003-4958-6412",
+"60366699-74f3-4a4d-acc1-d2269f4d5af9","D01","HOPB","HOPB.AOS.fish.point.09","2020-10-28T17:30Z","2020-10-28T18:37Z",1,"HOPB.20201028.09.1.e-fisher","RHIATR","Rhinichthys atratulus",,34,"actual",,"0000-0003-4958-6412",
+"810ef406-d616-4730-b762-ab8915afc4a3","D01","HOPB","HOPB.AOS.fish.point.10","2020-10-29T13:32Z","2020-10-29T14:53Z",1,"HOPB.20201029.10.1.e-fisher","RHIATR","Rhinichthys atratulus",,60,"actual",,"0000-0003-4958-6412",
+"3f9b484e-ca02-45bc-8774-6e9b6289747b","D01","HOPB","HOPB.AOS.fish.point.10","2020-10-29T16:16Z","2020-10-29T17:40Z",2,"HOPB.20201029.10.2.e-fisher","RHIATR","Rhinichthys atratulus",,34,"actual",,"0000-0003-4958-6412",

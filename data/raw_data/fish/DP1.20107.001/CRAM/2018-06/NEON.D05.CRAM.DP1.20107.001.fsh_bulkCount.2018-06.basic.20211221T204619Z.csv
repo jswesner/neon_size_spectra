@@ -1,0 +1,5 @@
+uid,domainID,siteID,namedLocation,passStartTime,passEndTime,passNumber,eventID,taxonID,scientificName,morphospeciesID,bulkFishCount,actualOrEstimated,identificationQualifier,identifiedBy,remarks
+"c303b70c-5552-4e5a-af97-778a3e800ed9","D05","CRAM","CRAM.AOS.riparian.point.06","2018-06-01T00:34Z","2018-06-01T19:30Z",1,"CRAM.20180531.06.1.fyke","LEPMAC","Lepomis macrochirus",,18,"actual",,"jbuza@battelleecology.org","One mortality added to perFish"
+"f7055a84-3020-4e61-97f0-d3cc10c28e40","D05","CRAM","CRAM.AOS.riparian.point.06","2018-06-02T01:50Z","2018-06-02T02:05Z",1,"CRAM.20180601.06.1.e-fisher","LEPMAC","Lepomis macrochirus",,80,"actual",,"jbuza@battelleecology.org",
+"d8bf9e70-e33a-4772-b473-3c627815a8cc","D05","CRAM","CRAM.AOS.riparian.point.06","2018-06-02T02:59Z","2018-06-02T03:13Z",2,"CRAM.20180601.06.2.e-fisher","LEPMAC","Lepomis macrochirus",,14,"actual",,"jbuza@battelleecology.org",
+"db7a00cd-0068-4298-be74-0b8452a3a418","D05","CRAM","CRAM.AOS.riparian.point.06","2018-06-02T03:43Z","2018-06-02T03:54Z",3,"CRAM.20180601.06.3.e-fisher","LEPMAC","Lepomis macrochirus",,7,,,"jbuza@battelleecology.org",

@@ -1,0 +1,2 @@
+uid,domainID,siteID,namedLocation,passStartTime,passEndTime,passNumber,eventID,taxonID,scientificName,morphospeciesID,bulkFishCount,actualOrEstimated,identificationQualifier,identifiedBy,remarks
+"a520aec5-8d1f-4407-bc26-224d0e379da0","D11","PRIN","PRIN.AOS.fish.point.03","2019-02-26T21:52Z","2019-02-26T22:20Z",3,"PRIN.20190226.03.3.e-fisher","GAMAFF","Gambusia affinis",,15,"actual",,"cburton@battelleecology.org",

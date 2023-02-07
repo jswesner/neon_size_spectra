@@ -1,0 +1,4 @@
+uid,domainID,siteID,namedLocation,passStartTime,passEndTime,passNumber,eventID,taxonID,scientificName,morphospeciesID,bulkFishCount,actualOrEstimated,identificationQualifier,identifiedBy,remarks
+"43488331-639a-458c-b9a8-cfb5a5afdfdb","D06","MCDI","MCDI.AOS.fish.point.02","2017-04-19T16:45Z","2017-04-19T18:45Z",1,"MCDI.20170419.02.1.e-fisher","ETHSPE","Etheostoma spectabile",,3,"actual",,"mviggiano@battelleecology.org",
+"330497be-814c-4ab3-99f3-39c49819e8ee","D06","MCDI","MCDI.AOS.fish.point.02","2017-04-19T19:16Z","2017-04-19T19:40Z",2,"MCDI.20170419.02.2.e-fisher","ETHSPE","Etheostoma spectabile",,29,"actual",,"mviggiano@battelleecology.org",
+"797b4e07-d817-44f6-b636-8886d745f51e","D06","MCDI","MCDI.AOS.fish.point.02","2017-04-19T20:11Z","2017-04-19T20:33Z",3,"MCDI.20170419.02.3.e-fisher","ETHSPE","Etheostoma spectabile",,19,"actual",,"mviggiano@battelleecology.org",

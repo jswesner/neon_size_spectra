@@ -1,0 +1,4 @@
+uid,domainID,siteID,namedLocation,passStartTime,passEndTime,passNumber,eventID,taxonID,scientificName,morphospeciesID,bulkFishCount,actualOrEstimated,identificationQualifier,identifiedBy,remarks
+"4adc6354-0521-44c0-9651-6ecdd34b87ff","D06","KING","KING.AOS.fish.point.01","2017-04-11T14:52Z","2017-04-11T16:30Z",2,"KING.20170411.01.2.e-fisher","ETHSPE","Etheostoma spectabile",,27,"actual",,"mviggiano@battelleecology.org",
+"6748425a-86c1-4ebf-9afc-101d3912a71d","D06","KING","KING.AOS.fish.point.01","2017-04-11T17:45Z","2017-04-11T18:10Z",3,"KING.20170411.01.3.e-fisher","ETHSPE","Etheostoma spectabile",,32,"actual",,"mviggiano@battelleecology.org",
+"0eed3ed2-89f9-4a23-8529-19a62ec30b65","D06","KING","KING.AOS.fish.point.01","2017-04-11T17:45Z","2017-04-11T18:10Z",3,"KING.20170411.01.3.e-fisher","SEMATR","Semotilus atromaculatus",,7,"actual",,"mviggiano@battelleecology.org",

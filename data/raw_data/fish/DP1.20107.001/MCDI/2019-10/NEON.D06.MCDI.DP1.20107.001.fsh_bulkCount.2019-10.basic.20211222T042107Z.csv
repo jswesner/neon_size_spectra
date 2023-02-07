@@ -1,0 +1,4 @@
+uid,domainID,siteID,namedLocation,passStartTime,passEndTime,passNumber,eventID,taxonID,scientificName,morphospeciesID,bulkFishCount,actualOrEstimated,identificationQualifier,identifiedBy,remarks
+"20377b69-4e11-4b7e-acbd-3f7a2cecb509","D06","MCDI","MCDI.AOS.fish.point.02","2019-10-31T15:00Z","2019-10-31T15:25Z",1,"MCDI.20191031.02.1.e-fisher","CAMANO","Campostoma anomalum",,22,"actual",,"0000-0001-9594-9689",
+"84ba7b30-0ed0-495f-ab19-6bf4c7279fdb","D06","MCDI","MCDI.AOS.fish.point.02","2019-10-31T17:12Z","2019-10-31T17:32Z",2,"MCDI.20191031.02.2.e-fisher","CAMANO","Campostoma anomalum",,37,"actual",,"0000-0001-9594-9689",
+"5922b5cf-8248-4665-ac82-a018ea561a04","D06","MCDI","MCDI.AOS.fish.point.02","2019-10-31T18:40Z","2019-10-31T18:59Z",3,"MCDI.20191031.02.3.e-fisher","CAMANO","Campostoma anomalum",,22,"actual",,"0000-0001-9594-9689",
