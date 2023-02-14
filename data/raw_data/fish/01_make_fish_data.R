@@ -66,7 +66,6 @@ reach_lengths_widths <- fish$fsh_fieldData %>% clean_names %>%
   left_join(stream_widths) %>% 
   mutate(area_m2 = measured_reach_length*mean_width_m)
 
-
 # fsh_perFish individual row for first 50 fish
 perfish <- fish$fsh_perFish %>% as_tibble() %>% clean_names() %>% 
   select(-identified_by, -fish_weight, -uid) %>% # remove these columns to allow removal of duplicates
@@ -103,9 +102,9 @@ all_fish <- left_join(perfish, bulk_count) %>%
 
 # final raw abundance data
 stream_fish_torun <- all_fish %>% 
-  select(site_id, pass_number, taxon_id, total_fish, reach, date, reach_id, event_id) %>% 
+  select(site_id, pass_number, taxon_id, total_fish, reach, date, reach_id) %>% 
   arrange(reach, pass_number) %>%
-  complete(pass_number, nesting(site_id, taxon_id, reach, reach_id, date, event_id), 
+  complete(pass_number, nesting(site_id, taxon_id, reach, reach_id, date), 
            fill = list(total_fish = 0)) %>% #add zeros to fish with no data in a given pass
   arrange(reach, taxon_id, date, pass_number, reach_id) %>% 
   distinct(pass_number, site_id, taxon_id, reach, reach_id, date, .keep_all = T) %>% # remove duplicates
@@ -120,13 +119,13 @@ stream_fish_torun <- all_fish %>%
   left_join(reach_lengths_widths %>% 
               distinct(reach_id, area_m2, measured_reach_length, mean_width_m), 
             by = "reach_id") %>% 
-  group_by(event_id) %>% 
+  group_by(site_id, reach_id, date) %>%
   filter(!any(is.na(area_m2))) 
 
 saveRDS(stream_fish_torun, file = "data/raw_data/fish/stream_fish_torun.rds")
 
-
 # model abundance ---------------------------------------------------------
+
 # Use poisson model of first pass with previously modeled capture efficiency as offset
 site_capture_probs = readRDS("data/raw_data/fish/site_capture_probs.rds")
 
@@ -137,7 +136,7 @@ stream_fish_firstpass = readRDS(file = "data/raw_data/fish/stream_fish_torun.rds
   left_join(site_capture_probs) %>%
   group_by(site_fac) %>% 
   mutate(mean_julian = mean(julian)) %>% 
-  mutate(area_m2_p = area_m2*p) #this is how to combine two offsets: https://stats.stackexchange.com/questions/250528/is-it-possible-to-use-two-offsets
+  mutate(area_m2_p = area_m2*median_prob) #this is how to combine two offsets: https://stats.stackexchange.com/questions/250528/is-it-possible-to-use-two-offsets
 
 fish_abundance_poisson = brm(total_fish ~ site_fac + (1|reach) + offset(log(area_m2_p)),
                              family = poisson(link = "log"),
