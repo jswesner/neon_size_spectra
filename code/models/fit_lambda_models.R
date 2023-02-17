@@ -1,14 +1,15 @@
 library(rstan)
+library(tidyverse)
 
 rstan_options(autowrite = TRUE)
 rstan_options(threads_per_chain = 1)
 
 # load data
-neon_sizes_2016_2021 = readRDS(file = "data/neon_sizes_2016_2021.rds") 
+neon_sizes_2016_2021 = readRDS(file = "data/derived_data/fish_inverts_dw-allyears.rds") %>% 
+  filter(year >= 2016 & year <= 2021)
 
 # compile model
 stan_spectra_mod_gpp_x_temp = stan_model("models/stan_spectra_mod_gpp_x_temp.stan")
-# stan_spectra_mod_temponly = stan_model("models/stan_spectra_mod_temponly.stan")
 
 
 # make data and fit model ---------------------------------------------------------
@@ -33,7 +34,7 @@ fit_interaction = sampling(object = stan_spectra_mod_gpp_x_temp,
                            data = stan_data_interaction,
                            iter = 2000, chains = 4, cores = 4)
 
-saveRDS(fit_interaction, file = "models/fit_interaction_refit.rds")
+saveRDS(fit_interaction, file = paste0("models/stan_gppxtemp",Sys.Date(),".rds"))
 
 
 
