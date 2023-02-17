@@ -17,11 +17,12 @@ gpp = readRDS("data/derived_data/gpp_means.rds") %>% clean_names() %>%
 mat = readRDS("data/derived_data/temperature_mean-annual.rds") %>% 
   mutate(mat_s = (mean - mean(mean))/sd(mean)) %>% clean_names()
 
-
-fish_collections = fish_dw %>% ungroup %>% distinct(mean_julian, event_id, site_id) %>%
+fish_collections = fish_dw %>% ungroup %>% distinct(julian, 
+                                                    event_id, 
+                                                    site_id) %>%
   rename(fish_site_id = site_id,
          fish_event_id = event_id,
-         fish_julian = mean_julian)
+         fish_julian = julian)
 
 macro_collections = macro_dw %>% ungroup %>% distinct(julian, event_id, site_id) %>% 
   rename(macro_event_id = event_id,
@@ -29,7 +30,7 @@ macro_collections = macro_dw %>% ungroup %>% distinct(julian, event_id, site_id)
          macro_julian = julian)
 
 
-# the tally's and filters just limit the fish/macro pairings to one sample 
+# the tally's and filters limit the fish/macro pairings to one sample 
 # per bout (i.e., if fish were sampled in June 15 and macros on June 2 and 
 # June 20, then we only keep the June 20 macro sample and combine it with fish on June 15)
 # Otherwise we'd have replicated the same fish sample twice
@@ -41,7 +42,7 @@ events_to_keep = fish_collections %>%
   filter(date_diff <= 30) %>%  # only samples that are within 30 days of each other
   group_by(fish_event_id) %>% 
   add_tally() %>%         
-  filter(date_diff == min(date_diff)) %>%
+  filter(date_diff == min(date_diff)) %>% # if more than one sample is within 30 days of the other, keep the closest two samples
   ungroup %>% 
   select(-n) %>% 
   group_by(macro_event_id) %>% 
@@ -126,7 +127,7 @@ macro_dw_wrangled = macro_dw_filtered %>%
 
 macro_fish_dw = bind_rows(fish_dw_wrangled, macro_dw_wrangled) %>% 
   group_by(dw, site_id, sample_id, macro_julian) %>% 
-  summarize(no_m2 = sum(no_m2)) %>% 
+  summarize(no_m2 = sum(no_m2)) %>%    # tally by size, regardless of taxa
   ungroup() %>% 
   mutate(xmin = min(dw)) %>% 
   group_by(site_id) %>% 
@@ -153,11 +154,12 @@ saveRDS(macro_fish_dw, file = "data/derived_data/fish_inverts_dw-allyears.rds")
 # sanity check ------------------------------------------------------------
 
 macro_fish_dw %>% 
-  group_by(dw) %>% 
+  group_by(dw, site_id) %>% 
   summarize(no_m2 = sum(no_m2)) %>% 
   ggplot(aes(x = dw, y = no_m2)) +
   # geom_histogram(bins = 200) +
   geom_point() +
+  facet_wrap(~site_id) +
   scale_x_log10() +
   scale_y_log10() +
   NULL

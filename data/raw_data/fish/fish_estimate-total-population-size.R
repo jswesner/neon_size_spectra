@@ -13,6 +13,21 @@ fixed_reaches = fish$fsh_fieldData %>% distinct(reachID, fixedRandomReach) %>%
 three_pass_data = read_csv("data/raw_data/fish/three_pass_data.csv") %>%   # restrict to fixed reaches only
   filter(reach_id %in% fixed_reaches)
 
+stream_widths <- readRDS("data/raw_data/fish/stream_widths_stacked.rds") %>% .[9] %>% # selects rea_widthFieldData
+  bind_rows() %>% clean_names() %>% 
+  group_by(site_id) %>% 
+  summarize(mean_width_m = mean(wetted_width, na.rm = T))
+
+reach_lengths_widths <- fish$fsh_fieldData %>% clean_names %>% 
+  mutate(year = year(start_date),
+         month = month(start_date)) %>%
+  filter(is.na(sampling_impractical)) %>% 
+  filter(fixed_random_reach == "fixed") %>% 
+  filter(!is.na(measured_reach_length)) %>% 
+  distinct(reach_id, measured_reach_length, year, month, site_id) %>% 
+  left_join(stream_widths) %>% 
+  mutate(area_m2 = measured_reach_length*mean_width_m)
+
 # fit multinomial poisson (three pass depletion model) -----------------------------------------------
 # wrangle
 three_pass_data_wide = three_pass_data %>% 
@@ -24,6 +39,8 @@ three_pass_data_wide = three_pass_data %>%
                   `3` = 0)) %>% 
   mutate(year = as.numeric(str_sub(reach_id, 6, 9))) %>% 
   filter(year >= 2016 & year <2022) # limit years
+
+saveRDS(three_pass_data_wide, "data/raw_data/fish/three_pass_data_wide.rds")
   
 # put passes in a matrix (for ubms)
 three_pass_matrix = three_pass_data_wide %>% 
@@ -132,6 +149,8 @@ three_pass_population = as_draws_df(three_pass_model@stanfit) %>%
   select(-.width, -.point, -.interval) %>% 
   rename(.lower_threepass = .lower,
          .upper_threepass = .upper) 
+
+saveRDS(three_pass_population, file = "data/raw_data/fish/fish_three-pass-total-population.rds")
 
 single_pass_population = fish_total_abundance_poisson$data %>% 
   distinct(reach_id, median_prob) %>% 

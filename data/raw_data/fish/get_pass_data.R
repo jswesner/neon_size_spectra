@@ -76,23 +76,32 @@ three_pass_data %>% ggplot(aes(x = pass, y = total_fish)) +
 # SPECIES POPULATION wrangle data ------------------
 fish <- readRDS("data/raw_data/fish/fish_stacked.rds")
 
-fish_bulk = fish$fsh_bulkCount %>% 
+fish_bulk_species = fish$fsh_bulkCount %>% 
   select(eventID, taxonID, bulkFishCount) %>% 
   separate(eventID, into = c("site_id", "date", "reach", "pass", "method")) %>% 
   mutate(reach_id = paste(site_id, date, reach, sep = ".")) %>% 
-  rename(n = bulkFishCount)
+  rename(n = bulkFishCount) %>% 
+  clean_names()
 
 fish_measures_species = fish$fsh_perFish %>% 
   select(eventID, taxonID) %>% 
   separate(eventID, into = c("site_id", "date", "reach", "pass", "method")) %>% 
   mutate(reach_id = paste(site_id, date, reach, sep = ".")) %>% 
   group_by(site_id, date, reach, reach_id, pass, taxonID) %>% 
-  tally()
+  tally() %>% 
+  clean_names()
 
-three_pass_data = bind_rows(fish_bulk, fish_measures) %>% group_by(reach_id, pass) %>% 
+three_pass_data_taxon = bind_rows(fish_bulk_species, fish_measures_species) %>%
+  group_by(reach_id, pass, taxon_id) %>% 
   summarize(total_fish = sum(n, na.rm = T))
 
-write_csv(three_pass_data, file = "data/raw_data/fish/three_pass_data.csv")
+write_csv(three_pass_data_taxon, file = "data/raw_data/fish/three_pass_data_taxon.csv")
 
-three_pass_data %>% ggplot(aes(x = pass, y = total_fish)) +
-  geom_jitter(width = 0.2)
+# three_pass_data_taxon %>% ggplot(aes(x = pass, y = total_fish)) +
+#   geom_jitter(width = 0.2)
+
+rm(fish)
+rm(fish_bulk)
+rm(fish_bulk_species)
+rm(fish_measures)
+rm(fish_measures_species)
