@@ -7,11 +7,10 @@ library(tidybayes)
 library(brms)
 library(neonstore)
 library(neonDivData)
-source("code/sandbox/estimate_macro_dw_functions.R")
+# source("code/sandbox/estimate_macro_dw_functions.R")
 
 # load Length Weight coefficient table (used below)
-coeff <- read.csv("data/macro_lw_coeffs.csv")
-stream_sites <- readRDS("data/streams.rds")
+coeff <- read.csv("data/raw_data/inverts/macro_lw_coeffs.csv")
 
 # directory
 Sys.setenv(NEONSTORE_HOME = paste(getwd(), 
@@ -39,10 +38,10 @@ streamsites=c("HOPB", "LEWI", "POSE", "CUPE",
 #                                   package="basic",
 #                                   site = streamsites)
 
-# saveRDS(inverts_stacked, file = "data/inverts_stacked.rds")
+# saveRDS(inverts_stacked, file = "data/raw_data/inverts/inverts_stacked.rds")
 
-inverts_stacked = readRDS(file = "data/inverts_stacked.rds")
-macro = readRDS(file = "data/inverts_stacked.rds")
+inverts_stacked = readRDS(file = "data/raw_data/inverts/inverts_stacked.rds")
+macro = readRDS(file = "data/raw_data/inverts/inverts_stacked.rds")
 
 # 2) Add LW coefficients, estimate dry weights  ------------------------------------
 
@@ -120,3 +119,6 @@ macro_dw = MN.no.damage.unique  %>%
   mutate(julian = julian(date))
 
 saveRDS(macro_dw, file = "data/macro_dw_allyears.rds")
+
+
+macro %>% glimpse()
