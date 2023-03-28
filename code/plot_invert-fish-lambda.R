@@ -1,6 +1,7 @@
 library(brms)
 library(tidyverse)
 library(tidybayes)
+library(ggview)
 library(janitor)
 source("code/custom-functions/get_sample_lambdas.R") # automates wrangling of sample-specific posterior lambdas
 
@@ -11,16 +12,22 @@ neon_sizes_2016_2021 = readRDS(file = "data/derived_data/fish_inverts_dw-allyear
 dat = neon_sizes_2016_2021 %>% mutate(temp_mean = mean, 
                                       temp_sd = sd)
 
+mean_temp = mean(unique(dat$temp_mean))
+sd_temp = sd(unique(dat$temp_mean))
+
 # load models
 fishinvertmod = readRDS("models/stan_gppxtemp2023-02-18.rds")
 
 # extract posteriors
 posts_sample_lambdas = get_sample_lambdas(fishinvertmod, data = dat)
 
-# median lambdas
+
+# x = temp, y = isd, facet = gpp quantiles --------------------------------
+
 posts_medians = posts_sample_lambdas %>% 
   group_by(year, site_id, sample_int, mat_s, log_gpp_s) %>% 
-  median_qi(lambda)
+  median_qi(lambda) %>% 
+  mutate(raw_temp = (mat_s*sd_temp) + mean_temp)
 
 # lambda regression
 post_lines = as_draws_df(fishinvertmod) %>% as_tibble() %>% 
@@ -28,19 +35,31 @@ post_lines = as_draws_df(fishinvertmod) %>% as_tibble() %>%
   expand_grid(log_gpp_s = quantile(unique(dat$log_gpp_s), probs = c(0.25, 0.5, 0.75))) %>% 
   mutate(lambda = a + beta_mat*mat_s + beta_gpp*log_gpp_s + beta_gpp_mat*mat_s*log_gpp_s) %>% 
   group_by(mat_s, log_gpp_s) %>% 
-  median_qi(lambda)
+  median_qi(lambda) %>% 
+  mutate(panel = case_when(log_gpp_s == min(log_gpp_s) ~ "a) Low GPP (q25)",
+                           log_gpp_s == max(log_gpp_s) ~ "c) High GPP (q75)",
+                           TRUE ~ "b) Median GPP (q50)"),
+         raw_temp = (mat_s*sd_temp) + mean_temp)
 
 # counterfactual plots
-post_lines %>% 
-  ggplot(aes(x = mat_s, y = lambda)) + 
-  geom_line(data = post_lines, aes(group = as.factor(log_gpp_s))) + 
-  geom_ribbon(data = post_lines, aes(ymin = .lower,ymax = .upper,
-                                     fill = as.factor(log_gpp_s)), alpha = 0.2) + 
-  facet_wrap(~log_gpp_s)
+(isd_temp_by_gpp = post_lines %>% 
+  ggplot(aes(x = raw_temp, y = lambda)) + 
+  geom_line(aes(group = as.factor(log_gpp_s))) + 
+  geom_ribbon(aes(ymin = .lower,ymax = .upper), alpha = 0.2) + 
+  facet_wrap(~panel) + 
+  ylim(-1.4, -1.1) + 
+  theme_default() + 
+  labs(y = "\u03bb (ISD exponent)",
+       x = "Mean Annual Temperature (\u00b0C)"))
+
+ggview::ggview(isd_temp_by_gpp, width = 6, height = 2.3, units = "in")
+ggsave(isd_temp_by_gpp, file = "plots/isd_temp_by_gpp.jpg", width = 6, height = 2.3, units = "in")
+saveRDS(isd_temp_by_gpp, file = "plots/isd_temp_by_gpp.rds")
+
 
 # regression with samples 
-posts_medians %>% 
-  ggplot(aes(x = mat_s, y = lambda)) + 
+(isd_by_temp = posts_medians %>% 
+  ggplot(aes(x = raw_temp, y = lambda)) + 
   geom_pointrange(aes(ymin = .lower, ymax = .upper),
                   position = position_jitter(width = 0.02),
                   alpha = 0.7,
@@ -51,7 +70,67 @@ posts_medians %>%
   geom_ribbon(data = post_lines %>% filter(log_gpp_s!= min(log_gpp_s) &
                                              log_gpp_s != max(log_gpp_s)), 
               aes(ymin = .lower,ymax = .upper), alpha = 0.2) + 
-  ylim(-2, -1)
+  # ylim(-1.4, -1.1) + 
+  theme_default() + 
+  labs(y = "\u03bb (ISD exponent)",
+       x = "Mean Annual Temperature (\u00b0C)"))
+
+ggview::ggview(isd_by_temp, width = 4, height = 3, units = "in")
+ggsave(isd_by_temp, file = "plots/isd_by_temp.jpg", width = 6, height = 3, units = "in")
+saveRDS(isd_by_temp, file = "plots/isd_by_temp.rds")
+
+
+
+# x = gpp, y = isd, facet = temp quantiles --------------------------------
+posts_medians = posts_sample_lambdas %>% 
+  group_by(year, site_id, sample_int, mat_s, log_gpp_s) %>% 
+  median_qi(lambda)
+
+# lambda regression
+post_lines_xis_gpp = as_draws_df(fishinvertmod) %>% as_tibble() %>% 
+  expand_grid(log_gpp_s = seq(min(dat$log_gpp_s), max(dat$log_gpp_s), length.out = 10)) %>% 
+  expand_grid(mat_s = quantile(unique(dat$mat_s), probs = c(0.25, 0.5, 0.75))) %>% 
+  mutate(lambda = a + beta_mat*mat_s + beta_gpp*log_gpp_s + beta_gpp_mat*mat_s*log_gpp_s) %>% 
+  group_by(mat_s, log_gpp_s) %>% 
+  median_qi(lambda) %>% 
+  mutate(panel = case_when(mat_s == min(mat_s) ~ "a) Low temp (q25)",
+                           mat_s == max(mat_s) ~ "c) High temp (q75)",
+                           TRUE ~ "b) Median temp (q50)"),
+         raw_temp = (mat_s*sd_temp) + mean_temp)
+
+# counterfactual plots
+(isd_gpp_by_temp = post_lines_xis_gpp %>% 
+    ggplot(aes(x = log_gpp_s, y = lambda)) + 
+    geom_line(aes(group = as.factor(mat_s))) + 
+    geom_ribbon(aes(ymin = .lower,ymax = .upper), alpha = 0.2) + 
+    facet_wrap(~panel) + 
+    ylim(-1.4, -1.1) +
+    theme_default() + 
+    labs(y = "\u03bb (ISD exponent)",
+         x = "Mean Annual Temperature (\u00b0C)"))
+
+ggview::ggview(isd_gpp_by_temp, width = 6, height = 2.3, units = "in")
+ggsave(isd_gpp_by_temp, file = "plots/isd_gpp_by_temp.jpg", width = 6, height = 2.3, units = "in")
+saveRDS(isd_gpp_by_temp, file = "plots/isd_gpp_by_temp.rds")
+
+
+# regression with samples 
+posts_medians %>% 
+  ggplot(aes(x = mat_s, y = lambda)) + 
+  geom_pointrange(aes(ymin = .lower, ymax = .upper),
+                  position = position_jitter(width = 0.02),
+                  alpha = 0.7,
+                  shape = 21, size = 0.4) +
+  geom_line(data = post_lines %>% filter(log_gpp_s!= min(log_gpp_s) &
+                                           log_gpp_s != max(log_gpp_s)), 
+            aes(group = as.factor(log_gpp_s))) + 
+  geom_ribbon(data = post_lines %>% filter(log_gpp_s!= min(log_gpp_s) &
+                                             log_gpp_s != max(log_gpp_s)), 
+              aes(ymin = .lower,ymax = .upper), alpha = 0.2) + 
+  # ylim(-1.4, -1.1) + 
+  theme_default() + 
+  labs(y = "\u03bb (ISD exponent)",
+       x = "Mean Annual Temperature (\u00b0C)")
 
 
 

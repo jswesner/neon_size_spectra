@@ -1,0 +1,96 @@
+---
+title: "ISD exponent derivation"
+author: "Jeff Wesner"
+date: "2022-10-28"
+output:
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)
+library(tidyverse)
+```
+
+Reuman et al. (2008, Ecology Letters) derive the ISD exponent from metabolic theory. Based on their equation 7 on page 1220, ISD exponents are explained by:
+
+$$
+b + 1 = \frac{log_{10}\alpha}{log_{10}\beta} -\frac{3}{4}
+$$
+
+where $\alpha$ is the trophic transfer efficiency, ranging from 0 (no energy transfer) to 1 (all energy is transferred) and $\beta$ is the body mass ratio of consumers to their resources. $\beta$ is typically \~10\^4 and $\alpha$ is typically \~0.1 (Brown et al. 2004). The 3/4 is derived from the quarter scaling laws.
+
+These are the predictions of the ISD exponent across a broad range of $\alpha$ and $\beta$.
+
+```{r}
+alpha = seq(0.01,1, length.out = 10)
+beta = seq(1e3, 1e6, length.out = 50)
+
+
+simulations = tibble(alpha = alpha) %>% 
+  expand_grid(beta = beta) %>% 
+  mutate(b = (log10(alpha)/log10(beta)) - 3/4 - 1)
+
+
+simulations %>% 
+  ggplot(aes(x = beta, y = b, color = alpha)) + 
+  geom_line(aes(group = alpha)) +
+  ylim(-3, -1) +
+  geom_hline(yintercept = -1.5) +
+  geom_vline(xintercept = 1e4) +
+  labs(title = "ISD predictions assuming the 3/4 power scaling") +
+  scale_x_log10()
+```
+
+As shown in the figure above, predicted values of the ISD exponent converge to around -2 at moderate levels of trophic transfer efficiency ($\alpha$) and at large ratios of consumer to resource sizes ($\beta$). Our samples with NEON are typically closer to -1.5 or less. However, from this equation, the only way to generate samples close to -1.5 empirical value is to change the -3/4 scaling assumption, which implies changing the -3/4 value. For example, changing -3/4 to -1/3 places the predicted values closer to the observed levels.
+
+```{r}
+alpha = seq(0.01,1, length.out = 10)
+beta = seq(1e3, 1e6, length.out = 50)
+
+
+simulations = tibble(alpha = alpha) %>% 
+  expand_grid(beta = beta) %>% 
+  mutate(b = (log10(alpha)/log10(beta)) - 1/3 - 1)
+
+
+simulations %>% 
+  ggplot(aes(x = beta, y = b, color = alpha)) + 
+  geom_line(aes(group = alpha)) +
+  ylim(-3, -1) +
+  geom_vline(xintercept = 1e4) +
+  geom_hline(yintercept = -1.5) +
+  labs(title = "ISD predictions assuming the 1/3 power scaling") +
+  scale_x_log10()
+```
+
+Given these equations, we can solve for the scaling exponent given values of the ISD exponent $b$.
+
+$$
+MTE_{exponent} = b + 1 - \frac{log10\alpha}{log10\beta}
+$$
+
+The figure below indicates that $b$ exponents of -2 equate to an MTE scaling exponent of \~0.75. By comparison, the $b$ exponents that we tend to observe in NEON streams are around -1.3 to -1.5. Those correspond to MTE exponents of about 0.2. One explanation for these lower values might be that the food webs in NEON streams are heavily supported by detrital subsidies, which are known to make ISD relationships more shallow (Yvon-Durocher et al. 2011). In addition, the NEON samples are benthic, while most of the theory for body size scaling has been developed for pelagic communities. In marine systems, Blanchard et al. (2009) found that benthic communities had shallower slopes than pelagic communities, with $b$ exponents in benthic communities similar to those we find in NEON streams (-1.6 to -1.8).
+
+```{r}
+alpha = seq(0.05, 0.3, length.out = 10)
+beta = seq(1e3, 1e5, length.out = 50)
+b = seq(-2, -0.5, length.out = 10)
+
+simulations = tibble(alpha = alpha,
+                     b = b) %>% 
+  expand_grid(beta = beta) %>% 
+  mutate(mte_exp = -(b + 1 - (log10(alpha)/log10(beta))))
+
+
+simulations %>% 
+  ggplot(aes(x = b, y = mte_exp, color = beta)) + 
+  geom_point() +
+  # geom_line(aes(group = interaction(alpha, b))) +
+  # ylim(-3, -1) +
+  labs(title = "ISD predictions assuming the 1/3 power scaling")
+```
