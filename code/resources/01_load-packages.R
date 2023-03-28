@@ -22,8 +22,8 @@ library(reaRate)
 rstan::rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
 
-source(here::here("./code/resources/metabFunctions.R"))
-latlong = read_csv(file = here::here("./data/site_latlong.csv"))
-streams = readRDS(file = here::here("./data/derived_data/streams.rds"))
+source(here::here("code/resources/metabFunctions.R"))
+latlong = read_csv(file = here::here("data/site_latlong.csv"))
+streams = readRDS(file = here::here("data/derived_data/streams.rds"))
 
 theme_set(theme_minimal())

@@ -1,0 +1,15 @@
+######   METADATA  ######,
+sampleID,alphanumeric code for sample identification. Format: PROJECT_SITE_DATE_REP (e.g. NEON_BLDE_2017-08-08_R1)
+siteCode,character string of four (4) letter site identifier
+repID,"alphanumeric identifier of replicate takes value ""R#"" (e.g., R2) for each rep. sample replicates split among more than one tin are separated by a point (.) (e.g., R1.2)"
+tinID,"alphanumeric code for weighing tin identification. Format: TXXX (e.g., T001)"
+tinmass_mg,"numeric value of tin weight in milligrams (e.g., 1023.8 mg). Optional and may be empty"
+drymass_mg,numeric value of sample mass dried to constant mass in milligrams (e.g. 1509.1 mg)
+ashfreemass_mg,numeric value of sample mass following muffle furnace ~4hrs @ 500C in milligrams
+OMmass_mg,numeric value of organic matter mass representing drymass - ashfreemass in milligrams
+subsample,"numeric value of subsample multiplier. OMmass_mg is multiplied by this factor. Samples that are not subsampled have a value of 1.0, samples that are split in half take a value of 2.0, etc."
+OMmass_mg_corr,numeric value of final organic matter estimate after subsample multiplier is accounted in milligrams
+label notes,alphanumeric string of notes from label to help in identifying samples. The full label is copied here for posterity
+sample notes,"alphanumeric string of notes from sample for future context. For example, if sample has a lot of algae versus coarse litter"
+archiveID,"alphnumeric string of 13 character identifier taken from label of form ""AXXXXXXXXXXXX"" (e.g., A000002006555)"
+######   END METADATA  ######,

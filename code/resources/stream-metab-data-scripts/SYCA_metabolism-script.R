@@ -75,6 +75,51 @@ SYCA_clean_temp = SYCA_temp %>%
 plot(ts(SYCA_clean_temp$temp_102))
 
 saveRDS(SYCA_clean_temp, file = here::here("ignore/site-gpp-data/SYCA_clean_temp.rds"))
+
+rm(list = ls())
+source("./code/resources/01_load-packages.R")
+debugonce(clean_Q)
+SYCA_Q = clean_Q(siteCode ='SYCA', save = FALSE, return = TRUE, QLims = c(0,5e4));names(SYCA_Q)
+SYCA_ZQ_xts = xts(SYCA_Q[,grep("Q.*|Z.",names(SYCA_Q))], order.by = SYCA_Q$timePeriod)
+
+dygraph(SYCA_ZQ_xts, main = "SYCA Qs") %>% dyRangeSelector()
+
+SYCA_Q_badDates = c(seq(as.Date("2022-01-22"), as.Date("2022-08-31"), by = 1))
+
+SYCA_Q = SYCA_Q %>% 
+  dplyr::filter(as.Date(timePeriod) %ni% SYCA_Q_badDates,
+                Q.obs > 0,
+                !is.na(Z.obs))
+
+
+ZQ_priors = c(set_prior('normal(0, 5)', nlpar = "a"),
+              set_prior('normal(1, 0.5)', nlpar = "b", lb = 0))
+
+SYCA_ZQmod = brm(bf(Q.obs ~ s(Z.obs, bs = 'tp', k = 4)), 
+                 data = SYCA_Q, 
+                 family = Gamma(link = 'log'),#
+                 # prior = ZQ_priors,
+                 chains= 4, cores = 4, seed = 42,
+                 iter = 500, thin = 1,
+                 # control = list(adapt_delta = 0.99),
+                 save_pars = save_pars(all = TRUE),
+                 file = "./ignore/metab-models/SYCAZQmod",
+                 file_refit = 'always',
+                 backend = 'cmdstanr')
+
+conditional_effects(SYCA_ZQmod, points = TRUE)
+pp_check(SYCA_ZQmod)
+
+SYCA_Q$pred = predict(SYCA_ZQmod, newdata = data.frame(Z.obs = SYCA_Q$Z.obs))
+
+SYCA_Q %>% 
+  na.omit %>% 
+  ggplot()+
+  geom_line(aes(x = Z.obs, y = pred[,"Estimate"]), color = 'grey', alpha = 0.5)+
+  geom_point(aes(x = Z.obs, y = Q.obs), color = 'blue', size = 1)+
+  scale_y_continuous(limits = c(0,5e4))
+
+
 ## run a quick version of the 
 bayes_name <- mm_name(type='bayes', pool_K600='binned', err_obs_iid=TRUE,
                       err_proc_iid=FALSE, err_proc_GPP = TRUE, ode_method = "trapezoid")
