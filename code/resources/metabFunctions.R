@@ -229,7 +229,7 @@ clean_temp = function(siteCode = NA,startDate = NULL, endDate = NULL, tempLims =
 #' @title clean_Q
 #'
 #'
-clean_Q = function(siteCode = NA,startDate = NULL, endDate = NULL, QLims = c(0,30), QDiffLims = c(0.001,0.999), return = TRUE, save = TRUE,...){
+clean_Q = function(siteCode = NA,startDate = NULL, endDate = NULL, QLims = c(0,10e5), QDiffLims = c(0.001,0.999), return = TRUE, save = TRUE,...){
   require(tidyverse)
   require(lutz)
   library(lubridate)
@@ -242,45 +242,58 @@ clean_Q = function(siteCode = NA,startDate = NULL, endDate = NULL, QLims = c(0,3
                                   lon = unlist(latlong[which(latlong$site == siteCode), 'long']),
                                   method = 'accurate')
   ## Get site files
-  fileList = list.files("./ignore/site-gpp-data/", paste0(siteCode,"_dischargeQ.rds"), full.names = TRUE)
-  QList = fileList %>%
+  QfileList = list.files("./ignore/site-gpp-data/", paste0(siteCode,"_dischargeQ.rds"), full.names = TRUE)
+  ZfileList = list.files("./ignore/site-gpp-data/", paste0(siteCode,"_30min_depthZ.rds"), full.names = TRUE)
+  QList = QfileList %>%
+    purrr::map(readRDS)
+  ZList = ZfileList %>% 
     purrr::map(readRDS)
   oldColNames = c(
     "timePeriod",
-    "dissolvedOxygen",
-    "surfWaterTempMean",
     "maxpostDischarge",
-    "staPresMean"
+    "staPresMean",
+    "surfacewaterElevMean"
   )
   
   newColNames = c(
     "startDateTime",
     "Q.obs",
-    "temp.water",
-    "discharge",
-    "air.pressure"
+    "air.pressure",
+    "Z.obs"
   )
   
   columnKeyVal = setNames(newColNames,oldColNames)
   
   ### Q
-  sensorNames = QList %>% flatten %>% names(.)
-  
   QDfmod = QList %>% 
     flatten %>%
-    purrr::map(~.x %>%
-                 plyr::rename(replace = columnKeyVal,
-                              warn_missing = FALSE) %>%
-                 dplyr::mutate(startDateTime = as.POSIXct(startDateTime, format = "%Y-%m-%d %H:%M:%S", tz = siteTZ),
-                               startDateTime = ceiling_date(startDateTime, 'minute')) %>%
-                 dplyr::select(startDateTime, Q.obs) %>%
-                 dplyr::mutate(diff = c(NA,diff(Q.obs))) %>%
-                 dplyr::mutate(Q.obs = ifelse(between(diff, quantile(diff, QDiffLims[1], na.rm = TRUE), quantile(diff, QDiffLims[2], na.rm = TRUE)), Q.obs, NA)) %>%
-                 dplyr::select(-diff)) %>%
-    reduce(merge, by = 'startDateTime', all = TRUE) %>%
-    setNames(.,nm = c('startDateTime', paste0("Q_",sensorNames)))
+    data.frame %>% 
+    plyr::rename(replace = columnKeyVal,
+                 warn_missing = FALSE) %>%
+    dplyr::mutate(startDateTime = as.POSIXct(startDateTime, format = "%Y-%m-%d %H:%M:%S", tz = siteTZ),
+                  startDateTime = ceiling_date(startDateTime, 'minute')) %>%
+    dplyr::select(startDateTime, Q.obs, equivalentStage) %>%
+    dplyr::mutate(diff = c(NA,diff(Q.obs))) %>%
+    dplyr::mutate(Q.obs = ifelse(between(diff, quantile(diff, QDiffLims[1], na.rm = TRUE), quantile(diff, QDiffLims[2], na.rm = TRUE)), Q.obs, NA)) %>%
+    dplyr::select(-diff)
   
-  QFullDf = QDfmod %>%
+  ### Z
+  ZDfmod = ZList %>% 
+    flatten %>%
+    data.frame %>% 
+    plyr::rename(replace = columnKeyVal,
+                 warn_missing = FALSE) %>%
+    dplyr::mutate(startDateTime = as.POSIXct(startDateTime, format = "%Y-%m-%d %H:%M:%S", tz = siteTZ),
+                  startDateTime = ceiling_date(startDateTime, 'minute')) %>%
+    dplyr::select(startDateTime, Z.obs) %>%
+    dplyr::mutate(diff = c(NA,diff(Z.obs))) %>%
+    dplyr::select(-diff)
+  ### ZQ 
+  QZDfmod = QDfmod %>% 
+    left_join(ZDfmod, by = 'startDateTime')
+  
+  
+  QZFullDf = QZDfmod %>%
     dplyr::mutate(day = as.Date(startDateTime, tz = siteTZ)) %>%
     group_by(day) %>%
     dplyr::mutate(fullFlag = case_when(all(is.na(across(matches('Q')))) ~ FALSE,
@@ -290,40 +303,34 @@ clean_Q = function(siteCode = NA,startDate = NULL, endDate = NULL, QLims = c(0,3
     dplyr::summarise(fullFlag = unique(fullFlag))
   
   # combine and remove days with all NAs  
-  QDf = QDfmod %>%
+  QZDf = QZDfmod %>%
     dplyr::mutate(day = as.Date(startDateTime)) %>%
-    left_join(QFullDf, by = 'day') %>%
+    left_join(QZFullDf, by = 'day') %>%
     dplyr::filter(fullFlag) %>%
     dplyr::filter(!is.na(startDateTime)) %>%
-    dplyr::select(startDateTime, day, matches('Q'))
+    dplyr::select(startDateTime, day, matches('Q|Z'))
   
   
-  QDates =  QDf%>% dplyr::select(day) %>% reduce(c) %>% range %>% purrr::map(~paste0(.x, "00:00:00") %>% as.POSIXct(., format = "%Y-%m-%d %H:%M:%S", tz = siteTZ)) %>% reduce(c)
-  fullTime = data.frame(startDateTime = seq(QDates[1], QDates[2], by = 'mins'))
+  QZDates =  QZDf%>% dplyr::select(day) %>% reduce(c) %>% range %>% purrr::map(~paste0(.x, "00:00:00") %>% as.POSIXct(., format = "%Y-%m-%d %H:%M:%S", tz = siteTZ)) %>% reduce(c)
+  fullTime = data.frame(startDateTime = seq(QZDates[1], QZDates[2], by = 'mins'))
   
-  QDf = fullTime %>%
-    left_join(QDf, by = 'startDateTime') %>%
+  QZDf = fullTime %>%
+    left_join(QZDf, by = 'startDateTime') %>%
     dplyr::mutate(across(matches('Q'), ~ifelse(between(.x, QLims[1],QLims[2]), .x, NA))) %>%
-    dplyr::mutate(across(matches('Q'), ~zoo::na.approx(.x, maxgap = 100, na.rm = FALSE))) %>%
+    dplyr::mutate(across(matches('Q|Z'), ~zoo::na.approx(.x, maxgap = 100, na.rm = FALSE))) %>%
     dplyr::mutate(timePeriod = cut(startDateTime, breaks = "15 min")) %>%
     group_by(timePeriod) %>%
-    dplyr::summarise(across(matches('Q'), ~mean(.x, na.rm = TRUE))) %>% 
+    dplyr::summarise(across(matches('Q|Z'), ~mean(.x, na.rm = TRUE))) %>% 
     dplyr::mutate(timePeriod = as.POSIXct(timePeriod, format = "%Y-%m-%d %H:%M:%S", tz = siteTZ)) %>%
     ungroup %>%
     dplyr::mutate(hour = lubridate::hour(timePeriod))
   
-  missingQ = QDf %>% dplyr::mutate(missing := case_when(is.na(!!as.name(paste0("Q_",sensorNames[length(sensorNames)]))) & any(!is.na(!!as.name(paste0("Q_",sensorNames[(length(sensorNames)-1)])))) ~ 1,
-                                                          TRUE ~ 0)) %>%
-    dplyr::select(missing) %>% unlist %>% sum
-  
-  cat("\nNumber of missing observations in downstream sensor with non-na in other sensors is ",missingQ)
-  
   if(save){
-    saveRDS(QDf, file = paste0("./ignore/site-gpp-data/",siteCode,"_clean_Q.rds"))
+    saveRDS(QZDf, file = paste0("./ignore/site-gpp-data/",siteCode,"_clean_ZQ.rds"))
   }
   
   if(return){
-    return(QDf)
+    return(QZDf)
   }
 }
 
