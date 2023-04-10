@@ -9,7 +9,7 @@ neon_sizes_2016_2021 = readRDS(file = "data/derived_data/fish_dw-wrangled.rds") 
   filter(year >= 2016 & year <= 2021)
 
 # compile model
-stan_spectra_mod_gpp_x_temp = stan_model("models/stan_spectra_mod_gpp_x_temp.stan")
+stan_spectra_mod_gpp_x_temp_x_om = stan_model("models/stan_spectra_mod_gpp_x_temp_x_om.stan")
 
 
 # make data and fit model ---------------------------------------------------------
@@ -19,6 +19,7 @@ dat = neon_sizes_2016_2021
 stan_data_interaction = list(N = nrow(dat),
                              mat_s = dat$mat_s,
                              gpp_s = dat$log_gpp_s,
+                             om_s = dat$log_om_s,
                              year = dat$year_int,
                              site = dat$site_int,
                              sample = dat$sample_int,
@@ -30,11 +31,11 @@ stan_data_interaction = list(N = nrow(dat),
                              xmin = dat$xmin,
                              xmax = dat$xmax)
 
-fit_interaction = sampling(object = stan_spectra_mod_gpp_x_temp,
+fit_interaction = sampling(object = stan_spectra_mod_gpp_x_temp_x_om,
                            data = stan_data_interaction,
                            iter = 2000, chains = 4, cores = 4)
 
-saveRDS(fit_interaction, file = paste0("models/stan_fishonly_gppxtemp",Sys.Date(),".rds"))
+saveRDS(fit_interaction, file = paste0("models/stan_fishonly_gppxtempxom",Sys.Date(),".rds"))
 
 
 
