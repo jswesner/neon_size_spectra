@@ -17,6 +17,7 @@ three_pass_matrix = three_pass_data_wide_total_fish %>%
 three_pass_frame <- unmarkedFrameMPois(three_pass_matrix,
                                 siteCovs=as.data.frame(three_pass_data_wide_total_fish %>% select(site_int)),
                                 type = "removal")
+
 saveRDS(three_pass_frame, file = "data/raw_data/fish/three_pass_frame.rds")
 
 # fit model

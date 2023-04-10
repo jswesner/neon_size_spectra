@@ -8,6 +8,7 @@ library(brms)
 library(neonstore)
 library(neonDivData)
 # source("code/sandbox/estimate_macro_dw_functions.R")
+source("code/custom-functions/LW_coef.R")
 
 # load Length Weight coefficient table (used below)
 coeff <- read.csv("data/raw_data/inverts/macro_lw_coeffs.csv")
@@ -40,7 +41,6 @@ streamsites=c("HOPB", "LEWI", "POSE", "CUPE",
 
 # saveRDS(inverts_stacked, file = "data/raw_data/inverts/inverts_stacked.rds")
 
-inverts_stacked = readRDS(file = "data/raw_data/inverts/inverts_stacked.rds")
 macro = readRDS(file = "data/raw_data/inverts/inverts_stacked.rds")
 
 # 2) Add LW coefficients, estimate dry weights  ------------------------------------
@@ -116,9 +116,18 @@ macro_dw = MN.no.damage.unique  %>%
   group_by(dw, event_id, site_id, date, animal_type) %>% 
   summarize(n = sum(n),
             no_m2 = sum(no_m2)) %>% 
-  mutate(julian = julian(date))
+  mutate(julian = julian(date)) %>% 
+  filter(site_id %in% streamsites)
 
-saveRDS(macro_dw, file = "data/macro_dw_allyears.rds")
+saveRDS(macro_dw, file = "data/inverts_dw-allyears.rds")
 
 
 macro %>% glimpse()
+
+# taxa
+macro$inv_taxonomyProcessed %>% 
+  distinct(scientificName) %>% 
+  nrow()
+
+# body size measures
+sum(macro$inv_taxonomyProcessed$estimatedTotalCount, na.rm = T) 

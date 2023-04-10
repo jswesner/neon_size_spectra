@@ -2,6 +2,7 @@ library(tidyverse)
 library(janitor)
 library(lubridate)
 library(hydroTSM)
+library(here)
 
 # load data
 macro_dw = readRDS(file = "data/derived_data/inverts_dw-allyears.rds")
@@ -16,6 +17,16 @@ gpp = readRDS("data/derived_data/gpp_means.rds") %>% clean_names() %>%
 
 mat = readRDS("data/derived_data/temperature_mean-annual.rds") %>% 
   mutate(mat_s = (mean - mean(mean))/sd(mean)) %>% clean_names()
+
+cpom = readRDS(here("data/derived_data/cpom_means.rds")) %>% 
+  mutate(om_s = (mean - mean(mean, na.rm = T))/sd(mean, na.rm = T)) %>% 
+  clean_names() %>% 
+  rename(mean_om = mean,
+         sd_om = sd) %>% 
+  mutate(log_om = log(mean_om),
+         log_om_s = scale(log_om),
+         log_om_s = as.numeric(om_s))
+
 
 fish_collections = fish_dw %>% ungroup %>% distinct(julian, 
                                                     event_id, 
@@ -93,6 +104,7 @@ fish_dw_wrangled = fish_dw_filtered %>%
   ungroup %>% 
   left_join(gpp) %>% 
   left_join(mat) %>% 
+  left_join(cpom) %>% 
   filter(!is.na(log_gpp_s)) %>% 
   mutate(date = as_date(macro_julian),
          year = year(date),
@@ -115,6 +127,7 @@ macro_dw_wrangled = macro_dw_filtered %>%
   ungroup %>% 
   left_join(gpp) %>% 
   left_join(mat) %>% 
+  left_join(cpom) %>% 
   filter(!is.na(log_gpp_s)) %>% 
   mutate(date = as_date(macro_julian),
          year = year(date),
@@ -135,6 +148,7 @@ macro_fish_dw = bind_rows(fish_dw_wrangled, macro_dw_wrangled) %>%
   ungroup %>% 
   left_join(gpp) %>% 
   left_join(mat) %>% 
+  left_join(cpom) %>% 
   filter(!is.na(log_gpp_s)) %>% 
   mutate(date = as_date(macro_julian),
          year = year(date),
@@ -166,5 +180,11 @@ macro_fish_dw %>%
 
 macro_fish_dw
 
+predictors = macro_fish_dw %>%
+  ungroup %>% 
+  distinct(log_gpp_s, log_om_s, mat_s) 
 
-
+pairs(predictors)
+macro_fish_dw %>% 
+  ungroup() %>% 
+  filter(dw == max(dw))

@@ -119,6 +119,66 @@ saveRDS(species_population_selected, "data/raw_data/fish/species_population_sele
 
 
 # fish length weight ------------------------------------------------------------
+species_population_selected = readRDS("data/raw_data/fish/species_population_selected.rds")
+
+individual_dw = fish$fsh_perFish %>% clean_names() %>% as_tibble() %>%
+  mutate(year = year(pass_start_time),
+         month = month(pass_start_time),
+         reach_id = str_sub(event_id, 1, 16),
+         reach_taxon_id = paste(reach_id, taxon_id, sep = "_")) %>% 
+  mutate(dw = fish_weight*0.2) %>% 
+  select(reach_taxon_id, dw) 
+
+# Sample from dw measurements with replacement.
+# Number of samples = total number of fish caught per pass per species.
+# If 4 fish caught, then sample the 4 lengths from the 50 length measurements
+# If 400 fish caught, then sample 400 lengths (with replacement) from the 50 length measurements
+
+# simulate dw totals
+size_and_totals = individual_dw %>% 
+  # left_join(total_fish) %>%
+  left_join(species_population_selected) %>% 
+  mutate(fish_perm2 = species_pop/area_m2,
+         fish_per10000m2 = fish_perm2*10000) %>% 
+  group_by(reach_taxon_id) %>% 
+  filter(!any(is.na(fish_perm2)))
+
+# sample individual dry weight with replacement. Sample sizes for individual weights
+# are weighted by the population size of a given species
+
+dw_sims = size_and_totals %>% 
+  group_by(reach_taxon_id) %>% 
+  filter(!is.na(dw)) %>% 
+  sample_n(size = fish_per10000m2[1], replace = T) %>% 
+  group_by(dw, reach_taxon_id, year, month) %>% 
+  dplyr::count(name = "no_10000m2") %>% 
+  mutate(no_m2 = no_10000m2/10000,
+         animal_type = "fish") 
+
+fish_dw = dw_sims %>% 
+  ungroup %>% 
+  separate(reach_taxon_id, into = c("reach_id", "taxon_id"), sep = "_") %>% 
+  separate(reach_id, into = c("site_id", "date", NA), remove = F) %>% 
+  mutate(date = ymd(date),
+         julian = julian(date),
+         year_month = paste(year, month, sep = "_")) %>% 
+  group_by(dw,reach_id, site_id, year, month, julian, animal_type, year_month) %>% # Sum body size abundance regardless of fish taxon
+  summarize(no_m2 = sum(no_m2)) %>% 
+  mutate(event_id = paste(site_id, year_month, animal_type, sep = "_"),
+         dw = dw*1000,
+         dw_units = "mg") 
+
+saveRDS(fish_dw, file = "data/derived_data/fish_dw-allyears.rds")
+
+
+
+
+
+
+
+
+# old code from when we used lengths --------------------------------------
+
 # total_fish = readRDS(file = "data/derived_data/fish_fish-abundance.rds") # modeled fish abundances
 
 # CHECK FOR SAMPLING BIAS. NONE APPARENT WITH FIELD DRY MASSES, BUT CLEAR BIAS WITH LENGTHS. 
@@ -200,55 +260,3 @@ saveRDS(species_population_selected, "data/raw_data/fish/species_population_sele
 # 
 # saveRDS(sampling_bias, file = "plots/fish_sampling-bias.RDS")
 # ggsave(sampling_bias, file = "plots/fish_sampling-bias.jpg", width = 6, height = 3)
-
-individual_dw = fish$fsh_perFish %>% clean_names() %>% as_tibble() %>%
-  mutate(year = year(pass_start_time),
-         month = month(pass_start_time),
-         reach_id = str_sub(event_id, 1, 16),
-         reach_taxon_id = paste(reach_id, taxon_id, sep = "_")) %>% 
-  mutate(dw = fish_weight*0.2) %>% 
-  select(reach_taxon_id, dw) 
-
-# Sample from dw measurements with replacement.
-# Number of samples = total number of fish caught per pass per species.
-# If 4 fish caught, then sample the 4 lengths from the 50 length measurements
-# If 400 fish caught, then sample 400 lengths (with replacement) from the 50 length measurements
-
-# simulate dw totals
-size_and_totals = individual_dw %>% 
-  # left_join(total_fish) %>%
-  left_join(species_population_selected) %>% 
-  mutate(fish_perm2 = species_pop/area_m2,
-         fish_per10000m2 = fish_perm2*10000) %>% 
-  group_by(reach_taxon_id) %>% 
-  filter(!any(is.na(fish_perm2)))
-
-# sample individual dry weight with replacement. Sample sizes for individual weights
-# are weighted by the population size of a given species
-
-dw_sims = size_and_totals %>% 
-  group_by(reach_taxon_id) %>% 
-  filter(!is.na(dw)) %>% 
-  sample_n(size = fish_per10000m2[1], replace = T) %>% 
-  group_by(dw, reach_taxon_id, year, month) %>% 
-  dplyr::count(name = "no_10000m2") %>% 
-  mutate(no_m2 = no_10000m2/10000,
-         animal_type = "fish") 
-
-fish_dw = dw_sims %>% 
-  ungroup %>% 
-  separate(reach_taxon_id, into = c("reach_id", "taxon_id"), sep = "_") %>% 
-  separate(reach_id, into = c("site_id", "date", NA), remove = F) %>% 
-  mutate(date = ymd(date),
-         julian = julian(date),
-         year_month = paste(year, month, sep = "_")) %>% 
-  group_by(dw,reach_id, site_id, year, month, julian, animal_type, year_month) %>% # Sum body size abundance regardless of fish taxon
-  summarize(no_m2 = sum(no_m2)) %>% 
-  mutate(event_id = paste(site_id, year_month, animal_type, sep = "_"),
-         dw = dw*1000,
-         dw_units = "mg") 
-
-saveRDS(fish_dw, file = "data/derived_data/fish_dw-allyears.rds")
-
-
-
