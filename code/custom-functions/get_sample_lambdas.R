@@ -23,12 +23,14 @@ get_sample_lambdas <- function(model = NA, data = dat, grp1_contains = "alpha_ra
     mutate(sample_int = parse_number(sample_int)) %>% 
     left_join(dat %>% ungroup %>% distinct(sample_int, year_int, site_int, 
                                            mat_s, log_gpp_s, year, site_id, temp_mean,
-                                           gpp, log_gpp)) %>% 
+                                           gpp, log_gpp, log_om_s, log_om, mean_om)) %>% 
     left_join(year_pivot, by = c(".iteration",".draw","year_int")) %>% 
     left_join(site_pivot, by = c(".iteration",".draw","site_int"))
   
   posts_long_parsed = sample_pivot %>% 
-    mutate(lambda = a + beta_mat*mat_s + beta_gpp*log_gpp_s + beta_gpp_mat*log_gpp_s*mat_s + 
+    mutate(lambda = a + beta_mat*mat_s + beta_gpp*log_gpp_s + beta_om*log_om_s +
+             beta_gpp_om*log_gpp_s*log_om_s + beta_gpp_mat*log_gpp_s*mat_s + beta_om_mat*log_om_s*mat_s +
+             beta_om_mat_gpp*log_om_s*mat_s*log_gpp_s + 
              sigma_site*site_offset + sigma_sample*sample_offset + sigma_year*year_offset)
   
   return(posts_long_parsed)
