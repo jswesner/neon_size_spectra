@@ -125,9 +125,16 @@ saveRDS(macro_dw, file = "data/inverts_dw-allyears.rds")
 macro %>% glimpse()
 
 # taxa
-macro$inv_taxonomyProcessed %>% 
+macro$inv_taxonomyProcessed %>% as_tibble() %>% 
+  mutate(year = year(collectDate)) %>% 
+  filter(year >= 2016 & year <= 2021) %>% 
   distinct(scientificName) %>% 
   nrow()
 
-# body size measures
-sum(macro$inv_taxonomyProcessed$estimatedTotalCount, na.rm = T) 
+# number of body size measures
+macro$inv_taxonomyProcessed %>% as_tibble() %>% 
+  mutate(year = year(collectDate)) %>% 
+  filter(year >= 2016 & year <= 2021) %>% 
+  summarize(total = sum(estimatedTotalCount, na.rm = T))
+
+2403743 + 64940

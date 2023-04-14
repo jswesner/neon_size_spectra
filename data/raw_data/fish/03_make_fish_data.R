@@ -116,8 +116,6 @@ species_population_selected = species_population %>%
 saveRDS(species_population_selected, "data/raw_data/fish/species_population_selected.rds")
 
 
-
-
 # fish length weight ------------------------------------------------------------
 species_population_selected = readRDS("data/raw_data/fish/species_population_selected.rds")
 
@@ -172,9 +170,18 @@ saveRDS(fish_dw, file = "data/derived_data/fish_dw-allyears.rds")
 
 
 
+# number of fish collected
+three_pass_data_wide %>% 
+  mutate(total = `1` + `2` + `3`) %>% 
+  summarize(total = sum(total))
 
+# number of fish measured for mass
+fish$fsh_perFish %>% as_tibble() %>% 
+  filter(!is.na(fishWeight)) %>% 
+  nrow(.)
 
-
+# number of species
+length(unique(three_pass_data_species$taxon_id))
 
 
 # old code from when we used lengths --------------------------------------

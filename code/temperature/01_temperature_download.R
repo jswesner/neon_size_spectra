@@ -4,7 +4,7 @@ library(neonUtilities)
 raw_stream_temperatures <- loadByProduct(
   "DP1.20053.001",
   package = "basic",
-  startdate = "2018-01",
+  startdate = "2016-01",
   enddate = "2021-12",
   timeIndex = 30,   # ignore the one-minute data. Only download 30 minute data
   check.size = FALSE
