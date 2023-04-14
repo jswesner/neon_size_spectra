@@ -26,7 +26,7 @@ fishinvertmod = readRDS("models/stan_gppxtempxom2023-04-08.rds")
 
 # extract posteriors
 posts_sample_lambdas = get_sample_lambdas(fishinvertmod, data = dat)
-
+saveRDS(posts_sample_lambdas, file = "data/derived_data/posts_sample_lambdas.rds")
 
 
 # x = temp, y = isd, facet = gpp and quantiles --------------------------------
