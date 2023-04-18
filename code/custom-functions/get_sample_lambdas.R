@@ -1,21 +1,21 @@
 get_sample_lambdas <- function(model = NA, data = dat, grp1_contains = "alpha_raw_year",
                                grp2_contains = "alpha_raw_site",
                                grp3_contains = "alpha_raw_sample"){
-  year_pivot = as_draws_df(fishinvertmod) %>% 
+  year_pivot = as_draws_df(model) %>% 
     pivot_longer(contains('alpha_raw_year'), 
                  names_to = "year_int", 
                  values_to = "year_offset") %>% 
     mutate(year_int = parse_number(year_int)) %>% 
     select(.iteration, .draw, contains("year_"))
   
-  site_pivot = as_draws_df(fishinvertmod) %>% 
+  site_pivot = as_draws_df(model) %>% 
     pivot_longer(contains('alpha_raw_site'), 
                  names_to = "site_int", 
                  values_to = "site_offset") %>% 
     mutate(site_int = parse_number(site_int)) %>% 
     select(.iteration, .draw, contains("site_"))
   
-  sample_pivot = as_draws_df(fishinvertmod) %>% 
+  sample_pivot = as_draws_df(model) %>% 
     pivot_longer(contains('alpha_raw_sample'),
                  names_to = "sample_int", 
                  values_to = "sample_offset") %>% 

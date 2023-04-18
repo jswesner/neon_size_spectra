@@ -25,7 +25,7 @@ sd_temp = sd(unique(dat_fish$temp_mean))
 fishmod = readRDS("models/stan_fishonly_gppxtempxom2023-04-07.rds")
 
 # extract posteriors
-posts_sample_lambdas = get_sample_lambdas(fishmod, data = dat_fish)
+posts_sample_lambdas_fish = get_sample_lambdas(fishmod, data = dat_fish)
 
 
 
@@ -75,7 +75,7 @@ saveRDS(isd_temp_by_gpp, file = "plots/isd_temp_by_gpp_om-fishonly.rds")
 
 
 # regression with samples -----------------------------------
-posts_medians = posts_sample_lambdas %>% 
+posts_medians = posts_sample_lambdas_fish %>% 
   group_by(year, site_id, sample_int, mat_s, log_gpp_s, log_om_s) %>% 
   median_qi(lambda) %>% 
   mutate(raw_temp = (mat_s*sd_temp) + mean_temp)
@@ -107,7 +107,7 @@ saveRDS(isd_by_temp, file = "plots/isd_by_temp-fishonly.rds")
 
 
 # x = gpp, y = isd, facet = temp quantiles --------------------------------
-posts_medians = posts_sample_lambdas %>% 
+posts_medians = posts_sample_lambdas_fish %>% 
   group_by(year, site_id, sample_int, mat_s, log_gpp_s, log_om_s) %>% 
   median_qi(lambda) %>% 
   mutate(raw_temp = (mat_s*sd_temp) + mean_temp)
@@ -161,7 +161,7 @@ posts_medians %>%
 
 
 # x = temp, y = isd, dots = isd -------------------------------------------
-posts_sample_lambdas %>% 
+posts_sample_lambdas_fish %>% 
   group_by(sample_int, mat_s, log_gpp_s, log_om_s) %>% 
   median_qi(lambda) %>% 
   ggplot(aes(x = mat_s, y = lambda)) + 
