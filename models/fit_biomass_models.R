@@ -7,7 +7,27 @@ library(ggthemes)
 library(scales)
 library(janitor)
 
-# get data
+# get data -------------------------
+d = readRDS("data/derived_data/fish_inverts_dw-allyears.rds") %>% 
+  filter(year >= 2016 & year <= 2021)
+
+water = d %>% ungroup() %>% distinct(site_id, mean)
+
+mean_water = mean(water$mean)
+sd_water = sd(water$mean)
+
+community_mass = d %>% 
+  group_by(sample_id, site_id, log_gpp_s, log_om_s, mat_s, year, season, mean) %>% 
+  mutate(dw_m2 = dw*no_m2) %>% 
+  summarize(total_g_dwm2 = sum(dw_m2)/1000) %>% 
+  ungroup() %>% 
+  mutate(total_g_dwm2_s = total_g_dwm2/mean(total_g_dwm2),
+         log_total_g = log(total_g_dwm2),
+         log_total_g_s = log_total_g/mean(log_total_g)) %>% 
+  mutate(mat = (mat_s*sd_water) + mean_water)
+
+
+
 # fish and inverts separate
 dat_invert = readRDS(file = "data/derived_data/macro_dw-wrangled.rds") %>% 
   filter(year >= 2016 & year <= 2021) %>% 
@@ -46,24 +66,6 @@ dat_fishinvert = dat_invert %>% mutate(animal_type = "inverts") %>%
 
 saveRDS(dat_fishinvert, file = "data/derived_data/dat_fishinvert.rds")
 
-# fish plus inverts
-d = readRDS("data/derived_data/fish_inverts_dw-allyears.rds") %>% 
-  filter(year >= 2016 & year <= 2021)
-
-water = d %>% ungroup() %>% distinct(site_id, mean)
-
-mean_water = mean(water$mean)
-sd_water = sd(water$mean)
-
-community_mass = d %>% 
-  group_by(sample_id, site_id, log_gpp_s, log_om_s, mat_s, year, season, mean) %>% 
-  mutate(dw_m2 = dw*no_m2) %>% 
-  summarize(total_g_dwm2 = sum(dw_m2)/1000) %>% 
-  ungroup() %>% 
-  mutate(total_g_dwm2_s = total_g_dwm2/mean(total_g_dwm2),
-         log_total_g = log(total_g_dwm2),
-         log_total_g_s = log_total_g/mean(log_total_g)) %>% 
-  mutate(mat = (mat_s*sd_water) + mean_water)
 
 
 # total biomass -----------------------------------------------------------
