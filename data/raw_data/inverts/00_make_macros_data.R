@@ -79,11 +79,15 @@ field = fieldData %>%
 # add benthicArea column from fieldData to x. This is necessary to calculate number per m2 below
 
 # join by siteID and sampleID
-MN.no.damage <- left_join(MN.lw.x, field, by = c("siteID", "sampleID")) %>% 
+MN.no.damage.taxa <- left_join(MN.lw.x, field, by = c("siteID", "sampleID")) %>% 
   # filter(invertebrateLifeStage %in% c("larva", "pupa")) %>%
   filter(sizeClass >= 3) %>%
   mutate(dw = case_when(formula_type == 1 ~ a * sizeClass^b,
-                        formula_type == 2 ~ exp(a + b * log(sizeClass)))) %>% 
+                        formula_type == 2 ~ exp(a + b * log(sizeClass)))) 
+
+saveRDS(MN.no.damage.taxa, file = "data/derived_data/MN.no.damage.taxa.rds")
+
+MN.no.damage <- MN.no.damage.taxa %>% 
   group_by(dw, siteID, collectDate) %>% 
   summarize(n = sum(estimatedTotalCount),
             benthicArea = sum(benthicArea),
@@ -138,3 +142,10 @@ macro$inv_taxonomyProcessed %>% as_tibble() %>%
   summarize(total = sum(estimatedTotalCount, na.rm = T))
 
 2403743 + 64940
+
+MN.no.damage.taxa %>%
+  distinct(dw, order, siteID) %>% 
+  ggplot(aes(y = reorder(order, dw), x = dw)) + 
+  geom_point() + 
+  # scale_x_log10() +
+  NULL

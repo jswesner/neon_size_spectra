@@ -18,15 +18,18 @@ neon_sizes_2016_2021 = readRDS(file = "data/derived_data/fish_dw-wrangled.rds") 
 dat_fish = neon_sizes_2016_2021 %>% mutate(temp_mean = mean, 
                                       temp_sd = sd)
 
+saveRDS(dat_fish, file = "data/derived_data/dat_fish.rds")
+
 mean_temp = mean(unique(dat_fish$temp_mean))
 sd_temp = sd(unique(dat_fish$temp_mean))
 
 # load models
-fishmod = readRDS("models/stan_fishonly_gppxtempxom2023-04-07.rds")
+# fishmod = readRDS("models/stan_fishonly_gppxtempxom2023-04-07.rds")
+fishmod = readRDS("models/stan_fishonly_gppxtempxom2023-04-20.rds")
 
 # extract posteriors
 posts_sample_lambdas_fish = get_sample_lambdas(fishmod, data = dat_fish)
-
+saveRDS(posts_sample_lambdas_fish, file = "models/posteriors/posts_sample_lambdas_fish.rds")
 
 
 # x = temp, y = isd, facet = gpp and quantiles --------------------------------
@@ -139,38 +142,6 @@ ggview::ggview(isd_gpp_by_temp, width = 6, height = 2.3, units = "in")
 ggsave(isd_gpp_by_temp, file = "plots/isd_gpp_by_temp-fishonly.jpg", width = 6, height = 2.3, units = "in")
 saveRDS(isd_gpp_by_temp, file = "plots/isd_gpp_by_temp-fishonly.rds")
 
-
-# regression with samples 
-posts_medians %>% 
-  ggplot(aes(x = mat_s, y = lambda)) + 
-  geom_pointrange(aes(ymin = .lower, ymax = .upper),
-                  position = position_jitter(width = 0.02),
-                  alpha = 0.7,
-                  shape = 21, size = 0.4) +
-  geom_line(data = post_lines %>% filter(log_gpp_s!= min(log_gpp_s) &
-                                           log_gpp_s != max(log_gpp_s)), 
-            aes(group = as.factor(log_gpp_s))) + 
-  geom_ribbon(data = post_lines %>% filter(log_gpp_s!= min(log_gpp_s) &
-                                             log_gpp_s != max(log_gpp_s)), 
-              aes(ymin = .lower,ymax = .upper), alpha = 0.2) + 
-  # ylim(-1.4, -1.1) + 
-  theme_default() + 
-  labs(y = "\u03bb (ISD exponent)",
-       x = "Mean Annual Temperature (\u00b0C)")
-
-
-
-# x = temp, y = isd, dots = isd -------------------------------------------
-posts_sample_lambdas_fish %>% 
-  group_by(sample_int, mat_s, log_gpp_s, log_om_s) %>% 
-  median_qi(lambda) %>% 
-  ggplot(aes(x = mat_s, y = lambda)) + 
-  geom_point() + 
-  geom_linerange(aes(ymin = .lower, ymax = .upper)) +
-  geom_line(data = post_lines %>% filter(quantile_gpp == "Median GPP" & quantile_om == "Median OM")) +
-  geom_ribbon(data = post_lines %>% filter(quantile_gpp == "Median GPP" & quantile_om == "Median OM"),
-              aes(ymin = .lower, ymax = .upper), alpha = 0.3) + 
-  theme_default()
 
 
 

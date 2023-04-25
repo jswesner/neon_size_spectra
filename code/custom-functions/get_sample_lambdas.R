@@ -1,4 +1,4 @@
-get_sample_lambdas <- function(model = NA, data = dat, grp1_contains = "alpha_raw_year",
+get_sample_lambdas <- function(model = NA, data = NA, grp1_contains = "alpha_raw_year",
                                grp2_contains = "alpha_raw_site",
                                grp3_contains = "alpha_raw_sample"){
   year_pivot = as_draws_df(model) %>% 
@@ -21,7 +21,7 @@ get_sample_lambdas <- function(model = NA, data = dat, grp1_contains = "alpha_ra
                  values_to = "sample_offset") %>% 
     select(!contains("alpha_raw")) %>%
     mutate(sample_int = parse_number(sample_int)) %>% 
-    left_join(dat %>% ungroup %>% distinct(sample_int, year_int, site_int, 
+    left_join(data %>% ungroup %>% distinct(sample_int, year_int, site_int, 
                                            mat_s, log_gpp_s, year, site_id, temp_mean,
                                            gpp, log_gpp, log_om_s, log_om, mean_om)) %>% 
     left_join(year_pivot, by = c(".iteration",".draw","year_int")) %>% 

@@ -18,6 +18,8 @@ neon_sizes_2016_2021 = readRDS(file = "data/derived_data/fish_inverts_dw-allyear
 dat = neon_sizes_2016_2021 %>% mutate(temp_mean = mean, 
                                       temp_sd = sd)
 
+saveRDS(dat, file = "data/derived_data/dat_all.rds")
+
 mean_temp = mean(unique(dat$temp_mean))
 sd_temp = sd(unique(dat$temp_mean))
 
@@ -160,7 +162,7 @@ saveRDS(isd_gpp_by_temp, file = "plots/isd_gpp_by_temp.rds")
 # plot isd's --------------------------------------------------------------
 
 # sample dw weighted by density
-nsamples = 1000
+nsamples = 10000
 
 dat_sims = dat %>% 
   # filter(sample_int == id) %>%
@@ -186,8 +188,8 @@ for(i in 1:length(dat_split)) {
   sample_int = unique(dat_split[[i]]$sample_int)
   site_id = unique(dat_split[[i]]$site_id)
   year = unique(dat_split[[i]]$year)
-  xmin = min(dat_split[[i]]$dw)
-  xmax = max(dat_split[[i]]$dw)
+  xmin = min(dat_split[[i]]$xmin)
+  xmax = max(dat_split[[i]]$xmax)
   
   lambda = unique(dat_split[[i]]$lambda)
   .lower = unique(dat_split[[i]]$.lower)

@@ -1,3 +1,8 @@
+library(brms)
+library(tidyverse)
+library(tidybayes)
+library(ggview)
+library(janitor)
 
 dat_invert = readRDS(file = "data/derived_data/macro_dw-wrangled.rds") %>% 
   filter(year >= 2016 & year <= 2021) %>% 
@@ -11,6 +16,17 @@ dat_invert = readRDS(file = "data/derived_data/macro_dw-wrangled.rds") %>%
          temp_sd = sd)
 
 dat_fish = readRDS(file = "data/derived_data/fish_dw-wrangled.rds") %>% 
+  filter(year >= 2016 & year <= 2021) %>% 
+  filter(!is.na(log_om_s)) %>% 
+  filter(!is.na(log_gpp_s)) %>% 
+  filter(!is.na(mat_s)) %>% 
+  group_by(sample_id) %>% mutate(sample_int=cur_group_id())%>% 
+  group_by(year) %>% mutate(year_int = cur_group_id()) %>% 
+  group_by(site_id) %>% mutate(site_int=cur_group_id()) %>% 
+  mutate(temp_mean = mean, 
+         temp_sd = sd)
+
+dat = readRDS(file = "data/derived_data/dat_all.rds") %>% 
   filter(year >= 2016 & year <= 2021) %>% 
   filter(!is.na(log_om_s)) %>% 
   filter(!is.na(log_gpp_s)) %>% 
@@ -56,8 +72,6 @@ fish_range = dat_fish %>%
          order_max = floor(log10(xmax)),
          order_range = order_max - order_min)
 
-
-
 all_range = dat %>% 
   group_by(sample_int) %>% 
   add_tally() %>%
@@ -76,11 +90,14 @@ all_range = dat %>%
          order_range = order_max - order_min)
 
 
-  
+bind_rows(fish_range, invert_range) %>%
+  distinct(animal_type, n) %>% 
+  ggplot(aes(x = animal_type, y = n)) + 
+  geom_point()
 
 posts_sample_lambdas_fishinverts = readRDS(file = "data/derived_data/posts_sample_lambdas.rds")
 
-posts_medians_fish = posts_sample_lambdas_fish %>% 
+posts_medians_fish = readRDS(file = "models/posteriors/posts_sample_lambdas_fish.rds") %>% 
   group_by(year, site_id, sample_int, mat_s, log_gpp_s, log_om_s) %>% 
   median_qi(lambda) %>% 
   mutate(raw_temp = (mat_s*sd_temp) + mean_temp)
@@ -98,7 +115,7 @@ preds_to_match_fish = as_draws_df(fishmod) %>%
   select(mat_s, contains("predict"))
 
 
-posts_medians_inverts = posts_sample_lambdas_inverts %>% 
+posts_medians_inverts = readRDS(file = "models/posteriors/posts_sample_lambdas_inverts.rds") %>% 
   group_by(year, site_id, sample_int, mat_s, log_gpp_s, log_om_s) %>% 
   median_qi(lambda) %>% 
   mutate(raw_temp = (mat_s*sd_temp) + mean_temp)
@@ -116,12 +133,12 @@ preds_to_match_inverts = as_draws_df(invertmod) %>%
   select(mat_s, contains("predict"))
 
 
-posts_medians_all = posts_sample_lambdas %>% 
+posts_medians_all = posts_sample_lambdas_fishinverts %>% 
   group_by(year, site_id, sample_int, mat_s, log_gpp_s, log_om_s) %>% 
   median_qi(lambda) %>% 
   mutate(raw_temp = (mat_s*sd_temp) + mean_temp)
 
-preds_to_match_all = as_draws_df(fishinvertmod) %>% 
+preds_to_match_all = as_draws_df(readRDS("models/stan_gppxtempxom2023-04-08.rds")) %>% 
   expand_grid(distinct(posts_medians_all, mat_s, log_gpp_s, log_om_s)) %>% 
   mutate(lambda = a + beta_mat*mat_s + beta_gpp*log_gpp_s + beta_om*log_om_s +
            beta_gpp_om*log_gpp_s*log_om_s + beta_gpp_mat*log_gpp_s*mat_s + beta_om_mat*log_om_s*mat_s +
@@ -133,7 +150,7 @@ preds_to_match_all = as_draws_df(fishinvertmod) %>%
          upper_predict = .upper) %>% 
   select(mat_s, contains("predict"))
 
-posts_medians_fish %>% 
+deviance = posts_medians_fish %>% 
   left_join(preds_to_match_fish) %>% 
   mutate(deviance = lambda_predict - lambda) %>% 
   left_join(fish_range) %>% 
@@ -144,9 +161,11 @@ posts_medians_fish %>%
             posts_medians_all %>% 
               left_join(preds_to_match_all) %>% 
               mutate(deviance = lambda_predict - lambda) %>% 
-              left_join(all_range)) %>% 
+              left_join(all_range))
+  
+deviance %>% 
   # filter(animal_type == "inverts + fish") %>%
-  ggplot(aes(x = pwr, y = abs(deviance), color = animal_type)) +
+  ggplot(aes(x = pwr, y = deviance, color = animal_type)) +
   geom_point() + 
   # geom_smooth() +
   geom_hline(aes(yintercept = 0)) +
@@ -154,3 +173,12 @@ posts_medians_fish %>%
 
 
 
+fish_raw = readRDS("data/raw_data/fish/fish_stacked.rds")
+fish_raw$fsh_perFish %>% as_tibble() %>% 
+  mutate(year = year(passStartTime),
+         date = ymd(as.Date(passStartTime))) %>% 
+  filter(year >= 2016 & year <= 2021) %>% 
+  group_by(siteID, date) %>% 
+  tally() %>% 
+  ggplot(aes(x = n)) + 
+  geom_histogram()

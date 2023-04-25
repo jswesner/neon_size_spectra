@@ -18,6 +18,8 @@ neon_sizes_2016_2021 = readRDS(file = "data/derived_data/macro_dw-wrangled.rds")
 dat_invert = neon_sizes_2016_2021 %>% mutate(temp_mean = mean, 
                                       temp_sd = sd)
 
+saveRDS(dat_invert, file = "data/derived_data/dat_invert.rds")
+
 mean_temp = mean(unique(dat_invert$temp_mean))
 sd_temp = sd(unique(dat_invert$temp_mean))
 

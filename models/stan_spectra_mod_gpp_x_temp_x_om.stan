@@ -54,22 +54,22 @@ model {
 	  }
 	  
 	//priors
-  target += normal_lpdf(a|-1.5, 0.2);
+  target += normal_lpdf(a|-1.3, 0.1);
   alpha_raw_year ~ std_normal();
   alpha_raw_site ~ std_normal();
   alpha_raw_sample ~ std_normal();
   
   //hyperpriors
-  target += exponential_lpdf(sigma_year|7); 
-	target += normal_lpdf(beta_mat|0, 0.1);
-	target += normal_lpdf(beta_gpp|0, 0.1);
-	target += normal_lpdf(beta_om|0, 0.1);
-	target += normal_lpdf(beta_gpp_om|0, 0.1);
-	target += normal_lpdf(beta_gpp_mat|0, 0.1);
-	target += normal_lpdf(beta_om_mat|0, 0.1);
-	target += normal_lpdf(beta_om_mat_gpp|0, 0.1);
-	target += exponential_lpdf(sigma_site|7);
-	target += exponential_lpdf(sigma_sample|7);
+  target += exponential_lpdf(sigma_year|2); 
+	target += normal_lpdf(beta_mat|0, 0.5);
+	target += normal_lpdf(beta_gpp|0, 0.5);
+	target += normal_lpdf(beta_om|0, 0.5);
+	target += normal_lpdf(beta_gpp_om|0, 0.5);
+	target += normal_lpdf(beta_gpp_mat|0, 0.5);
+	target += normal_lpdf(beta_om_mat|0, 0.5);
+	target += normal_lpdf(beta_om_mat_gpp|0, 0.5);
+	target += exponential_lpdf(sigma_site|2);
+	target += exponential_lpdf(sigma_sample|2);
 	
 }
 

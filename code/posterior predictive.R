@@ -23,7 +23,7 @@ dat = readRDS(file = "data/derived_data/fish_inverts_dw-allyears.rds") %>%
   # select(a, .draw) %>% 
   # rename(lambda = a)
 
-# posts_sample_lambdas, file = "data/derived_data/posts_sample_lambdas.rds"
+posts_sample_lambdas = readRDS(file = "data/derived_data/posts_sample_lambdas.rds")
 
 
 # 4) merge with raw data
@@ -43,10 +43,11 @@ posts_raw_preds = posts_raw %>%
                      x = dw)) %>% 
   rename(sim = x)
 
+n_samples = 1000
 # 6) simulate y and y_new
 sim_posts = posts_raw_preds %>% 
   group_by(.draw, sample_int) %>% 
-  sample_n(10000, weight = no_m2, replace = T) %>% 
+  sample_n(n_samples, weight = no_m2, replace = T) %>% 
   select(sim, .draw, data, site_id, year, sample_int, xmin, xmax, no_m2)
 
 # 7) pick a sample to plot
@@ -66,9 +67,27 @@ sim_posts %>%
 # violin
 sim_posts %>%
   filter(sample_int == id) %>% 
-  ggplot(aes(x = sim*no_m2, color = data, group = .draw)) + 
+  ggplot(aes(x = sim, color = data, group = .draw)) + 
   geom_density() +
   scale_x_log10() +
   facet_wrap(sample_int ~ site_id) +
   NULL
 
+sim_ranked = posts_raw %>% ungroup %>% 
+  filter(.draw == 2) %>% 
+  distinct(lambda, xmin, xmax, sample_int) %>%
+  expand_grid(individual = 1:n_samples) %>%
+  mutate(u = runif(nrow(.), 0, 1)) %>% # uniform draw
+  mutate(x = (u*xmax^(lambda+1) +  (1-u) * xmin^(lambda+1) ) ^ (1/(lambda+1))) %>% 
+  filter(sample_int == 2) %>%
+  arrange(-x) %>% 
+  # group_by(sample_int) %>% 
+  mutate(rank_order = 1:n_samples)
+
+
+sim_ranked %>% 
+  ggplot(aes(x = x, y = rank_order)) + 
+  geom_point() +
+  scale_y_log10() + 
+  scale_x_log10()
+  

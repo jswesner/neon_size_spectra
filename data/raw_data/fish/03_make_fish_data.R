@@ -127,6 +127,8 @@ individual_dw = fish$fsh_perFish %>% clean_names() %>% as_tibble() %>%
   mutate(dw = fish_weight*0.2) %>% 
   select(reach_taxon_id, dw) 
 
+saveRDS(individual_dw, file = "data/derived_data/individual_dw_fish.rds")
+
 # Sample from dw measurements with replacement.
 # Number of samples = total number of fish caught per pass per species.
 # If 4 fish caught, then sample the 4 lengths from the 50 length measurements
