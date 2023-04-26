@@ -28,7 +28,7 @@ fishinvertmod = readRDS("models/stan_gppxtempxom2023-04-08.rds")
 
 # extract posteriors
 posts_sample_lambdas = get_sample_lambdas(fishinvertmod, data = dat)
-saveRDS(posts_sample_lambdas, file = "data/derived_data/posts_sample_lambdas.rds")
+saveRDS(posts_sample_lambdas, file = "models/posteriors/posts_sample_lambdas.rds")
 
 
 # x = temp, y = isd, facet = gpp and quantiles --------------------------------
@@ -97,7 +97,7 @@ posts_medians = posts_sample_lambdas %>%
   median_qi(lambda) %>% 
   mutate(raw_temp = (mat_s*sd_temp) + mean_temp)
 
-saveRDS(posts_medians, file = "data/derived_data/posts_medians.rds")
+saveRDS(posts_medians, file = "models/posteriors/posts_medians.rds")
 
 post_lines_median = post_lines %>% 
   filter(grepl("edian", quantile_gpp)) %>% filter(grepl("edian", quantile_gpp)) %>% 

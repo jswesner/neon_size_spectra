@@ -6,7 +6,14 @@ rstan_options(threads_per_chain = 1)
 
 # load data
 neon_sizes_2016_2021 = readRDS(file = "data/derived_data/fish_dw-wrangled.rds") %>% 
-  filter(year >= 2016 & year <= 2021)
+  filter(year >= 2016 & year <= 2021) %>% 
+  filter(!is.na(log_om_s)) %>% 
+  filter(!is.na(log_gpp_s)) %>% 
+  filter(!is.na(mat_s)) %>% 
+  mutate(xmin = 0.0035534) %>%
+  group_by(sample_id) %>% mutate(sample_int=cur_group_id())%>% 
+  group_by(year) %>% mutate(year_int = cur_group_id()) %>% 
+  group_by(site_id) %>% mutate(site_int=cur_group_id())
 
 # compile model
 stan_spectra_mod_gpp_x_temp_x_om = stan_model("models/stan_spectra_mod_gpp_x_temp_x_om.stan")

@@ -62,6 +62,7 @@ ribbons = bind_rows(ribbon_fish,
     theme(strip.text = element_text(hjust = 0)) +
   guides(color = "none",
          fill = "none") +
+    coord_cartesian(ylim = c(-2, -0.4)) +
   labs(y = "\u03bb (ISD exponent)",
        x = "Mean Annual Temperature (\u00b0C)")
 )

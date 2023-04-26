@@ -6,7 +6,7 @@ library(janitor)
 source("code/custom-functions/get_sample_lambdas.R") # automates wrangling of sample-specific posterior lambdas
 
 # get data
-neon_sizes_2016_2021 = readRDS(file = "data/derived_data/fish_dw-wrangled.rds") %>% 
+neon_sizes_2016_2021 = readRDS(file = "data/derived_data/fish_dw-wrangled-culled.rds") %>% 
   filter(year >= 2016 & year <= 2021) %>% 
   filter(!is.na(log_om_s)) %>% 
   filter(!is.na(log_gpp_s)) %>% 
@@ -25,10 +25,10 @@ sd_temp = sd(unique(dat_fish$temp_mean))
 
 # load models
 # fishmod = readRDS("models/stan_fishonly_gppxtempxom2023-04-07.rds")
-fishmod = readRDS("models/stan_fishonly_gppxtempxom2023-04-20.rds")
+fishmod = readRDS("models/stan_fishonly_gppxtempxom2023-04-25.rds")
 
 # extract posteriors
-posts_sample_lambdas_fish = get_sample_lambdas(fishmod, data = dat_fish)
+posts_sample_lambdas_fish = get_sample_lambdas(model = fishmod, data = dat_fish)
 saveRDS(posts_sample_lambdas_fish, file = "models/posteriors/posts_sample_lambdas_fish.rds")
 
 

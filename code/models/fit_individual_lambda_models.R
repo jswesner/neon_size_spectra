@@ -5,10 +5,10 @@ rstan_options(autowrite = TRUE)
 rstan_options(threads_per_chain = 1)
 
 # load data
-neon_sizes_2016_2021 = readRDS(file = "data/derived_data/fish_inverts_dw-allyears.rds") %>% 
+neon_sizes_2016_2021 = readRDS(file = "data/derived_data/fish_inverts_dw-allyears.rds") %>%
   filter(year >= 2016 & year <= 2021)
 
-# neon_sizes_2016_2021 = readRDS(file = "data/derived_data/fish_dw-wrangled.rds") %>% 
+# neon_sizes_2016_2021 = readRDS(file = "data/derived_data/fish_dw-wrangled.rds") %>%
 #   filter(year >= 2016 & year <= 2021)
 # 
 # neon_sizes_2016_2021 = readRDS(file = "data/derived_data/macro_dw-wrangled.rds") %>% 
@@ -21,7 +21,7 @@ stan_spectra_single_models = stan_model("models/stan_spectra_singlesample.stan")
 # make data and fit model ---------------------------------------------------------
 
 dat_group = neon_sizes_2016_2021 %>% 
-  filter(sample_id == 5)
+  filter(sample_int == 149)
 
 stan_data = list(N = nrow(dat_group),
                              mat_s = dat_group$mat_s,
@@ -46,3 +46,4 @@ fit <- sampling(object = stan_spectra_single_models,
 
 
 fit
+726821

@@ -269,3 +269,14 @@ length(unique(three_pass_data_species$taxon_id))
 # 
 # saveRDS(sampling_bias, file = "plots/fish_sampling-bias.RDS")
 # ggsave(sampling_bias, file = "plots/fish_sampling-bias.jpg", width = 6, height = 3)
+
+fish$fsh_perFish %>% 
+  mutate(dw = fishWeight*0.2) %>%
+  group_by(dw) %>% 
+  add_tally() %>% 
+  filter(dw >= 0.5) %>% 
+  ggplot(aes(x = dw, y = n)) + 
+  geom_point() +
+  scale_x_log10() + 
+  scale_y_log10() + 
+  geom_smooth(method = "lm")
