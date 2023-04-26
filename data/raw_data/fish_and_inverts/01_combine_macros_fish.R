@@ -3,7 +3,8 @@ library(janitor)
 library(lubridate)
 library(hydroTSM)
 library(here)
-library(segmented)
+# library(segmented) This package needs to be installed, but not loaded since it overlaps with tidyvers in function.
+# It is called by :: later just once
 
 # load data
 macro_dw = readRDS(file = "data/derived_data/inverts_dw-allyears.rds")
@@ -56,7 +57,7 @@ events_to_keep = fish_collections %>%
   add_tally() %>%         
   filter(date_diff == min(date_diff)) %>% # if more than one sample is within 30 days of the other, keep the closest two samples
   ungroup %>% 
-  select(-n) %>% 
+  select(-n) %>%
   group_by(macro_event_id) %>% 
   add_tally() %>% 
   filter(date_diff == min(date_diff)) %>% 
@@ -132,7 +133,7 @@ seg_cutoffs = list()
 
 for(i in 1:length(fish_dw_all_split)) {
   lm_fish_all = lm(log_n ~ log_dw, data = fish_dw_all_split[[i]])
-  seg_all = segmented(lm_fish_all)
+  seg_all = segmented::segmented(lm_fish_all)
   
   seg_cutoffs[[i]] = tibble(site_id = unique(fish_dw_all_split[[i]]$site_id),
                             cutoff = seg_all$psi[2])
@@ -219,13 +220,6 @@ pairs(predictors)
 macro_fish_dw %>% 
   ungroup() %>% 
   filter(dw == max(dw))
-
-# fish_cutoffs = fish_dw_all %>% 
-#   left_join(cutoffs) %>%  
-#   mutate(removed = case_when(dw < dw_cutoff ~ "removed",
-#                              TRUE ~ "kept"))   
-  
-# saveRDS(fish_cutoffs, file = "data/derived_data/fish_cutoffs.rds")
 
 fish_dw_all %>% mutate(data = "removed") %>% 
   bind_rows(fish_dw_wrangled %>% mutate(data = "kept")) %>% 

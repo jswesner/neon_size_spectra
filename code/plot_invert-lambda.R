@@ -18,8 +18,6 @@ neon_sizes_2016_2021 = readRDS(file = "data/derived_data/macro_dw-wrangled.rds")
 dat_invert = neon_sizes_2016_2021 %>% mutate(temp_mean = mean, 
                                       temp_sd = sd)
 
-saveRDS(dat_invert, file = "data/derived_data/dat_invert.rds")
-
 mean_temp = mean(unique(dat_invert$temp_mean))
 sd_temp = sd(unique(dat_invert$temp_mean))
 
@@ -28,7 +26,7 @@ invertmod = readRDS("models/stan_macrosonly_gppxtempxom2023-04-07.rds")
 
 # extract posteriors
 posts_sample_lambdas_inverts = get_sample_lambdas(invertmod, data = dat_invert)
-
+saveRDS(posts_sample_lambdas_inverts, file = "models/posteriors/posts_sample_lambdas_inverts.rds")
 
 
 # x = temp, y = isd, facet = gpp and quantiles --------------------------------
@@ -112,14 +110,14 @@ post_lines_median = post_lines %>%
             aes(group = as.factor(log_gpp_s))) + 
   geom_ribbon(data = post_lines_median, 
               aes(ymin = .lower,ymax = .upper), alpha = 0.2) + 
-  ylim(-2, -1) +
+  ylim(-2, NA) +
   theme_default() + 
   labs(y = "\u03bb (ISD exponent)",
        x = "Mean Annual Temperature (\u00b0C)"))
 
 ggview::ggview(isd_by_temp, width = 5, height = 5, units = "in")
 ggsave(isd_by_temp, file = "plots/isd_by_temp-invertsonly.jpg", width = 5, height = 5, units = "in")
-saveRDS(isd_by_temp, file = "plots/isd_by_temp-invertsonly.jpg")
+saveRDS(isd_by_temp, file = "plots/isd_by_temp-invertsonly.rds")
 
 
 
