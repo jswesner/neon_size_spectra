@@ -3,6 +3,7 @@ library(janitor)
 library(lubridate)
 library(hydroTSM)
 library(here)
+library(segmented)
 
 # load data
 macro_dw = readRDS(file = "data/derived_data/inverts_dw-allyears.rds")
@@ -92,7 +93,7 @@ macro_dw_filtered %>%
   add_count() %>% 
   filter(n>1)
 
-fish_dw_wrangled = fish_dw_filtered %>% 
+fish_dw_all = fish_dw_filtered %>% 
   rename(fish_event_id = event_id) %>% 
   left_join(events_to_keep %>% distinct(fish_event_id, sample_id, macro_julian)) %>% # macro date not fish date so all are the same
   group_by(dw, site_id, sample_id, macro_julian) %>% 
@@ -113,9 +114,38 @@ fish_dw_wrangled = fish_dw_filtered %>%
   mutate(sample_int = as.integer(as.factor(sample_id)),
          year_int = as.integer(as.factor(year)),
          site_int = as.integer(as.factor(site_id)),
-         season_int = as.integer(as.factor(season))) 
+         season_int = as.integer(as.factor(season))) %>%
+  group_by(site_id, dw) %>% 
+  add_tally()  
 
-fish_dw_wrangled_culled = fish_dw_wrangled %>% filter(dw >= 1e3)
+
+# estimate fish cutoffs for undersamlpling small fish with piecewise regression
+fish_dw_all_split = fish_dw_all %>% 
+  mutate(log_n = log(n),
+         log_dw = log(dw)) %>% 
+  group_by(site_id) %>% 
+  mutate(maxn = max(n)) %>% 
+  filter(maxn > 1) %>% 
+  group_split()
+
+seg_cutoffs = list()
+
+for(i in 1:length(fish_dw_all_split)) {
+  lm_fish_all = lm(log_n ~ log_dw, data = fish_dw_all_split[[i]])
+  seg_all = segmented(lm_fish_all)
+  
+  seg_cutoffs[[i]] = tibble(site_id = unique(fish_dw_all_split[[i]]$site_id),
+                            cutoff = seg_all$psi[2])
+}
+
+cutoffs = bind_rows(seg_cutoffs) %>% 
+  mutate(exp_cutoff = exp(cutoff))
+
+mean_cutoffs = exp(mean(cutoffs$cutoff))
+
+fish_dw_wrangled = fish_dw_all %>% 
+  left_join(cutoffs) %>% 
+  filter(dw >= mean_cutoffs)
 
 macro_dw_wrangled = macro_dw_filtered %>% 
   rename(macro_event_id = event_id) %>% 
@@ -162,7 +192,7 @@ macro_fish_dw = bind_rows(fish_dw_wrangled %>%
          site_int = as.integer(as.factor(site_id)),
          season_int = as.integer(as.factor(season))) 
 
-saveRDS(fish_dw_wrangled_culled, file = "data/derived_data/fish_dw-wrangled.rds")
+saveRDS(fish_dw_wrangled, file = "data/derived_data/fish_dw-wrangled.rds")
 saveRDS(macro_dw_wrangled, file = "data/derived_data/macro_dw-wrangled.rds")
 saveRDS(macro_fish_dw, file = "data/derived_data/fish_inverts_dw-allyears.rds")
 
@@ -190,34 +220,19 @@ macro_fish_dw %>%
   ungroup() %>% 
   filter(dw == max(dw))
 
-fish_dw_wrangled %>% 
-  group_by(dw, site_id) %>% 
-  add_tally() %>% 
-  filter(dw >= 1e3) %>%
+# fish_cutoffs = fish_dw_all %>% 
+#   left_join(cutoffs) %>%  
+#   mutate(removed = case_when(dw < dw_cutoff ~ "removed",
+#                              TRUE ~ "kept"))   
+  
+# saveRDS(fish_cutoffs, file = "data/derived_data/fish_cutoffs.rds")
+
+fish_dw_all %>% mutate(data = "removed") %>% 
+  bind_rows(fish_dw_wrangled %>% mutate(data = "kept")) %>% 
+  # filter(data == "kept") %>% 
   ggplot(aes(x = dw, y = n)) + 
-  facet_wrap(~site_id) +
-  geom_point() +
-  scale_y_log10() + 
-  scale_x_log10() 
-
-macro_dw_wrangled %>% 
-  group_by(dw, site_id) %>% 
-  add_tally() %>% 
-  # filter(dw >= 1e3) %>%
-  ggplot(aes(x = dw, y = n)) + 
-  facet_wrap(~site_id) +
-  geom_point() +
-  scale_y_log10() + 
-  scale_x_log10() 
-
-
-macro_fish_dw %>% 
-  sample_n(10000, weight = no_m2, replace = T) %>% 
-  group_by(dw) %>% 
-  add_tally() %>% 
-  # filter(dw >= 1e3) %>% 
-  ggplot(aes(x = dw, y = n, group = site_id)) + 
-  geom_point() +
-  scale_y_log10() + 
+  geom_point(aes(color = data)) +
   scale_x_log10() + 
-  geom_smooth(method = "lm")
+  scale_y_log10() +
+  facet_wrap(~site_id)
+
