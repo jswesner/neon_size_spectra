@@ -140,7 +140,8 @@ macro_dw_wrangled = macro_dw_filtered %>%
          site_int = as.integer(as.factor(site_id)),
          season_int = as.integer(as.factor(season))) 
 
-macro_fish_dw = bind_rows(fish_dw_wrangled, macro_dw_wrangled) %>% 
+macro_fish_dw = bind_rows(fish_dw_wrangled %>% 
+                            filter(dw >= 1e3), macro_dw_wrangled) %>% 
   group_by(dw, site_id, sample_id, macro_julian) %>% 
   summarize(no_m2 = sum(no_m2)) %>%    # tally by size, regardless of taxa
   ungroup() %>% 
@@ -161,37 +162,9 @@ macro_fish_dw = bind_rows(fish_dw_wrangled, macro_dw_wrangled) %>%
          site_int = as.integer(as.factor(site_id)),
          season_int = as.integer(as.factor(season))) 
 
-
-saveRDS(fish_dw_wrangled, file = "data/derived_data/fish_dw-wrangled.rds")
-saveRDS(fish_dw_wrangled_culled, file = "data/derived_data/fish_dw-wrangled-culled.rds")
+saveRDS(fish_dw_wrangled_culled, file = "data/derived_data/fish_dw-wrangled.rds")
 saveRDS(macro_dw_wrangled, file = "data/derived_data/macro_dw-wrangled.rds")
 saveRDS(macro_fish_dw, file = "data/derived_data/fish_inverts_dw-allyears.rds")
-
-
-macro_fish_dw_culled = bind_rows(fish_dw_wrangled %>% 
-                                   filter(dw >= 1e3), macro_dw_wrangled) %>% 
-  group_by(dw, site_id, sample_id, macro_julian) %>% 
-  summarize(no_m2 = sum(no_m2)) %>%    # tally by size, regardless of taxa
-  ungroup() %>% 
-  mutate(xmin = min(dw)) %>% 
-  group_by(site_id) %>% 
-  mutate(xmax = max(dw)) %>% 
-  ungroup %>% 
-  left_join(gpp) %>% 
-  left_join(mat) %>% 
-  left_join(cpom) %>% 
-  filter(!is.na(log_gpp_s)) %>% 
-  mutate(date = as_date(macro_julian),
-         year = year(date),
-         yday = yday(date),
-         season = time2season(date, out.fmt = "seasons")) %>% 
-  mutate(sample_int = as.integer(as.factor(sample_id)),
-         year_int = as.integer(as.factor(year)),
-         site_int = as.integer(as.factor(site_id)),
-         season_int = as.integer(as.factor(season))) 
-
-saveRDS(macro_fish_dw_culled, file = "data/derived_data/fish_inverts_dw-allyears-fish-culled.rds")
-
 
 # sanity check ------------------------------------------------------------
 
