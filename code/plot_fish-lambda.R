@@ -25,7 +25,7 @@ sd_temp = sd(unique(dat_fish$temp_mean))
 
 # load models
 # fishmod = readRDS("models/stan_fishonly_gppxtempxom2023-04-07.rds")
-fishmod = readRDS("models/stan_fishonly_gppxtempxom2023-04-25.rds")
+fishmod = readRDS("models/stan_fishonly_gppxtempxom2023-04-26.rds")
 
 # extract posteriors
 posts_sample_lambdas_fish = get_sample_lambdas(model = fishmod, data = dat_fish)
@@ -228,7 +228,8 @@ isd_per_sample_plot = dat_toplot %>%
 
 isd_per_sample_plot
 saveRDS(isd_per_sample_plot, file = "plots/isd_per_sample_plot-fishonly.rds")
-
+ggsave(isd_per_sample_plot, file = "plots/isd_per_sample_plot-fishonly.jpg", 
+       width = 6, height = 6)
 
 # isds range
 sites = as.integer(runif(3, min(dat_toplot$sample_int), max(dat_toplot$sample_int)))

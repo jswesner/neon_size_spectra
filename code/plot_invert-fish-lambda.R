@@ -24,7 +24,7 @@ mean_temp = mean(unique(dat$temp_mean))
 sd_temp = sd(unique(dat$temp_mean))
 
 # load models
-fishinvertmod = readRDS("models/stan_gppxtempxom2023-04-08.rds")
+fishinvertmod = readRDS("models/stan_gppxtempxom2023-04-26.rds")
 
 # extract posteriors
 posts_sample_lambdas = get_sample_lambdas(fishinvertmod, data = dat)
