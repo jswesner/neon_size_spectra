@@ -6,6 +6,7 @@ library(hydroTSM)
 library(ggthemes)
 library(scales)
 library(janitor)
+library(ggview)
 
 # get data -------------------------
 d = readRDS("data/derived_data/fish_inverts_dw-allyears.rds") %>% 
@@ -69,14 +70,14 @@ saveRDS(dat_fishinvert, file = "data/derived_data/dat_fishinvert.rds")
 
 
 # total biomass -----------------------------------------------------------
-# community_mass_brm = brm(log_total_g_s ~ log_gpp_s*log_om_s*mat_s + (1|year) + (1|season),
-#                          family = gaussian(),
-#                          data = community_mass,
-#                          prior = c(prior(normal(1, 2), class = "Intercept"),
-#                                    prior(normal(0, 1), class = "b"),
-#                                    prior(exponential(1), class = "sd")),
-#                          file = "models/community_mass_brm.rds",
-#                          file_refit = "on_change")
+community_mass_brm = brm(log_total_g_s ~ log_gpp_s*log_om_s*mat_s + (1|year) + (1|season),
+                         family = gaussian(),
+                         data = community_mass,
+                         prior = c(prior(normal(1, 2), class = "Intercept"),
+                                   prior(normal(0, 1), class = "b"),
+                                   prior(exponential(1), class = "sd")),
+                         file = "models/community_mass_brm.rds",
+                         file_refit = "on_change")
 
 community_mass_brm = readRDS("models/community_mass_brm.rds")
 
@@ -336,7 +337,7 @@ proportion_mass %>%
   theme_default() +
   scale_color_colorblind() + 
   scale_fill_colorblind() +
-  labs(y = bquote('Total Biomass: ln('~g/m^'2'*")"), 
+  labs(y = "Proportion of Community Mass (modeled)", 
        x = "Mean Annual Water Temperature (\u00b0C)") +
   theme(legend.title = element_blank()) +
   NULL
@@ -367,52 +368,6 @@ fish_invert_mass_plot_byom = posts_fishinvert %>%
 saveRDS(fish_invert_mass_plot_byom, file = "plots/fish_invert_mass_plot_byom.rds")
 ggsave(fish_invert_mass_plot_byom, file = "plots/fish_invert_mass_plot_byom.jpg", width = 6, height = 2, units = "in")
 
-
-
-
-# model with gamma --------------------------------------------------------
-
-
-fish_invert_mass_gamma_brm = brm(total_g_dwm2_s ~ log_gpp_s*log_om_s*mat_s*animal_type + (1|year) + (1|season) + (1|sample_id),
-                                 family = Gamma(link = "log"),
-                                 data = fish_invert_mass,
-                                 prior = c(prior(normal(0, 2), class = "Intercept"),
-                                           prior(normal(0, 1), class = "b"),
-                                           prior(exponential(1), class = "sd")),
-                                 file = "models/fish_invert_mass_gamma_brm.rds",
-                                 file_refit = "on_change", 
-                                 cores = 4)
-
-
-ids = fish_invert_mass_gamma_brm$data %>% distinct(sample_id, log_om_s, log_gpp_s, mat_s, animal_type, year, season)
-
-predictions_ids = predict(fish_invert_mass_gamma_brm, summary = F) %>% 
-  t() %>% 
-  as.data.frame() %>% 
-  as_tibble() %>% 
-  cbind(ids)  %>% 
-  pivot_longer(cols = starts_with("V"), names_to = ".draw", values_to = "value") %>% 
-  mutate(.draw = parse_number(.draw))
-
-proportion_posts = predictions_ids %>% 
-  mutate(value = exp(value)) %>% 
-  pivot_wider(names_from = animal_type, values_from = value) %>% 
-  mutate(total = fish + inverts) %>% 
-  mutate(fish = fish/total,
-         inverts = inverts/total) %>% 
-  pivot_longer(cols = c(fish, inverts), names_to = "animal_type", 
-               values_to = "proportion")
-
-
-proportion_posts %>% 
-  group_by(sample_id, mat_s, log_gpp_s, log_om_s, animal_type) %>% 
-  median_qi(proportion) %>% 
-  filter(animal_type == "fish") %>% 
-  ggplot(aes(x = mat_s, y = proportion)) + 
-  # geom_pointrange(aes(ymin = .lower, ymax = .upper)) +
-  ylim(0, 1) +
-  geom_point() + 
-  geom_smooth(method = "lm")
 
 
 
@@ -464,58 +419,24 @@ dat_fishinvert %>%
   facet_wrap(~animal_type) + 
   geom_smooth(method = "lm")
 
-# fit model
-
-ind_fish_invert_size = brm(bf(log_dw_c ~ mat_s*animal_type + (1|year) + 
-                                (1|season)), 
-                           data = dat_fishinvert, 
-                           family = gaussian(),
-                           prior = c(prior(normal(0, 3), class = "Intercept"),
-                                     prior(normal(0, 1), class = "b")),
-                           iter = 1000, chains = 2,
-                           file_refit = "on_change",
-                           file = "models/ind_fish_invert_size_gaussian.rds")
-
-posts_ind_size = ind_fish_invert_size$data %>% 
-  distinct(mat_s, animal_type) %>% 
-  add_epred_draws(ind_fish_invert_size, re_formula = NA) %>% 
-  left_join(dat_fishinvert %>% ungroup %>% distinct(animal_type, mean_log_dw)) %>% 
-  mutate(raw_pred = .epred + mean_log_dw,
-         temp_mean = (mat_s*sd_temp) + mean_temp)
-
-
-individual_size_and_temp = posts_ind_size %>%
-  group_by(animal_type, mat_s, temp_mean) %>% 
-  median_qi(y = exp(raw_pred)) %>% 
-  ggplot(aes(x = temp_mean, y = y, fill = animal_type)) + 
-  geom_line(aes(color = animal_type)) + 
-  geom_ribbon(aes(ymin = .lower, ymax = .upper), alpha = 0.4) + 
-  scale_y_log10() +
-  geom_point(data = dat_fishinvert, aes(y = exp(log_dw), 
-                                        color = animal_type), size = 0.2,
-             position = position_jitter(width = 0.04), alpha = 0.1) + 
-  # facet_wrap(~animal_type) +
-  theme_default() +
-  scale_color_colorblind() + 
-  theme(legend.title = element_blank()) + 
-  scale_fill_colorblind() + 
-  labs(y = "Individual mass in mgDM",
-       x = "Mean Annual Water Temperature (\u00b0C)") +
-  NULL
-
-saveRDS(individual_size_and_temp, file = "plots/indivdual_size_and_temp.rds")
-ggview(individual_size_and_temp, width = 5, height = 4)
-ggsave(individual_size_and_temp, file = "plots/individual_size_and_temp.jpg",
-       width = 5.5, height = 4, dpi = 500)
-
-ind_conds = plot(conditional_effects(ind_fish_invert_size, effects = "mat_s:animal_type"), points = T)
-
-ind_conds$`mat_s:animal_type` + 
-  scale_y_log10()
-
 
 # individual size density -------------------------------------------------
 dat_fishinvert = readRDS(file = "data/derived_data/dat_fishinvert.rds")
+
+qlog_om_s = quantile(unique(dat_fishinvert$log_om_s), probs = c(0.25, 0.5, 0.75), na.rm = T) %>% 
+  as_tibble() %>% 
+  pivot_longer(cols = everything(), values_to = "log_om_s", names_to = "quantile_om") %>% 
+  mutate(quantile_om = c("Low OM", "Median OM", "High OM"))
+
+qlog_gpp_s = quantile(unique(dat_fishinvert$log_gpp_s), probs = c(0.25, 0.5, 0.75), na.rm = T) %>% 
+  as_tibble() %>% 
+  pivot_longer(cols = everything(), values_to = "log_gpp_s", names_to = "quantile_gpp") %>% 
+  mutate(quantile_gpp = c("Low GPP", "Median GPP", "High GPP"))
+
+qmat_s = quantile(unique(dat_fishinvert$mat_s), probs = c(0.25, 0.5, 0.75), na.rm = T) %>% 
+  as_tibble() %>% 
+  pivot_longer(cols = everything(), values_to = "mat_s", names_to = "quantile_mat") %>% 
+  mutate(quantile_mat = c("Low Temp", "Median Temp", "High Temp"))
 
 ind_fish_invert_sizedensity = brm(bf(log_dwm2_c ~ mat_s*animal_type*log_gpp_s*log_om_s + (1|year) + 
                                 (1|season)), 
@@ -532,13 +453,17 @@ uncenter = dat_fishinvert %>% ungroup %>% distinct(animal_type, mean_log_dwm2)
 ind_m2_posts = tibble(mat_s = seq(min(ind_fish_invert_sizedensity$data$mat_s),
                    max(ind_fish_invert_sizedensity$data$mat_s),
                    length.out = 20)) %>% 
-  expand_grid(animal_type = unique(ind_fish_invert_sizedensity$data$animal_type)) %>% 
+  expand_grid(animal_type = unique(ind_fish_invert_sizedensity$data$animal_type)) %>%
+  expand_grid(qlog_om_s) %>% 
+  expand_grid(qlog_gpp_s) %>% 
   add_epred_draws(ind_fish_invert_sizedensity, re_formula = NA) %>% 
   mutate(temp_mean = (mat_s*sd_water) + mean_water) %>% 
   left_join(uncenter) %>% 
   mutate(.epred = .epred + mean_log_dwm2)
 
 plot_indm2_trend = ind_m2_posts %>% 
+  filter(grepl("edian", quantile_om)) %>% 
+  filter(grepl("edian", quantile_gpp)) %>% 
   group_by(mat_s, animal_type, temp_mean) %>% 
   median_qi(.epred) %>% 
   ggplot(aes(x = temp_mean, y = .epred, group = animal_type)) +
@@ -571,7 +496,7 @@ dat_all %>%
   geom_point() + 
   geom_smooth(method = "lm")
 
-ind_allfish_invert_sizedensity = brm(bf(log_dwm2_c ~ mat_s + (1|year) + 
+ind_allfish_invert_sizedensity = brm(bf(log_dwm2_c ~ mat_s*log_gpp_s*log_om_s + (1|year) + 
                                        (1|season)), 
                                   data = dat_all, 
                                   family = gaussian(),
@@ -582,7 +507,7 @@ ind_allfish_invert_sizedensity = brm(bf(log_dwm2_c ~ mat_s + (1|year) +
                                   file = "models/ind_allfish_invert_sizedensity_gaussian.rds")
 
 
-posts_indall = conditional_effects(ind_allfish_invert_sizedensity)
+posts_indall = conditional_effects(ind_allfish_invert_sizedensity, effects = "mat_s")
 
 plot_indall = as_tibble(posts_indall$mat_s) %>% 
   ggplot(aes(x = mat_s, y = estimate__ + unique(dat_all$mean_logdwm2))) + 
@@ -684,47 +609,21 @@ quantile_slope_posts %>%
 
 
 # ccsr -----------------------------------------------------
-
-dat_fishinvert %>% 
-  group_by(sample_int, animal_type, mat_s) %>% 
-  summarize(gm_dw = exp(mean(log(dw))),
-            median_dw = median(dw),
-            mean_dw = mean(dw)) %>% 
-  ggplot(aes(x = mat_s, y = gm_dw)) + 
-  geom_point() +
-  facet_wrap(~animal_type, scales = "free_y") + 
-  geom_smooth(method = "lm") + 
-  scale_y_log10()
-
-
-dat_fishinvert %>% 
+d %>% 
   group_by(sample_int, mat_s) %>% 
   summarize(gm_dw = exp(mean(log(dw))),
             median_dw = median(dw),
-            mean_dw = mean(dw)) %>% 
-  ggplot(aes(x = mat_s, y = gm_dw)) + 
+            mean_dw = mean(dw),
+            gm_m2 = exp(mean(log(no_m2)))) %>% 
+  ggplot(aes(x = gm_m2, y = gm_dw)) + 
   geom_point() +
   # facet_wrap(~animal_type, scales = "free_y") + 
   geom_smooth(method = "lm") + 
-  scale_y_log10()
-
-dat_fishinvert %>% 
-  group_by(sample_int, mat_s) %>% 
-  summarize(gm_dw = exp(mean(log(dw))),
-            median_dw = median(dw),
-            mean_dw = mean(log(dw)),
-            gm_nom2 = exp(mean(log(no_m2))),
-            mean_nom2 = mean(log(no_m2))) %>% 
-  ggplot(aes(x = gm_nom2, y = gm_dw)) + 
-  geom_point() +
-  # facet_wrap(~animal_type, scales = "free") +
-  geom_smooth(method = "lm") + 
-  scale_y_log10() +
-  scale_x_log10() +
-  NULL
+  scale_y_log10() + 
+  scale_x_log10()
 
 
-dat_means = dat_fishinvert %>% 
+dat_means = d %>% 
   group_by(sample_int, mat_s, year, season, log_gpp_s, log_om_s) %>% 
   summarize(gm_dw = exp(mean(log(dw))),
             median_dw = median(dw),
@@ -734,6 +633,22 @@ dat_means = dat_fishinvert %>%
   ungroup %>% 
   mutate(mean_lognom2_c = scale(mean_lognom2, scale = F),
          mean_logdw_c = scale(mean_logdw, scale = F))
+
+
+qlog_om_s = quantile(unique(dat_means$log_om_s), probs = c(0.25, 0.5, 0.75), na.rm = T) %>% 
+  as_tibble() %>% 
+  pivot_longer(cols = everything(), values_to = "log_om_s", names_to = "quantile_om") %>% 
+  mutate(quantile_om = c("Low OM", "Median OM", "High OM"))
+
+qlog_gpp_s = quantile(unique(dat_means$log_gpp_s), probs = c(0.25, 0.5, 0.75), na.rm = T) %>% 
+  as_tibble() %>% 
+  pivot_longer(cols = everything(), values_to = "log_gpp_s", names_to = "quantile_gpp") %>% 
+  mutate(quantile_gpp = c("Low GPP", "Median GPP", "High GPP"))
+
+qmat_s = quantile(unique(dat_means$mat_s), probs = c(0.25, 0.5, 0.75), na.rm = T) %>% 
+  as_tibble() %>% 
+  pivot_longer(cols = everything(), values_to = "mat_s", names_to = "quantile_mat") %>% 
+  mutate(quantile_mat = c("Low Temp", "Median Temp", "High Temp"))
 
 
 
@@ -768,6 +683,8 @@ plot_ccsr = ccsr_posts %>%
   labs(y = "Abundance (mean log no per m2 centered)",
        x = "Biomass (mean log mgDM per m2 centered)") + 
   annotate("text", x = 2, y = 5, label = "Slope = -0.87 (95% CrI: -1 to -0.74)")
+
+plot_ccsr
 
 
 saveRDS(plot_ccsr, file = "plots/plot_ccsr.rds")
