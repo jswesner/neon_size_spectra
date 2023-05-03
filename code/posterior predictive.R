@@ -6,7 +6,7 @@ library(brms)
 source("code/custom-functions/get_sample_lambdas.R") # automates wrangling of sample-specific posterior lambdas
 
 # 1) load models
-fishinvertmod = readRDS("models/stan_gppxtempxom2023-04-08.rds")
+fishinvertmod = readRDS("models/stan_gppxtempxom2023-04-27.rds")
 
 # 2) data
 dat = readRDS(file = "data/derived_data/fish_inverts_dw-allyears.rds") %>% 
@@ -23,7 +23,7 @@ dat = readRDS(file = "data/derived_data/fish_inverts_dw-allyears.rds") %>%
   # select(a, .draw) %>% 
   # rename(lambda = a)
 
-posts_sample_lambdas = readRDS(file = "data/derived_data/posts_sample_lambdas.rds")
+posts_sample_lambdas = readRDS(file = "models/posteriors/posts_sample_lambdas.rds")
 
 
 # 4) merge with raw data

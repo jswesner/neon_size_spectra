@@ -6,25 +6,26 @@ library(janitor)
 source("code/custom-functions/get_sample_lambdas.R") # automates wrangling of sample-specific posterior lambdas
 
 # get data
-neon_sizes_2016_2021 = readRDS(file = "data/derived_data/fish_inverts_dw-allyears.rds") %>% 
-  filter(year >= 2016 & year <= 2021) %>% 
-  filter(!is.na(log_om_s)) %>% 
-  filter(!is.na(log_gpp_s)) %>% 
-  filter(!is.na(mat_s)) %>% 
-  group_by(sample_id) %>% mutate(sample_int=cur_group_id())%>% 
-  group_by(year) %>% mutate(year_int = cur_group_id()) %>% 
-  group_by(site_id) %>% mutate(site_int=cur_group_id())
+# neon_sizes_2016_2021 = readRDS(file = "data/derived_data/fish_inverts_dw-allyears.rds") %>% 
+#   filter(year >= 2016 & year <= 2021) %>% 
+#   filter(!is.na(log_om_s)) %>% 
+#   filter(!is.na(log_gpp_s)) %>% 
+#   filter(!is.na(mat_s)) %>% 
+#   group_by(sample_id) %>% mutate(sample_int=cur_group_id())%>% 
+#   group_by(year) %>% mutate(year_int = cur_group_id()) %>% 
+#   group_by(site_id) %>% mutate(site_int=cur_group_id())
+# 
+# dat = neon_sizes_2016_2021 %>% mutate(temp_mean = mean, 
+#                                       temp_sd = sd)
+# 
+# saveRDS(dat, file = "data/derived_data/dat_all.rds")
+dat_all = readRDS("data/derived_data/dat_all.rds")
 
-dat = neon_sizes_2016_2021 %>% mutate(temp_mean = mean, 
-                                      temp_sd = sd)
-
-saveRDS(dat, file = "data/derived_data/dat_all.rds")
-
-mean_temp = mean(unique(dat$temp_mean))
-sd_temp = sd(unique(dat$temp_mean))
+mean_temp = mean(unique(dat_all$temp_mean))
+sd_temp = sd(unique(dat_all$temp_mean))
 
 # load models
-fishinvertmod = readRDS("models/stan_gppxtempxom2023-04-26.rds")
+fishinvertmod = readRDS("models/stan_gppxtempxom2023-04-27.rds")
 
 # extract posteriors
 posts_sample_lambdas = get_sample_lambdas(fishinvertmod, data = dat)
@@ -162,7 +163,7 @@ saveRDS(isd_gpp_by_temp, file = "plots/isd_gpp_by_temp.rds")
 # plot isd's --------------------------------------------------------------
 
 # sample dw weighted by density
-nsamples = 10000
+nsamples = 1000
 
 dat_sims = dat %>% 
   # filter(sample_int == id) %>%
@@ -305,3 +306,51 @@ isd_lines_onepanel = lines_toplot %>%
 ggsave(isd_lines_onepanel, file = "plots/isd_lines_onepanel.jpg", width = 5.5, height = 5, units = "in", dpi = 500)
 saveRDS(isd_lines_onepanel, file = "plots/isd_lines_onepanel.rds")
 
+
+# residuals ---------------------------------------------------------------
+# sample dw weighted by density
+nsamples = 10000
+
+dat_sims = dat %>% 
+  # filter(sample_int == id) %>%
+  left_join(posts_medians) %>% 
+  group_by(sample_int) %>% 
+  sample_n(nsamples, weight = no_m2, replace = T) %>% 
+  select(dw, site_id, year, sample_int, xmin, xmax, no_m2, lambda, .lower, .upper) 
+
+dat_toplot = dat_sims %>% 
+  # filter(sample_int %in% c(id)) %>% 
+  group_by(sample_int) %>% 
+  arrange(sample_int, desc(dw)) %>% 
+  mutate(y_order = (1:nsamples/nsamples)) %>% 
+  left_join(dat_all %>% ungroup %>% distinct(site_id, mean, log_gpp_s, log_om_s)) %>% 
+  group_by(sample_int) %>% 
+  # filter(sample_int == 12) %>% 
+  mutate(y.PLB = (1 - (dw^(lambda + 1) - 
+                         (xmin^(lambda+1)))/(xmax^(lambda + 1) - 
+                                               (xmin^(lambda+1)))),
+         y.PLBlower = (1 - (dw^(.lower + 1) - 
+                         (xmin^(.lower+1)))/(xmax^(.lower + 1) - 
+                                               (xmin^(.lower+1)))),
+         y.PLBupper = (1 - (dw^(.upper + 1) - 
+                         (xmin^(.upper+1)))/(xmax^(.upper + 1) - 
+                                               (xmin^(.upper+1))))) %>% 
+  mutate(residual = y_order - y.PLB,
+         residual_lower = y_order - y.PLBlower,
+         residual_upper = y_order - y.PLBupper)
+
+
+dat_toplot %>% 
+  ggplot(aes(x = dw, y = residual)) + 
+  # geom_point() +
+  geom_line(aes(group = sample_int)) +
+  geom_ribbon(aes(ymin = residual_lower, ymax = residual_upper, group = sample_int),
+              alpha = 0.5) +
+  # geom_point(aes(y = y.PLB)) + 
+  scale_x_log10() +
+  geom_hline(aes(yintercept = 0)) +
+  facet_wrap(~site_id) +
+  labs(subtitle = "The model underpredicts the frequency of small individuals and/noverpredicts the frequency of large individuals") +
+  # xlim(1, nsamples) +
+  # scale_y_log10() +
+  NULL
