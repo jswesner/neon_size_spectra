@@ -15,7 +15,7 @@ source("code/custom-functions/get_sample_lambdas.R") # automates wrangling of sa
 #   group_by(year) %>% mutate(year_int = cur_group_id()) %>% 
 #   group_by(site_id) %>% mutate(site_int=cur_group_id())
 # 
-# dat = neon_sizes_2016_2021 %>% mutate(temp_mean = mean, 
+# dat_all = neon_sizes_2016_2021 %>% mutate(temp_mean = mean, 
 #                                       temp_sd = sd)
 # 
 # saveRDS(dat, file = "data/derived_data/dat_all.rds")
@@ -28,25 +28,25 @@ sd_temp = sd(unique(dat_all$temp_mean))
 fishinvertmod = readRDS("models/stan_gppxtempxom2023-04-27.rds")
 
 # extract posteriors
-posts_sample_lambdas = get_sample_lambdas(fishinvertmod, data = dat)
+posts_sample_lambdas = get_sample_lambdas(fishinvertmod, data = dat_all)
 saveRDS(posts_sample_lambdas, file = "models/posteriors/posts_sample_lambdas.rds")
 
 
 # x = temp, y = isd, facet = gpp and quantiles --------------------------------
 
-qlog_om_s = quantile(unique(dat$log_om_s), probs = c(0.25, 0.5, 0.75), na.rm = T) %>% 
+qlog_om_s = quantile(unique(dat_all$log_om_s), probs = c(0.25, 0.5, 0.75), na.rm = T) %>% 
   as_tibble() %>% 
   pivot_longer(cols = everything(), values_to = "log_om_s", names_to = "quantile_om") %>% 
   mutate(quantile_om = c("Low OM", "Median OM", "High OM"))
 
-qlog_gpp_s = quantile(unique(dat$log_gpp_s), probs = c(0.25, 0.5, 0.75), na.rm = T) %>% 
+qlog_gpp_s = quantile(unique(dat_all$log_gpp_s), probs = c(0.25, 0.5, 0.75), na.rm = T) %>% 
   as_tibble() %>% 
   pivot_longer(cols = everything(), values_to = "log_gpp_s", names_to = "quantile_gpp") %>% 
   mutate(quantile_gpp = c("Low GPP", "Median GPP", "High GPP"))
 
 # lambda regression
 post_lines = as_draws_df(fishinvertmod) %>% as_tibble() %>% 
-  expand_grid(mat_s = seq(min(dat$mat_s), max(dat$mat_s), length.out = 10)) %>% 
+  expand_grid(mat_s = seq(min(dat_all$mat_s), max(dat_all$mat_s), length.out = 10)) %>% 
   expand_grid(qlog_gpp_s) %>% 
   expand_grid(qlog_om_s) %>% 
   mutate(lambda = a + beta_mat*mat_s + beta_gpp*log_gpp_s + beta_om*log_om_s +
@@ -59,6 +59,8 @@ post_lines = as_draws_df(fishinvertmod) %>% as_tibble() %>%
   mutate(quantile_om = fct_relevel(quantile_om, "Low OM", "Median OM")) %>% 
   mutate(quantile_gpp = as.factor(quantile_gpp)) %>% 
   mutate(quantile_gpp = fct_relevel(quantile_gpp, "Low GPP", "Median GPP"))
+
+saveRDS(post_lines, file = "models/posteriors/post_lines.rds")
 
 # counterfactual plots
 (isd_temp_by_gpp = post_lines %>% 
@@ -108,8 +110,8 @@ post_lines_median = post_lines %>%
   ggplot(aes(x = raw_temp, y = lambda)) + 
   geom_pointrange(aes(ymin = .lower, ymax = .upper),
                   position = position_jitter(width = 0.09),
-                  alpha = 0.7,
-                  shape = 21, size = 0.3) +
+                  alpha = 0.3,
+                  shape = "O", size = 0.2) +
   # geom_point(shape = 21, size = 0.5) +
   geom_line(data = post_lines_median, 
             aes(group = as.factor(log_gpp_s))) + 
@@ -124,6 +126,25 @@ ggview::ggview(isd_by_temp, width = 5, height = 5, units = "in")
 ggsave(isd_by_temp, file = "plots/isd_by_temp.jpg", width = 5, height = 5, units = "in")
 saveRDS(isd_by_temp, file = "plots/isd_by_temp.rds")
 
+coefs_isd_fishinvert = tidy_draws(fishinvertmod) %>% 
+  select(starts_with("beta_")) %>% 
+  pivot_longer(everything()) %>% 
+  group_by(name) %>% 
+  # median_qi(value) %>% 
+  mutate(coefficient = str_sub(name, 6, 20),
+         coefficient = str_replace(coefficient, "_", ":"),
+         coefficient = str_replace(coefficient, "_", ":"),
+         coefficient = paste0("\u03b2", coefficient),
+         order = str_length(coefficient))
+  
+coefs_isd_fishinvert %>% 
+  ggplot(aes(y = value, x = reorder(coefficient, -order))) + 
+  stat_pointinterval() +
+  coord_flip(ylim = c(-0.05, 0.05)) +
+  geom_hline(aes(yintercept = 0)) + 
+  theme_default() +
+  labs(x = "Model coefficients",
+       y = "Value")
 
 
 # x = gpp, y = isd, facet = temp quantiles --------------------------------
@@ -134,8 +155,8 @@ posts_medians = posts_sample_lambdas %>%
 
 # lambda regression
 post_lines_xis_gpp = as_draws_df(fishinvertmod) %>% as_tibble() %>% 
-  expand_grid(log_gpp_s = seq(min(dat$log_gpp_s), max(dat$log_gpp_s), length.out = 10)) %>% 
-  expand_grid(mat_s = quantile(unique(dat$mat_s), probs = c(0.25, 0.5, 0.75))) %>% 
+  expand_grid(log_gpp_s = seq(min(dat_all$log_gpp_s), max(dat_all$log_gpp_s), length.out = 10)) %>% 
+  expand_grid(mat_s = quantile(unique(dat_all$mat_s), probs = c(0.25, 0.5, 0.75))) %>% 
   mutate(lambda = a + beta_mat*mat_s + beta_gpp*log_gpp_s + beta_gpp_mat*mat_s*log_gpp_s) %>% 
   group_by(mat_s, log_gpp_s) %>% 
   median_qi(lambda) %>% 
@@ -165,7 +186,7 @@ saveRDS(isd_gpp_by_temp, file = "plots/isd_gpp_by_temp.rds")
 # sample dw weighted by density
 nsamples = 1000
 
-dat_sims = dat %>% 
+dat_sims = dat_all %>% 
   # filter(sample_int == id) %>%
   left_join(posts_medians) %>% 
   group_by(sample_int) %>% 
@@ -177,7 +198,7 @@ dat_toplot = dat_sims %>%
   group_by(sample_int) %>% 
   arrange(sample_int, desc(dw)) %>% 
   mutate(y_order = 1:nsamples) %>% 
-  left_join(dat %>% ungroup %>% distinct(site_id, mean, log_gpp_s, log_om_s))
+  left_join(dat_all %>% ungroup %>% distinct(site_id, mean, log_gpp_s, log_om_s))
 
 dat_split = dat_sims %>% 
   # filter(sample_int %in% c(id)) %>% 
@@ -218,7 +239,7 @@ for(i in 1:length(dat_split)) {
 lines_toplot = bind_rows(xy.PLB)  %>% 
   # filter(sample_int <= 10) %>% 
   mutate(facet_name = paste(site_id, sample_int)) %>% 
-  left_join(dat %>% ungroup %>% distinct(site_id, mean, log_gpp_s, log_om_s))
+  left_join(dat_all %>% ungroup %>% distinct(site_id, mean, log_gpp_s, log_om_s))
 
 
 isd_per_sample_plot = dat_toplot %>% 
@@ -311,7 +332,7 @@ saveRDS(isd_lines_onepanel, file = "plots/isd_lines_onepanel.rds")
 # sample dw weighted by density
 nsamples = 10000
 
-dat_sims = dat %>% 
+dat_sims = dat_all %>% 
   # filter(sample_int == id) %>%
   left_join(posts_medians) %>% 
   group_by(sample_int) %>% 
