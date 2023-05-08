@@ -163,8 +163,8 @@ b_heat = mass_heat_plot + theme(strip.text = element_blank(),
 heat_map_plot = a_heat/b_heat
 
 ggview::ggview(heat_map_plot, width = 6.5, height = 4.5, units = "in")
-ggsave(heat_map_plot, file = "plots/heat_map_plot.jpg",width = 6.5, height = 4.5, units = "in",
+ggsave(heat_map_plot, file = "plots/ms_plots/heat_map_plot.jpg",width = 6.5, height = 4.5, units = "in",
        dpi = 500)
-saveRDS(heat_map_plot, file = "plots/heat_map_plot.rds")
+saveRDS(heat_map_plot, file = "plots/ms_plots/heat_map_plot.rds")
 saveRDS(a_heat, file = "plots/a_heat.rds")
 saveRDS(b_heat, file = "plots/b_heat.rds")

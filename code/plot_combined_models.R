@@ -338,9 +338,9 @@ f = b_heat + labs(subtitle = "f)") + theme(legend.position = "top")
 
 isd_mass_fourpanel = (a + b)/(c + d)
 ggview::ggview(isd_mass_fourpanel, width = 6.5, height = 6.5, units = "in")
-saveRDS(isd_mass_fourpanel, file = "plots/isd_mass_fourpanel.rds")
+saveRDS(isd_mass_fourpanel, file = "plots/ms_plots/isd_mass_fourpanel.rds")
 ggsave(isd_mass_fourpanel, width = 6.5, height = 6.5, units = "in",
-       file = "plots/isd_mass_fourpanel.jpg", dpi = 500)
+       file = "plots/ms_plots/isd_mass_fourpanel.jpg", dpi = 500)
 
 
 isd_mass_sixpanel = (a + b)/(c + d)/(e + f)
