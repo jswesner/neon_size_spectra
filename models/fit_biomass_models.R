@@ -81,6 +81,31 @@ community_mass_brm = brm(log_total_g_s ~ log_gpp_s*log_om_s*mat_s + (1|year) + (
 
 community_mass_brm = readRDS("models/community_mass_brm.rds")
 
+coefs_mass = tidy_draws(community_mass_brm) %>% 
+  select(starts_with("b_")) %>% 
+  pivot_longer(everything()) %>% 
+  filter(name != "b_Intercept") %>% 
+  group_by(name) %>% 
+  mutate(coefficient = str_sub(name, 3, 50),
+         coefficient = paste0("\u03b2", coefficient),
+         coefficient = str_replace(coefficient, "log_", ""),
+         coefficient = str_replace(coefficient, "log_", ""),
+         coefficient = str_replace(coefficient, "log_", ""),
+         coefficient = str_replace(coefficient, "_s", ""),
+         coefficient = str_replace(coefficient, "_s", ""),
+         coefficient = str_replace(coefficient, "_s", ""),
+         coefficient = str_replace(coefficient, "gpp:om:mat", "om:mat:gpp"),
+         order = str_length(coefficient))
+
+coefs_mass %>% 
+  ggplot(aes(y = value, x = reorder(coefficient, -order))) + 
+  stat_pointinterval() +
+  coord_flip() +
+  geom_hline(aes(yintercept = 0)) + 
+  theme_default() +
+  labs(x = "Model coefficients",
+       y = "Value")
+
 qlog_om_s = quantile(unique(d$log_om_s), probs = c(0.25, 0.5, 0.75), na.rm = T) %>% 
   as_tibble() %>% 
   pivot_longer(cols = everything(), values_to = "log_om_s", names_to = "quantile_om") %>% 
@@ -100,6 +125,8 @@ posts = tibble(mat_s = unique(d$mat_s)) %>%
   add_epred_draws(community_mass_brm, re_formula = NA) %>% 
   mutate(mat = (mat_s*sd_water) + mean_water)
 
+saveRDS(posts, file = "models/posteriors/posts_mass.rds")
+
 community_mass_univariate_plot = posts %>% 
   filter(quantile_gpp == "Median GPP") %>% 
   filter(quantile_om == "Median OM") %>% 
@@ -111,7 +138,7 @@ community_mass_univariate_plot = posts %>%
   geom_point(data = community_mass, aes(y = log_total_g), size = 0.5) + 
   geom_ribbon(aes(ymin = .lower, ymax = .upper), alpha = 0.3) + 
   theme_default() + 
-  labs(y = bquote('Total Biomass: ln('*g/m^'2'*")"), 
+  labs(y = bquote('Standing Stock Biomass: ln('*gDM/m^'2'*")"), 
        x = "Mean Annual Water Temperature (\u00b0C)") +
   # scale_y_log10() +
   NULL
@@ -119,6 +146,7 @@ community_mass_univariate_plot = posts %>%
 ggview::ggview(community_mass_univariate_plot, width = 5, height = 5, units = "in")
 ggsave(community_mass_univariate_plot, width = 5, height = 5, units = "in",
        file = "plots/community_mass_univariate_plot.jpg", dpi = 500)
+saveRDS(community_mass_univariate_plot, file = "plots/community_mass_univariate_plot.rds")
 
 
 
@@ -131,14 +159,15 @@ community_mass_plot = posts %>%
   group_by(mat_s, log_om_s, log_gpp_s, quantile_om, quantile_gpp, mat) %>% 
   mutate(.epred = .epred*mean(community_mass$log_total_g)) %>% 
   median_qi(.epred) %>% 
-  ggplot(aes(x = mat, y = .epred)) +
-  geom_line()  +
+  ggplot(aes(x = mat, y = .epred, fill = quantile_om)) +
+  geom_line(aes(color = quantile_om))  +
   geom_ribbon(aes(ymin = .lower, ymax = .upper), alpha = 0.2) + 
   facet_grid(quantile_om~quantile_gpp) +
   # scale_y_log10() + 
-  theme_default() +
-  labs(y = bquote('Total Biomass: ln('*g/m^'2'*")"), 
-       x = "Mean Annual Water Temperature (\u00b0C)") + 
+  theme_default() + 
+  labs(y = bquote('Standing Stock Biomass: ln('*gDM/m^'2'*")"), 
+       x = "Mean Annual Water Temperature (\u00b0C)") +
+  # scale_y_log10() +
   NULL
 
 
@@ -159,8 +188,9 @@ community_mass_plot_byom = posts  %>%
   facet_grid(~quantile_om) +
   theme_default() +
   # scale_y_log10() + 
-  labs(y = bquote('Total Biomass: ln('*g/m^'2'*")"), 
-       x = "Mean Annual Water Temperature (\u00b0C)") + 
+  labs(y = bquote('Standing Stock Biomass: ln('*gDM/m^'2'*")"), 
+       x = "Mean Annual Water Temperature (\u00b0C)") +
+  # scale_y_log10() +
   NULL
 
 saveRDS(community_mass_plot_byom, file = "plots/community_mass_plot_byom.rds")
