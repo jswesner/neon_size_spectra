@@ -5,6 +5,7 @@ library(ggview)
 library(janitor)
 library(ggridges)
 library(patchwork)
+library(rstan)
 source("code/custom-functions/get_sample_lambdas.R") # automates wrangling of sample-specific posterior lambdas
 
 
@@ -53,54 +54,63 @@ site_future_preds = as_draws_df(fishinvertmod) %>%
   mutate(median = median(lambda),
          year = 2022)
 
+site_future_pred_summary = site_future_preds %>% 
+  group_by(site_id) %>% 
+  median_qi(lambda)
+
 posts_sample_lambdas_years = get_sample_lambdas(fishinvertmod, data = dat_all,
                                                 grp1_contains = "site",
                                                 grp2_contains = "year") %>% 
-  left_join(site_future_preds %>% distinct(site_id, median))
+  left_join(site_future_preds %>% distinct(site_id, median)) 
 
 # fit single future samples
-fit_model = stan_model("models/stan_spectra_singlesample_future.stan")
-
-sim_data = neon_sizes_future %>% 
-  group_by(sample_int) %>% 
-  group_split()
-
-posts_single = list()
-
-# fit
-for (i in 1:length(sim_data)) {
-  stan_dat <- list(x = sim_data[[i]]$dw,
-                   N = nrow(sim_data[[i]]),
-                   counts = sim_data[[i]]$no_m2,
-                   xmax = sim_data[[i]]$xmax,
-                   xmin = sim_data[[i]]$xmin)
-  
-  fit <- sampling(object = fit_model,
-                  data = stan_dat,
-                  iter = 1000,
-                  chains = 2,
-                  open_progress = F,
-                  verbose = F)
-  
-  posts_single[[i]] = as_draws_df(fit) %>% 
-    mutate(site_id = unique(sim_data[[i]]$site_id),
-           year = unique(sim_data[[i]]$year),
-           season = unique(sim_data[[i]]$season),
-           sample_int = unique(sim_data[[i]]$sample_int),
-           sample_size = nrow(sim_data[[i]]))
-  
-}
-
-future_lambdas = bind_rows(posts_single)
-
-saveRDS(future_lambdas, file = "models/posteriors/future_lambdas.rds")
+# fit_model = stan_model("models/stan_spectra_singlesample_future.stan")
+# 
+# sim_data = neon_sizes_future %>% 
+#   group_by(sample_int) %>% 
+#   group_split()
+# 
+# posts_single = list()
+# 
+# # fit
+# for (i in 1:length(sim_data)) {
+#   stan_dat <- list(x = sim_data[[i]]$dw,
+#                    N = nrow(sim_data[[i]]),
+#                    counts = sim_data[[i]]$no_m2,
+#                    xmax = sim_data[[i]]$xmax,
+#                    xmin = sim_data[[i]]$xmin)
+#   
+#   fit <- sampling(object = fit_model,
+#                   data = stan_dat,
+#                   iter = 1000,
+#                   chains = 2,
+#                   open_progress = F,
+#                   verbose = F)
+#   
+#   posts_single[[i]] = as_draws_df(fit) %>% 
+#     mutate(site_id = unique(sim_data[[i]]$site_id),
+#            year = unique(sim_data[[i]]$year),
+#            season = unique(sim_data[[i]]$season),
+#            sample_int = unique(sim_data[[i]]$sample_int),
+#            sample_size = nrow(sim_data[[i]]))
+#   
+# }
+# 
+# future_lambdas = bind_rows(posts_single)
+# 
+# saveRDS(future_lambdas, file = "models/posteriors/future_lambdas.rds")
 
 future_lambdas = readRDS(file = "models/posteriors/future_lambdas.rds")
 
 future_lambdas_summary = future_lambdas %>% 
   group_by(site_id, sample_int, season, sample_size) %>% 
   # median_qi(lambda) %>% 
-  left_join(site_future_preds %>% ungroup %>% distinct(site_id, median))
+  left_join(site_future_preds %>% ungroup %>% distinct(site_id, median)) %>% 
+  group_by(site_id) %>% 
+  left_join(site_future_pred_summary %>% distinct(site_id, .lower, .upper)) %>% 
+  mutate(median2022 = median(lambda)) %>% 
+  mutate(within = case_when(median2022 <= .upper | median2022 >= .lower ~ "yes", TRUE ~ "no"))
+
 
 isd_future_predictions = posts_sample_lambdas_years %>% 
   bind_rows(site_future_preds) %>%
@@ -116,15 +126,17 @@ isd_future_predictions = posts_sample_lambdas_years %>%
                       aes(group = interaction(year, site_id)), 
                       scale = .6, quantile_lines = T,
                       quantiles = c(0.025, 0.1, 0.5, 0.9, 0.975)) + 
-  stat_pointinterval(aes(x = lambda), 
+  stat_pointinterval(aes(x = lambda, color = within), 
                      data = future_lambdas_summary,
                      size = 0.8) + 
   theme_default() + 
+  scale_color_colorblind() +
   labs(y = "NEON Stream Site",
        x = "\u03BB") + 
   coord_cartesian(xlim = c(-1.6, NA)) + 
   theme(text = element_text(size = 11),
-        legend.title = element_blank())
+        legend.title = element_blank()) +
+  guides(color = "none")
 
 # isd_future_predictions = site_future_preds %>% 
 #   ggplot(aes(x = lambda, y = reorder(site_id, median))) + 
@@ -163,18 +175,6 @@ d = readRDS("data/derived_data/fish_inverts_dw-allyears.rds") %>%
          log_total_g_s = log_total_g/mean(log_total_g)) 
 
 
-community_mass_future = readRDS("data/derived_data/fish_inverts_dw-allyears.rds") %>% 
-  filter(year > 2021) %>% 
-  group_by(sample_id, site_id, log_gpp_s, log_om_s, mat_s, year, season, mean) %>% 
-  mutate(dw_m2 = dw*no_m2) %>% 
-  summarize(total_g_dwm2 = sum(dw_m2)/1000) %>% 
-  ungroup() %>% 
-  mutate(total_g_dwm2_s = total_g_dwm2/mean(total_g_dwm2),
-         log_total_g = log(total_g_dwm2),
-         log_total_g_s = log_total_g/mean(log_total_g)) %>% 
-  # mutate(mat = (mat_s*sd_water) + mean_water) %>% 
-  left_join(site_future_preds %>% distinct(site_id, median))
-  
 biomass_preds = as_draws_df(community_mass_brm) %>% 
   ungroup() %>% 
   select(starts_with("b_"), starts_with("sd_")) %>% 
@@ -189,6 +189,25 @@ biomass_preds = as_draws_df(community_mass_brm) %>%
   left_join(site_future_preds %>% distinct(site_id, median)) %>% 
   mutate(year = 2022)
 
+biomass_preds_summary = biomass_preds %>% 
+  group_by(site_id) %>% 
+  median_qi(log_total_g) %>% 
+  select(site_id, .lower, .upper, log_total_g) %>% 
+  rename(median2022 = log_total_g)
+
+community_mass_future = readRDS("data/derived_data/fish_inverts_dw-allyears.rds") %>% 
+  filter(year > 2021) %>% 
+  group_by(sample_id, site_id, log_gpp_s, log_om_s, mat_s, year, season, mean) %>% 
+  mutate(dw_m2 = dw*no_m2) %>% 
+  summarize(total_g_dwm2 = sum(dw_m2)/1000) %>% 
+  ungroup() %>% 
+  mutate(total_g_dwm2_s = total_g_dwm2/mean(total_g_dwm2),
+         log_total_g = log(total_g_dwm2),
+         log_total_g_s = log_total_g/mean(log_total_g)) %>% 
+  # mutate(mat = (mat_s*sd_water) + mean_water) %>% 
+  left_join(site_future_preds %>% distinct(site_id, median)) %>% 
+  left_join(biomass_preds_summary) %>% 
+  mutate(within = case_when(log_total_g <= .upper | log_total_g >= .lower ~ "yes", TRUE ~ "no"))
 
 biomass_preds_year = as_draws_df(community_mass_brm) %>% 
   ungroup() %>% 
@@ -207,7 +226,6 @@ biomass_preds_year = as_draws_df(community_mass_brm) %>%
   left_join(site_future_preds %>% distinct(site_id, median)) %>% 
   mutate(year = parse_number(name))
 
-
 community_mass_future_preds = biomass_preds_year %>% 
   bind_rows(biomass_preds) %>%
   mutate(year = as.factor(year)) %>% 
@@ -222,15 +240,17 @@ community_mass_future_preds = biomass_preds_year %>%
                       aes(group = interaction(year, site_id)), 
                       scale = .6, quantile_lines = T,
                       quantiles = c(0.025, 0.1, 0.5, 0.9, 0.975)) + 
-  stat_pointinterval(aes(x = log_total_g), 
+  stat_pointinterval(aes(x = log_total_g, color = within), 
                      data = community_mass_future,
                      size = 0.8) + 
   theme_default() + 
+  scale_color_colorblind() +
   labs(y = "NEON Stream Site",
        x = "ln(Total Community Mass gDM)") + 
   coord_cartesian(xlim = c(-2, 5)) + 
   theme(text = element_text(size = 11),
-        legend.title = element_blank()) 
+        legend.title = element_blank()) +
+  guides(color = "none")
 
 # community_mass_future_preds = biomass_preds %>% 
 #   ggplot(aes(x = log_total_g, y = reorder(site_id, median))) +
@@ -256,10 +276,9 @@ isd_mass_future_plot = (isd_future_predictions + labs(subtitle = "a) ISD")) +
                                        axis.title.y = element_blank()) + 
      labs(subtitle = "b) Total Community Mass"))
 
-saveRDS(isd_mass_future_plot, file = "plots/isd_mass_future_plot.rds")  
+saveRDS(isd_mass_future_plot, file = "plots/ms_plots/isd_mass_future_plot.rds")  
 ggsave(isd_mass_future_plot, width = 6.5, height = 5,
-       file = "plots/isd_mass_future_plot.jpg", dpi = 500)
-
+       file = "plots/ms_plots/isd_mass_future_plot.jpg", dpi = 500)
 
 
 

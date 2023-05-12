@@ -25,7 +25,7 @@ sd_temp = sd(unique(dat_fish$temp_mean))
 
 # load models
 # fishmod = readRDS("models/stan_fishonly_gppxtempxom2023-04-07.rds")
-fishmod = readRDS("models/stan_fishonly_gppxtempxom2023-04-26.rds")
+fishmod = readRDS("models/stan_fishonly_gppxtempxom2023-05-08.rds")
 
 # extract posteriors
 posts_sample_lambdas_fish = get_sample_lambdas(model = fishmod, data = dat_fish)

@@ -195,6 +195,24 @@ sims %>%
 
 # isd and biomass ---------------------------------------------------------
 # Fix quantiles
+d = readRDS("data/derived_data/fish_inverts_dw-allyears.rds") %>% 
+  filter(year >= 2016 & year <= 2021)
+
+water = d %>% ungroup() %>% distinct(site_id, mean)
+
+mean_water = mean(water$mean)
+sd_water = sd(water$mean)
+
+community_mass = d %>% 
+  group_by(sample_id, site_id, log_gpp_s, log_om_s, mat_s, year, season, mean) %>% 
+  mutate(dw_m2 = dw*no_m2) %>% 
+  summarize(total_g_dwm2 = sum(dw_m2)/1000) %>% 
+  ungroup() %>% 
+  mutate(total_g_dwm2_s = total_g_dwm2/mean(total_g_dwm2),
+         log_total_g = log(total_g_dwm2),
+         mean_log_total_g = mean(log_total_g),
+         log_total_g_s = log_total_g/mean(log_total_g)) %>% 
+  mutate(mat = (mat_s*sd_water) + mean_water)
 
 lowgpp <-  expression(paste(GPP[0.25]))
 medgpp <- expression(paste(GPP[0.5]))
@@ -301,6 +319,8 @@ community_mass_univariate_plot = readRDS(file = "plots/community_mass_univariate
          x = "Mean Annual Temperature (\u00b0C)") 
   )
 
+mean_mass = community_mass %>% ungroup %>% distinct(site_id, log_total_g) %>% summarize(mean_mass = mean(log_total_g))
+
 community_mass_facet_plot = posts_mass %>% 
   # filter(quantile_om == "Median OM") %>% 
   mutate(quantile_om = as.factor(quantile_om)) %>% 
@@ -308,7 +328,7 @@ community_mass_facet_plot = posts_mass %>%
   mutate(quantile_gpp = as.factor(quantile_gpp)) %>% 
   mutate(quantile_gpp = fct_relevel(quantile_gpp, "Low GPP", "Median GPP")) %>% 
   group_by(mat_s, log_om_s, log_gpp_s, quantile_om, quantile_gpp, mat, facet_om, facet_gpp) %>% 
-  mutate(.epred = .epred*mean(community_mass$log_total_g)) %>% 
+  mutate(.epred = .epred*unique(community_mass$mean_log_total_g)) %>% 
   median_qi(.epred) %>% 
   ggplot(aes(x = mat, y = .epred, fill = quantile_om)) +
   geom_line(aes(color = quantile_om))  +
@@ -342,10 +362,4 @@ saveRDS(isd_mass_fourpanel, file = "plots/ms_plots/isd_mass_fourpanel.rds")
 ggsave(isd_mass_fourpanel, width = 6.5, height = 6.5, units = "in",
        file = "plots/ms_plots/isd_mass_fourpanel.jpg", dpi = 500)
 
-
-isd_mass_sixpanel = (a + b)/(c + d)/(e + f)
-ggview::ggview(isd_mass_sixpanel, width = 6.5, height = 6.5, units = "in")
-saveRDS(isd_mass_sixpanel, file = "plots/isd_mass_sixpanel.rds")
-ggsave(isd_mass_sixpanel, width = 6.5, height = 6.5, units = "in",
-       file = "plots/isd_mass_sixpanel.jpg", dpi = 500)
 

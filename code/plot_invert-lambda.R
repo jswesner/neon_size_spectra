@@ -22,7 +22,7 @@ mean_temp = mean(unique(dat_invert$temp_mean))
 sd_temp = sd(unique(dat_invert$temp_mean))
 
 # load models
-invertmod = readRDS("models/stan_macrosonly_gppxtempxom2023-04-07.rds")
+invertmod = readRDS("models/stan_macrosonly_gppxtempxom2023-05-09.rds")
 
 # extract posteriors
 posts_sample_lambdas_inverts = get_sample_lambdas(invertmod, data = dat_invert)

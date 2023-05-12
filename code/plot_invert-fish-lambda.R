@@ -6,26 +6,26 @@ library(janitor)
 source("code/custom-functions/get_sample_lambdas.R") # automates wrangling of sample-specific posterior lambdas
 
 # get data
-# neon_sizes_2016_2021 = readRDS(file = "data/derived_data/fish_inverts_dw-allyears.rds") %>% 
-#   filter(year >= 2016 & year <= 2021) %>% 
-#   filter(!is.na(log_om_s)) %>% 
-#   filter(!is.na(log_gpp_s)) %>% 
-#   filter(!is.na(mat_s)) %>% 
-#   group_by(sample_id) %>% mutate(sample_int=cur_group_id())%>% 
-#   group_by(year) %>% mutate(year_int = cur_group_id()) %>% 
+# neon_sizes_2016_2021 = readRDS(file = "data/derived_data/fish_inverts_dw-allyears.rds") %>%
+#   filter(year >= 2016 & year <= 2021) %>%
+#   filter(!is.na(log_om_s)) %>%
+#   filter(!is.na(log_gpp_s)) %>%
+#   filter(!is.na(mat_s)) %>%
+#   group_by(sample_id) %>% mutate(sample_int=cur_group_id())%>%
+#   group_by(year) %>% mutate(year_int = cur_group_id()) %>%
 #   group_by(site_id) %>% mutate(site_int=cur_group_id())
 # 
-# dat_all = neon_sizes_2016_2021 %>% mutate(temp_mean = mean, 
+# dat_all = neon_sizes_2016_2021 %>% mutate(temp_mean = mean,
 #                                       temp_sd = sd)
 # 
-# saveRDS(dat, file = "data/derived_data/dat_all.rds")
+# saveRDS(dat_all, file = "data/derived_data/dat_all.rds")
 dat_all = readRDS("data/derived_data/dat_all.rds")
 
 mean_temp = mean(unique(dat_all$temp_mean))
 sd_temp = sd(unique(dat_all$temp_mean))
 
 # load models
-fishinvertmod = readRDS("models/stan_gppxtempxom2023-04-27.rds")
+fishinvertmod = readRDS("models/stan_gppxtempxom2023-05-10.rds")
 
 # extract posteriors
 posts_sample_lambdas = get_sample_lambdas(fishinvertmod, data = dat_all)
@@ -264,7 +264,8 @@ isd_per_sample_plot = dat_toplot %>%
 
 isd_per_sample_plot
 saveRDS(isd_per_sample_plot, file = "plots/isd_per_sample_plot.rds")
-
+ggsave(isd_per_sample_plot, file = "plots/isd_per_sample_plot.jpg", 
+       width = 6.5, height = 6.5, dpi = 400)
 
 # isds range
 sites = as.integer(runif(3, min(dat_toplot$sample_int), max(dat_toplot$sample_int)))
