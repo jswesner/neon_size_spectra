@@ -24,10 +24,9 @@ community_mass = d %>%
   ungroup() %>% 
   mutate(total_g_dwm2_s = total_g_dwm2/mean(total_g_dwm2),
          log_total_g = log(total_g_dwm2),
+         mean_log_total_g = mean(log_total_g),
          log_total_g_s = log_total_g/mean(log_total_g)) %>% 
   mutate(mat = (mat_s*sd_water) + mean_water)
-
-
 
 # fish and inverts separate
 dat_invert = readRDS(file = "data/derived_data/macro_dw-wrangled.rds") %>% 
@@ -82,8 +81,8 @@ community_mass_brm = brm(log_total_g_s ~ log_gpp_s*log_om_s*mat_s + (1|year) + (
 community_mass_brm = readRDS("models/community_mass_brm.rds")
 
 coefs_mass = tidy_draws(community_mass_brm) %>% 
-  select(starts_with("b_")) %>% 
-  pivot_longer(everything()) %>% 
+  select(starts_with("b_"), .draw) %>% 
+  pivot_longer(cols = -.draw) %>% 
   filter(name != "b_Intercept") %>% 
   group_by(name) %>% 
   mutate(coefficient = str_sub(name, 3, 50),
@@ -96,6 +95,11 @@ coefs_mass = tidy_draws(community_mass_brm) %>%
          coefficient = str_replace(coefficient, "_s", ""),
          coefficient = str_replace(coefficient, "gpp:om:mat", "om:mat:gpp"),
          order = str_length(coefficient))
+
+
+coefs_mass %>% 
+  group_by(name) %>% 
+  summarize(prob_pos = sum(value>0)/4000)
 
 coefs_mass %>% 
   ggplot(aes(y = value, x = reorder(coefficient, -order))) + 
@@ -147,7 +151,6 @@ ggview::ggview(community_mass_univariate_plot, width = 5, height = 5, units = "i
 ggsave(community_mass_univariate_plot, width = 5, height = 5, units = "in",
        file = "plots/community_mass_univariate_plot.jpg", dpi = 500)
 saveRDS(community_mass_univariate_plot, file = "plots/community_mass_univariate_plot.rds")
-
 
 
 community_mass_plot = posts %>% 
@@ -305,9 +308,9 @@ fish_invert_mass_plot = posts_fishinvert %>%
   geom_ribbon(aes(ymin = .lower, ymax = .upper), alpha = 0.2) +
   # scale_y_log10() + 
   theme_default() +
-  scale_color_colorblind() + 
-  scale_fill_colorblind() +
-  labs(y = bquote('Total Biomass: ln('*g/m^'2'*")"), 
+  scale_color_colorblind(guide = guide_legend(reverse = T)) + 
+  scale_fill_colorblind(guide = guide_legend(reverse = T)) +
+  labs(y = bquote('Total Biomass: ln('*gDM/m^'2'*")"), 
        x = "Mean Annual Water Temperature (\u00b0C)") +
   theme(legend.title = element_blank()) +
   NULL
@@ -333,8 +336,8 @@ fish_invert_mass_plot_panels = posts_fishinvert %>%
   facet_grid(quantile_om~quantile_gpp) +
   # scale_y_log10() + 
   theme_default() +
-  scale_color_colorblind() + 
-  scale_fill_colorblind() +
+  scale_color_colorblind(guide = guide_legend(reverse = T)) + 
+  scale_fill_colorblind(guide = guide_legend(reverse = T))+
   labs(y = bquote('Total Biomass: ln('~g/m^'2'*")"), 
        x = "Mean Annual Water Temperature (\u00b0C)") +
   theme(legend.title = element_blank()) +
@@ -431,26 +434,21 @@ dat_fish = readRDS(file = "data/derived_data/fish_dw-wrangled.rds") %>%
 dat_fishinvert = dat_invert %>% mutate(animal_type = "inverts") %>% 
   bind_rows(dat_fish %>% mutate(animal_type = "fish")) %>% 
   group_by(animal_type) %>% 
-  mutate(mean_dw = mean(dw),
-         log_dw = log(dw),
-         log_dwm2 = log(dw*no_m2)) %>%
-  mutate(mean_log_dw = mean(log_dw),
-         log_dw_c = log_dw - mean(log_dw),
-         dw_s = dw/mean(dw),
+  mutate(log_dw = log(dw),
+         mean_log_dw = mean(log_dw),
+         sd_log_dw = sd(log_dw),
+         log_dw_c = log_dw - mean_log_dw,
+         log_dw_s = log_dw_c/sd_log_dw,
+         log_dwm2 = log(dw*no_m2),
          mean_log_dwm2 = mean(log_dwm2),
+         sd_log_dwm2 = sd(log_dwm2),
          log_dwm2_c = log_dwm2 - mean_log_dwm2,
+         log_dwm2_s = log_dwm2_c/sd_log_dwm2,
          temp_mean = (mat_s*sd_water) + mean_water)
 
 saveRDS(dat_fishinvert, file = "data/derived_data/dat_fishinvert.rds")
 
-dat_fishinvert %>% 
-  ggplot(aes(x = mat_s, y = log_dwm2_c)) + 
-  geom_point() + 
-  facet_wrap(~animal_type) + 
-  geom_smooth(method = "lm")
-
-
-# individual size density -------------------------------------------------
+# individual size -------------------------------------------------
 dat_fishinvert = readRDS(file = "data/derived_data/dat_fishinvert.rds")
 
 qlog_om_s = quantile(unique(dat_fishinvert$log_om_s), probs = c(0.25, 0.5, 0.75), na.rm = T) %>% 
@@ -468,7 +466,7 @@ qmat_s = quantile(unique(dat_fishinvert$mat_s), probs = c(0.25, 0.5, 0.75), na.r
   pivot_longer(cols = everything(), values_to = "mat_s", names_to = "quantile_mat") %>% 
   mutate(quantile_mat = c("Low Temp", "Median Temp", "High Temp"))
 
-ind_fish_invert_sizedensity = brm(bf(log_dwm2_c ~ mat_s*animal_type*log_gpp_s*log_om_s + (1|year) + 
+ind_fish_invert_sizedensity = brm(bf(log_dwm2_s ~ mat_s*animal_type*log_gpp_s*log_om_s + (1|year) + 
                                 (1|season)), 
                            data = dat_fishinvert, 
                            family = gaussian(),
@@ -478,9 +476,11 @@ ind_fish_invert_sizedensity = brm(bf(log_dwm2_c ~ mat_s*animal_type*log_gpp_s*lo
                            file_refit = "on_change",
                            file = "models/ind_fish_invert_sizedensity_gaussian.rds")
 
-uncenter = dat_fishinvert %>% ungroup %>% distinct(animal_type, mean_log_dwm2)
+ind_fish_invert_sizedensity = readRDS("models/ind_fish_invert_sizedensity_gaussian.rds")
 
-ind_m2_posts = tibble(mat_s = seq(min(ind_fish_invert_sizedensity$data$mat_s),
+uncenter = dat_fishinvert %>% ungroup %>% distinct(animal_type, mean_log_dw, sd_log_dw)
+
+ind_mass_posts = tibble(mat_s = seq(min(ind_fish_invert_sizedensity$data$mat_s),
                    max(ind_fish_invert_sizedensity$data$mat_s),
                    length.out = 20)) %>% 
   expand_grid(animal_type = unique(ind_fish_invert_sizedensity$data$animal_type)) %>%
@@ -488,47 +488,45 @@ ind_m2_posts = tibble(mat_s = seq(min(ind_fish_invert_sizedensity$data$mat_s),
   expand_grid(qlog_gpp_s) %>% 
   add_epred_draws(ind_fish_invert_sizedensity, re_formula = NA) %>% 
   mutate(temp_mean = (mat_s*sd_water) + mean_water) %>% 
-  left_join(uncenter) %>% 
-  mutate(.epred = .epred + mean_log_dwm2)
+  left_join(uncenter) 
 
-plot_indm2_trend = ind_m2_posts %>% 
+ind_mass_summary = ind_mass_posts %>% 
   filter(grepl("edian", quantile_om)) %>% 
   filter(grepl("edian", quantile_gpp)) %>% 
   group_by(mat_s, animal_type, temp_mean) %>% 
-  median_qi(.epred) %>% 
+  median_qi(.epred)
+
+plot_indmass_trend = ind_mass_summary %>% 
   ggplot(aes(x = temp_mean, y = .epred, group = animal_type)) +
-  geom_point(data = dat_fishinvert, aes(y = log_dwm2, color = animal_type),
+  geom_point(data = dat_fishinvert, aes(y = log_dwm2_s, color = animal_type),
              size = 0.1) + 
-  geom_line(linewidth = 2) + 
+  geom_line() + 
   geom_ribbon(aes(fill = animal_type, ymin = .lower, ymax = .upper), alpha = 0.7) +
   scale_color_colorblind() + 
   scale_fill_colorblind() + 
   theme_default() + 
   theme(legend.title = element_blank()) + 
-  labs(y = expression("log mgDM/"~m^2),
-       x = "Mean Annual Water Temperature (\u00b0C)") 
+  labs(y = expression("log mgDM/" ~ m^2 ~ "(standardized)"),
+       x = "Mean Annual Water Temperature (\u00b0C)")
 
-
-ggsave(plot_indm2_trend, file = "plots/plot_indm2_trend.jpg", width = 6, height = 4,
+saveRDS(plot_indmass_trend, file = "plots/plot_indmass_trend.rds")
+ggsave(plot_indmass_trend, file = "plots/plot_indmass_trend.jpg", width = 6, height = 4,
        dpi = 500)
 
 
-
-# indm2_all
+# ind_all
 dat_all = readRDS(file = "data/derived_data/dat_all.rds") %>%
   ungroup %>% 
   mutate(log_dwm2 = log(dw*no_m2),
-         mean_logdwm2 = mean(log_dwm2),
-         log_dwm2_c = log_dwm2 - mean_logdwm2)
+         mean_log_dwm2 = mean(log_dwm2),
+         sd_log_dwm2 = sd(log_dwm2),
+         log_dwm2_c = log_dwm2 - mean_log_dwm2,
+         log_dwm2_s = log_dwm2_c/sd_log_dwm2,
+         mat = (mat_s*sd_water) + mean_water)
 
-dat_all %>% 
-  ggplot(aes(x = mat_s, y = log(dw*no_m2))) + 
-  geom_point() + 
-  geom_smooth(method = "lm")
-
-ind_allfish_invert_sizedensity = brm(bf(log_dwm2_c ~ mat_s*log_gpp_s*log_om_s + (1|year) + 
-                                       (1|season)), 
-                                  data = dat_all, 
+ind_allfish_invert_sizedensity = brm(bf(log_dwm2_s ~ mat_s*log_gpp_s*log_om_s + (1|year) +
+                                       (1|season)),
+                                  data = dat_all,
                                   family = gaussian(),
                                   prior = c(prior(normal(0, 3), class = "Intercept"),
                                             prior(normal(0, 1), class = "b")),
@@ -536,22 +534,84 @@ ind_allfish_invert_sizedensity = brm(bf(log_dwm2_c ~ mat_s*log_gpp_s*log_om_s + 
                                   file_refit = "on_change",
                                   file = "models/ind_allfish_invert_sizedensity_gaussian.rds")
 
-
+ind_allfish_invert_sizedensity = readRDS(file = "models/ind_allfish_invert_sizedensity_gaussian.rds")
 posts_indall = conditional_effects(ind_allfish_invert_sizedensity, effects = "mat_s")
 
+uncenter_all = dat_all_sampled %>% ungroup %>% distinct(mean_log_dw, sd_log_dw)
+
 plot_indall = as_tibble(posts_indall$mat_s) %>% 
-  ggplot(aes(x = mat_s, y = estimate__ + unique(dat_all$mean_logdwm2))) + 
+  mutate(mat = (mat_s*sd_water) + mean_water) %>% 
+  ggplot(aes(x = mat, y = estimate__)) + 
   geom_line() + 
-  geom_ribbon(aes(ymin = lower__ + unique(dat_all$mean_logdwm2), 
-                  ymax = upper__ + unique(dat_all$mean_logdwm2)), alpha = 0.5) + 
+  geom_ribbon(aes(ymin = lower__, 
+                  ymax = upper__),
+              alpha = 0.5) + 
   theme_default() + 
-  geom_point(data = dat_all, aes(y = log_dwm2_c + 
-                                   unique(dat_all$mean_logdwm2)), size = 0.2) + 
-  labs(y = expression("ln Individual mass in mgDM/"~m^2),
+  geom_point(data = dat_all, aes(y = log_dwm2_s), size = 0.2) + 
+  labs(y = expression("log mgDM/" ~ m^2 ~ "(standardized)"),
        x = "Mean Annual Water Temperature (\u00b0C)") 
 
+plot_indall
 
 ggsave(plot_indall, file = "plots/plot_indall.jpg", width = 4, height = 4,
+       dpi = 500)
+
+library(patchwork)
+
+all_posts_ind = as_tibble(posts_indall$mat_s) %>% 
+  mutate(mat = (mat_s*sd_water) + mean_water,
+         model = "a)",
+         animal_type = "a)") %>% 
+  rename(.epred = estimate__,
+         .lower = lower__,
+         .upper = upper__) %>% 
+  bind_rows(ind_mass_summary %>% mutate(model = "b)")) %>% 
+  mutate(mat = (mat_s*sd_water) + mean_water)
+
+all_ind_data = bind_rows(ind_allfish_invert_sizedensity$data %>% 
+                           mutate(animal_type = "a)",
+                                  model = "a)"),
+          ind_fish_invert_sizedensity$data %>% mutate(model = "b)")) %>% 
+  as_tibble() %>% 
+  mutate(mat = (mat_s*sd_water) + mean_water) 
+
+labels = all_posts_ind %>% 
+  distinct(mat, animal_type, .epred) %>% 
+  mutate(mat = round(mat,0)) %>% 
+  filter(mat == 20) %>% 
+  group_by(mat, animal_type) %>% 
+  summarize(.epred = mean(.epred)) %>% 
+  mutate(label = c("All individuals", 
+                   "Fish only", 
+                   "Invertebrates only"),
+         model = c("a)", "b)", "b)"))
+
+
+all_ind_plot = all_posts_ind %>% 
+  ggplot(aes(x = mat, y = .epred, fill = animal_type)) + 
+  geom_point(data = all_ind_data, (aes(y = log_dwm2_s, color = animal_type)), 
+             size = 0.2, 
+             shape = 21,
+             alpha = 0.2) + 
+  geom_line() +
+  geom_ribbon(aes(ymin = .lower, ymax = .upper), alpha = 0.7) + 
+  facet_wrap(~model) + 
+  scale_color_manual(values = c("black", "black", "#E69F00")) +
+  scale_fill_manual(values = c("black", "black", "#E69F00")) +
+  theme_default() +  
+  ggrepel::geom_label_repel(data = labels, 
+                            aes(label = label),
+                            nudge_y = c(2, -2, 2),
+                            fill = c("grey70", "grey70", "#E69f00")) + 
+  guides(fill = "none", 
+         color = "none") +
+  labs(y = expression("log mgDM/" ~ m^2 ~ "(standardized)"),
+       x = "Mean Annual Water Temperature (\u00b0C)") + 
+  theme(strip.text.x = element_text(hjust = 0))
+
+
+saveRDS(all_ind_plot, file = "plots/all_ind_plot.rds")
+ggsave(all_ind_plot, file = "plots/all_ind_plot.jpg", width = 6, height = 3, units = "in",
        dpi = 500)
 
 
