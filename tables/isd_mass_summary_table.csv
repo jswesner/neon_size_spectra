@@ -1,0 +1,25 @@
+,"Table 2. Fitted parameter values from models of the individual size distribution (ISD) and standing stock community biomass (dry mass). Parameters include the intercept (?), regression coefficients (?), varying intercepts (sx). The ISD model has a truncated pareto likelihood. The standing stock model has a Gaussian likelihood and hence also includes a parameter for the standard deviation (?). Values summarize the mean and 95% Credible Intervals of the posterior distribution.",,,,
+name,Model,Parameter,Mean,Q2.5,Q97.5
+a,ISD,?,-1.22,-1.25,-1.20
+beta_om,ISD,?logOM_s,0.00,-0.06,0.05
+beta_gpp,ISD,?logGPP_s,-0.01,-0.03,0.02
+beta_mat,ISD,?Temp_s,0.01,-0.02,0.04
+beta_gpp_om,ISD,?logGPP_s x logOM_s,0.00,-0.04,0.05
+beta_om_mat,ISD,?logOMs x Temp_s,0.01,-0.06,0.09
+beta_gpp_mat,ISD,?logGPP_s x Temp_s,-0.01,-0.03,0.02
+beta_om_mat_gpp,ISD,?logOMs x Temp_s x logGPP_s,0.00,-0.07,0.07
+sigma_site,ISD,?site,0.02,0.01,0.04
+sigma_year,ISD,?year,0.004,0.00,0.02
+sigma_sample,ISD,?sample,0.04,0.04,0.05
+,,,,,
+b_mat_s,Standing Stock Biomass,?Temp_s,0.3,-0.1,0.7
+b_log_om_s,Standing Stock Biomass,?logOM_s,0.0,-0.5,0.6
+b_Intercept,Standing Stock Biomass,?,1.1,0.6,1.6
+b_log_gpp_s,Standing Stock Biomass,?logGPP_s,-0.3,-0.5,0.0
+b_log_om_s:mat_s,Standing Stock Biomass,?logOMs x Temp_s,0.2,-1.0,1.3
+b_log_gpp_s:mat_s,Standing Stock Biomass,?logGPP_s x Temp_s,0.1,-0.3,0.4
+b_log_gpp_s:log_om_s,Standing Stock Biomass,?logGPP_s x logOM_s,-0.2,-0.7,0.2
+b_log_gpp_s:log_om_s:mat_s,Standing Stock Biomass,?logOMs x Temp_s x logGPP_s,1.1,0.1,2.1
+sigma,Standing Stock Biomass,?,0.7,0.6,0.8
+sd_year__Intercept,Standing Stock Biomass,?year,0.1,0.0,0.5
+sd_season__Intercept,Standing Stock Biomass,?season,0.2,0.0,1.0
