@@ -24,7 +24,7 @@ read.csv(file = here::here("data/raw_data/resources/allochthonous/NEON-stream-CP
   # group by site and repID
   group_by(siteCode, repID) %>%
   # sum split samples
-  dplyr::summarise(OMmass_g_corr = sum(om_mgm2/10000, na.rm = TRUE)) %>% 
+  dplyr::summarise(OMmass_g_corr = sum(om_mgm2/1000, na.rm = TRUE)) %>% 
   # regroup by just site to get mean and sd
   group_by(siteCode) %>% 
   dplyr::summarise(mean = mean(OMmass_g_corr, na.rm = TRUE),

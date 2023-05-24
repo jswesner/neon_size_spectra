@@ -5,7 +5,7 @@ library(lubridate)
 library(tidybayes)
 library(brms)
 library(neonstore)
-library(neonDivData)
+# library(neonDivData)
 
 # directory
 Sys.setenv(NEONSTORE_HOME = paste(getwd(), 
@@ -154,6 +154,22 @@ dw_sims = size_and_totals %>%
   dplyr::count(name = "no_10000m2") %>% 
   mutate(no_m2 = no_10000m2/10000,
          animal_type = "fish") 
+
+
+fish_dw_taxa = dw_sims %>% 
+  ungroup %>% 
+  separate(reach_taxon_id, into = c("reach_id", "taxon_id"), sep = "_") %>% 
+  separate(reach_id, into = c("site_id", "date", NA), remove = F) %>% 
+  mutate(date = ymd(date),
+         julian = julian(date),
+         year_month = paste(year, month, sep = "_")) %>% 
+  group_by(dw,reach_id, site_id, year, month, julian, animal_type, year_month, taxon_id) %>% # Sum body size abundance regardless of fish taxon
+  summarize(no_m2 = sum(no_m2)) %>% 
+  mutate(event_id = paste(site_id, year_month, animal_type, sep = "_"),
+         dw = dw*1000,
+         dw_units = "mg") %>% 
+  saveRDS(., file = "data/derived_data/fish_dw_taxa.rds")
+
 
 fish_dw = dw_sims %>% 
   ungroup %>% 
