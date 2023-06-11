@@ -76,7 +76,8 @@ ggsave(all_isd + facet_wrap(~panel, ncol = 3), file = "plots/all_isd_samescale.j
 
 
 # total community only
-total_community_isd = ggplot(data = points  %>% filter(animal_type == "inverts + fish"), aes(x = x, y = y)) + 
+total_community_isd = ggplot(data = points  %>% 
+                               filter(animal_type == "inverts + fish"), aes(x = x, y = y)) + 
   geom_pointrange(aes(color = animal_type, ymin = ymin, ymax = ymax)) + 
   geom_line(data = lines  %>% filter(animal_type == "inverts + fish"), aes(color = animal_type)) + 
   geom_ribbon(data = ribbons  %>% filter(animal_type == "inverts + fish"), 

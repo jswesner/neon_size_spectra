@@ -34,6 +34,8 @@ temperature_posteriors = temperature_conditionals %>%
   distinct(.draw, model, .keep_all = TRUE) %>%  # removes redundant outputs
   select(-year_f) # model is not year dependent - only intercept is. Remove for summaries
 
+saveRDS(temperature_posteriors, file = "data/derived_data/temperature_posteriors.rds")
+
 # plot posteriors
 temperature_mean_annual <- temperature_posteriors %>% 
   ungroup() %>% 
@@ -43,3 +45,14 @@ temperature_mean_annual <- temperature_posteriors %>%
             sd = sd(temperature))
 
 saveRDS(temperature_mean_annual, file = ("code/temperature/temperature_mean-annual.rds"))
+
+temperature_posteriors %>% 
+  filter(model == "ARIK") %>% 
+  ungroup() %>% 
+  group_by(siteID, jday) %>% 
+  median_qi(.epred) %>% 
+  ggplot(aes(x = jday, y = .epred)) + 
+  geom_line()
+
+
+

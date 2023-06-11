@@ -201,6 +201,42 @@ ggsave(community_mass_plot_byom, file = "plots/community_mass_plot_byom.jpg", wi
 
 
 
+# Polynomial biomass ------------------------------------------------------
+
+community_mass_brm = readRDS("models/community_mass_brm.rds")
+community_polynomial_brm = update(community_mass_brm,
+                                  formula = . ~ log_gpp_s*log_om_s*mat_s +
+                                    I(mat_s^2) + (1|year) + (1|season))
+
+WAIC(community_mass_brm, community_polynomial_brm)
+
+
+
+# vary time windows -------------------------------------------------------
+
+temp_season_year = readRDS(file = "data/derived_data/raw_stream_temperatures_formodel.rds") %>%
+  filter(surfWaterTempMean <= 33) %>% 
+  mutate(season = case_when(
+    month %in% c(1,2,3) ~ 'winter',
+    month %in% c(4,5,6) ~ 'spring',
+    month %in% c(7,8,9) ~ 'summer',
+    month %in% c(10,11,12) ~ 'autumn' 
+  )) %>% 
+  group_by(season, siteID) %>% 
+  summarize(mean_season_temp = mean(surfWaterTempMean)) %>% 
+  clean_names()
+
+community_mass %>% 
+  mutate(season = case_when(season == "autumm" ~ "autumn",
+                            TRUE ~ season)) %>% 
+  left_join(temp_season_year) %>% 
+  ggplot(aes(x = mean_season_temp, y = total_g_dwm2)) + 
+  geom_point() + 
+  scale_y_log10() +
+  geom_smooth(method = "lm") +
+  NULL
+
+
 
 # fish and invert biomass ------------------------------------------------------------
 fish_dw_wrangled = readRDS(file = "data/derived_data/fish_dw-wrangled.rds") %>% mutate(animal_type = "fish") %>% 

@@ -27,7 +27,7 @@ cpom = readRDS(here("data/derived_data/cpom_means.rds")) %>%
          sd_om = sd) %>% 
   mutate(log_om = log(mean_om),
          log_om_s = scale(log_om),
-         log_om_s = as.numeric(om_s))
+         log_om_s = as.numeric(log_om_s))
 
 
 fish_collections = fish_dw %>% ungroup %>% distinct(julian, 

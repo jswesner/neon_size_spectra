@@ -3,8 +3,10 @@ library(maps)
 library(usmap)
 library(ggrepel)
 library(lubridate)
+library(janitor)
 library(viridis)
 library(rnaturalearthdata)
+library(rnaturalearth)
 
 neon_latlong <- read_csv(file = "data/raw_data/site_lat_longs.csv") %>% distinct(siteID, lat, long) %>% 
   clean_names()
@@ -112,7 +114,7 @@ usa <- ne_countries(scale='medium',returnclass = 'sf')
           legend.key.size = unit(0.4, "cm"),
           legend.title = element_text(size = 8),
           legend.text = element_text(size = 8)) +
-    scale_fill_viridis(trans = "log", breaks = c(0.2, 2, 20))+ 
+    scale_fill_viridis(trans = "log") +
     NULL)
 
 (map_empty <- usa %>% 
@@ -192,3 +194,18 @@ map_sites <- usa %>%
 map_sites
 ggsave(map_sites, file = "plots/map_sites.jpg", width = 5, height = 5, dpi = 500, units = "in")
 
+
+abiotic_quantiles = temp_gpp_om %>% 
+  group_by(name) %>% 
+  reframe(min = min(value),
+          q25 = quantile(value, probs = 0.25),
+            q5 = quantile(value, probs = 0.5),
+            q75 = quantile(value, probs = 0.75),
+          max = max(value)) %>% 
+  mutate_if(is.numeric, round, 0) %>% 
+  mutate(metric = case_when(name == "gpp" ~ "g/C/m2/yr",
+                            name == "mean_om" ~ "gAFDM/m2",
+                            TRUE ~ "degrees C"))
+saveRDS(abiotic_quantiles, file = "tables/abiotic_quantiles.rds")
+write_csv(abiotic_quantiles, file = "tables/abiotic.csv")
+          

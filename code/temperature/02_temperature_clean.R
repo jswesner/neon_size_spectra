@@ -37,7 +37,7 @@ add_zeros_to_alaska <- raw_stream_temperatures_cleaned %>%
                                        TRUE ~ surfWaterTempMean)) %>% 
   select(siteID, date, surfWaterTempMean)
 
-mean_weekly_temperatures <- raw_stream_temperatures_cleaned %>% 
+raw_stream_temperatures_formodel = raw_stream_temperatures_cleaned %>% 
   filter(siteID != "OKSR" | siteID != "CARI") %>% # remove Alaska here. Add it below.
   filter(year >= 2019) %>% 
   select(siteID, date, surfWaterTempMean) %>% 
@@ -48,7 +48,9 @@ mean_weekly_temperatures <- raw_stream_temperatures_cleaned %>%
          jday = yday(date),
          julian = julian(date),
          hour = hour(date),
-         month = month(date)) %>% 
+         month = month(date))
+
+mean_weekly_temperatures <- raw_stream_temperatures_formodel %>% 
   group_by(siteID) %>% 
   mutate(mean_water = mean(surfWaterTempMean, na.rm = T),
          mean_jday = mean(jday, na.rm = T),
@@ -56,7 +58,8 @@ mean_weekly_temperatures <- raw_stream_temperatures_cleaned %>%
          water_c_10 = (surfWaterTempMean - mean_water)/10) %>%
   ungroup() 
 
-mean_weekly_temperatures = saveRDS(mean_weekly_temperatures, file = "data/derived_data/mean_weekly_temperatures.rds")
+saveRDS(raw_stream_temperatures_formodel, file = "data/derived_data/raw_stream_temperatures_formodel.rds")
+saveRDS(mean_weekly_temperatures, file = "data/derived_data/mean_weekly_temperatures.rds")
 
 # fit temperature model ---------------------------------------------
 # 1) make lists by site
