@@ -57,6 +57,12 @@ post_sample_lambdas = dat_all %>%
   select(-dw) %>% 
   add_epred_draws(fit_pareto, re_formula = NULL)
 
+post_sample_lambdas_medians = post_sample_lambdas %>%
+  group_by(sample_id) %>% 
+  median_qi(.epred) 
+
+write_csv(post_sample_lambdas_medians, file = "models/posteriors/post_sample_lambdas.csv")
+
 post_sample_lambdas_summary = post_sample_lambdas %>%
   group_by(sample_id) %>% 
   median_qi(.epred) %>% 

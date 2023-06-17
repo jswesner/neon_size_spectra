@@ -3,91 +3,186 @@ library(tidyverse)
 library(janitor)
 library(tidybayes)
 library(brms)
-source("code/custom-functions/get_sample_lambdas.R") # automates wrangling of sample-specific posterior lambdas
+library(ggthemes)
+source("code/sandbox/paretocounts.R")
+theme_set(brms::theme_default())
 
 # 1) load models
-fishinvertmod = readRDS("models/stan_gppxtempxom2023-04-27.rds")
+fishinvertmod = readRDS("models/fit_pareto.rds")
 
-# 2) data
-dat = readRDS(file = "data/derived_data/fish_inverts_dw-allyears.rds") %>% 
-  filter(year >= 2016 & year <= 2021) %>% 
-  filter(!is.na(log_om_s)) %>% 
-  filter(!is.na(log_gpp_s)) %>% 
-  filter(!is.na(mat_s)) %>% 
-  group_by(sample_id) %>% mutate(sample_int=cur_group_id())%>% 
-  group_by(year) %>% mutate(year_int = cur_group_id()) %>% 
-  group_by(site_id) %>% mutate(site_int=cur_group_id())
+# 2) get data
+dat = as_tibble(fishinvertmod$data)
 
-# 3) extract posteriors (decide which level to summarize (i.e., intercept, sites, sample_ids, etc.))
-# posts = as_draws_df(fishinvertmod) %>% 
-  # select(a, .draw) %>% 
-  # rename(lambda = a)
+# 3) extract posteriors 
+posts_sample_lambdas = dat_all %>% 
+  distinct(sample_id, .keep_all = T) %>% 
+  add_epred_draws(fishinvertmod, re_formula = NULL) %>% 
+  rename(lambda = .epred) %>% 
+  ungroup()
 
-posts_sample_lambdas = readRDS(file = "models/posteriors/posts_sample_lambdas.rds")
+# 4) merge posts and raw data
+n_samples = 500
 
+dat_resampled = dat %>% 
+  group_by(sample_id) %>% 
+  sample_n(n_samples, weight = no_m2, replace = T) %>% 
+  select(site_id, year, sample_id, no_m2, dw) %>% 
+  group_by(sample_id) %>% 
+  mutate(xmin = min(dw),
+         xmax = max(dw),
+         data = "y_raw") %>% 
+  ungroup()
 
-# 4) merge with raw data
 posts_raw = posts_sample_lambdas %>% 
   filter(.draw <= 10) %>% 
-  select(lambda, sample_int, .draw) %>% 
-  right_join(dat %>% select(sample_int, dw, xmin, xmax, no_m2), multiple = "all")
+  select(lambda, sample_id, .draw) %>% 
+  right_join(dat_resampled %>% select(sample_id, dw, no_m2, xmin, xmax, site_id), multiple = "all",
+             relationship = "many-to-many") 
 
 # 5) sample posterior preds
-posts_raw_preds = posts_raw %>% 
+sim_posts = posts_raw %>% 
   mutate(u = runif(nrow(.), 0, 1)) %>% # uniform draw
   mutate(x = (u*xmax^(lambda+1) +  (1-u) * xmin^(lambda+1) ) ^ (1/(lambda+1))) %>% 
   mutate(data = "y_rep") %>% 
-  bind_rows(dat %>% 
+  # mutate(x = round(x,2)) %>% 
+  bind_rows(dat_resampled %>% 
               mutate(data = "y_raw") %>% 
               mutate(.draw = 0,
                      x = dw)) %>% 
   rename(sim = x)
 
-n_samples = 1000
-# 6) simulate y and y_new
-sim_posts = posts_raw_preds %>% 
-  group_by(.draw, sample_int) %>% 
-  sample_n(n_samples, weight = no_m2, replace = T) %>% 
-  select(sim, .draw, data, site_id, year, sample_int, xmin, xmax, no_m2)
-
-# 7) pick a sample to plot
-id = as.integer(runif(5, 1, length(unique(dat$sample_int))))
+# 6) pick a sample to plot
+id = as.integer(runif(15, 1, length(unique(dat$sample_id))))
 
 # 8 Make plots
 # violin
 sim_posts %>%
-  filter(sample_int == id) %>%
-  ggplot(aes(x = .draw, y = sim*no_m2, color = data, group = .draw)) + 
+  # filter(sample_id %in% id) %>%
+  ggplot(aes(x = .draw, y = sim, color = data, group = .draw)) + 
   geom_violin() +
   scale_y_log10() +
-  facet_wrap(sample_int ~ site_id) +
+  facet_wrap(~ site_id) +
   NULL
 
 # density
-# violin
 sim_posts %>%
-  filter(sample_int == id) %>% 
   ggplot(aes(x = sim, color = data, group = .draw)) + 
   geom_density() +
   scale_x_log10() +
-  facet_wrap(sample_int ~ site_id) +
+  facet_wrap(~site_id, scales = "free_y") +
+  scale_color_colorblind() +
   NULL
 
-sim_ranked = posts_raw %>% ungroup %>% 
-  filter(.draw == 2) %>% 
-  distinct(lambda, xmin, xmax, sample_int) %>%
-  expand_grid(individual = 1:n_samples) %>%
+# bayes pvalue ------------------------------------------------------------
+id = as.integer(runif(15, 1, length(unique(dat$sample_id))))
+
+posts_raw_p = posts_sample_lambdas %>% 
+  # filter(sample_id %in% id) %>% 
+  filter(.draw <= 100) %>% 
+  select(lambda, sample_id, .draw) %>% 
+  right_join(dat_resampled %>% distinct(sample_id, dw, no_m2, xmin, xmax, site_id), 
+             by = "sample_id", multiple = "all",
+             relationship = "many-to-many") 
+
+# 5) sample posterior preds
+n_samples = 1000
+posts_raw_preds = posts_raw_p %>% 
+  # filter(.draw <= 4) %>%
+  group_by(sample_id) %>% 
+  mutate(xmin = min(dw),
+         xmax = max(dw)) %>% 
+  ungroup %>% 
   mutate(u = runif(nrow(.), 0, 1)) %>% # uniform draw
   mutate(x = (u*xmax^(lambda+1) +  (1-u) * xmin^(lambda+1) ) ^ (1/(lambda+1))) %>% 
-  filter(sample_int == 2) %>%
-  arrange(-x) %>% 
-  # group_by(sample_int) %>% 
-  mutate(rank_order = 1:n_samples)
+  mutate(data = "y_rep") %>% 
+  # mutate(x = round(x,2)) %>% 
+  rename(sim = x) %>% 
+  group_by(sample_id, .draw) %>% 
+  sample_n(n_samples, weight = no_m2, replace = T) %>% 
+  ungroup
+
+# by site
+t_stat_post_site = posts_raw_preds %>% 
+  # filter(site_id %in% id) %>% 
+  group_by(.draw, site_id) %>% 
+  reframe(gm = exp(mean(log(sim))),
+          median = median(sim))
+
+t_stat_raw_site = dat_resampled %>% 
+  group_by(site_id) %>%
+  reframe(gm_raw = exp(mean(log(dw))),
+          median_raw = median(dw))
 
 
-sim_ranked %>% 
-  ggplot(aes(x = x, y = rank_order)) + 
-  geom_point() +
+t_stat_post_site %>% 
+  ggplot(aes(x = gm)) + 
+  geom_histogram() + 
+  facet_wrap(~site_id) + 
+  geom_vline(data = t_stat_raw_site, aes(xintercept = gm_raw))
+
+
+
+
+# by sample
+t_stat_post_sample = posts_raw_preds %>% 
+  # filter(sample_id %in% id) %>% 
+  group_by(.draw, sample_id) %>% 
+  reframe(gm = exp(mean(log(sim))),
+          median = median(sim))
+
+t_stat_raw_sample = dat_resampled %>% 
+  group_by(sample_id) %>%
+  reframe(gm_raw = exp(mean(log(dw))),
+          median_raw = median(dw))
+
+t_stat_summary = t_stat_post_sample %>% 
+  # filter(sample_id == 2) %>% 
+  # group_by(sample_id) %>% 
+  # reframe(mean_gm = mean(gm),
+          # sd_gm = sd(gm)) %>% 
+  left_join(t_stat_raw_sample) %>% 
+  mutate(diff_gm = gm - gm_raw,
+         diff_median = median - median_raw, 
+         higher_gm = case_when(diff_gm > 0 ~ "higher", TRUE ~ "lower"),
+         higher_f = as.integer(as.factor(higher_gm)) - 1, 
+         higher_median = case_when(diff_median > 0 ~ "higher", TRUE ~ "lower"),
+         higher_f_median = as.integer(as.factor(higher_median)) - 1)
+
+bayesian_p_gm = as.character(round(sum(t_stat_summary$higher_f > 0)/nrow(t_stat_summary), 2))
+
+t_stat_summary %>% 
+  ggplot(aes(x = gm, y = gm_raw)) + 
+  geom_point(aes(color = higher_gm), size = 0.2, shape = 21) + 
+  ggthemes::scale_color_colorblind() +
+  geom_abline() + 
   scale_y_log10() + 
-  scale_x_log10()
-  
+  scale_x_log10() +
+  annotate(geom = "text", x = 0.02, y = 10, label = paste("Bayesian P = ", bayesian_p_gm)) +
+  coord_cartesian(ylim = c(0.005, 10),
+                  xlim = c(0.005, 10)) + 
+  labs(x = "Predicted",
+       y = "Observed") +
+  theme_default()
+
+
+bayesian_p_median = as.character(round(sum(t_stat_summary$higher_f_median > 0)/nrow(t_stat_summary), 2))
+
+t_stat_summary %>% 
+  ggplot(aes(x = median, y = median_raw)) + 
+  geom_point(aes(color = higher_median), size = 0.2, shape = 21) + 
+  ggthemes::scale_color_colorblind() +
+  geom_abline() + 
+  scale_y_log10() + 
+  scale_x_log10() +
+  annotate(geom = "text", x = 0.02, y = 10, label = paste("Bayesian P = ", bayesian_p_median)) +
+  coord_cartesian(ylim = c(0.005, 10),
+                  xlim = c(0.005, 10)) + 
+  labs(x = "Predicted",
+       y = "Observed") +
+  theme_default()
+
+
+t_stat_summary %>% 
+  group_by(sample_id) %>% 
+  reframe(bayes_p = sum(higher_f)/length(row_number())) %>% 
+  filter(bayes_p <= 0.025 | bayes_p >= 0.975)
