@@ -14,7 +14,7 @@ fishinvertmod = readRDS("models/fit_pareto.rds")
 dat = as_tibble(fishinvertmod$data)
 
 # 3) extract posteriors 
-posts_sample_lambdas = dat_all %>% 
+posts_sample_lambdas = dat %>% 
   distinct(sample_id, .keep_all = T) %>% 
   add_epred_draws(fishinvertmod, re_formula = NULL) %>% 
   rename(lambda = .epred) %>% 
@@ -85,7 +85,7 @@ posts_raw_p = posts_sample_lambdas %>%
              relationship = "many-to-many") 
 
 # 5) sample posterior preds
-n_samples = 1000
+n_samples = 500
 posts_raw_preds = posts_raw_p %>% 
   # filter(.draw <= 4) %>%
   group_by(sample_id) %>% 
@@ -121,8 +121,6 @@ t_stat_post_site %>%
   geom_vline(data = t_stat_raw_site, aes(xintercept = gm_raw))
 
 
-
-
 # by sample
 t_stat_post_sample = posts_raw_preds %>% 
   # filter(sample_id %in% id) %>% 
@@ -141,14 +139,21 @@ t_stat_summary = t_stat_post_sample %>%
   # reframe(mean_gm = mean(gm),
           # sd_gm = sd(gm)) %>% 
   left_join(t_stat_raw_sample) %>% 
+  left_join(dat %>% ungroup %>% distinct(sample_id, site_id)) %>% 
   mutate(diff_gm = gm - gm_raw,
          diff_median = median - median_raw, 
          higher_gm = case_when(diff_gm > 0 ~ "higher", TRUE ~ "lower"),
          higher_f = as.integer(as.factor(higher_gm)) - 1, 
          higher_median = case_when(diff_median > 0 ~ "higher", TRUE ~ "lower"),
-         higher_f_median = as.integer(as.factor(higher_median)) - 1)
+         higher_f_median = as.integer(as.factor(higher_median)) - 1) %>% 
+  ungroup() %>% 
+  mutate(p_value_overall = sum(higher_f >0)/nrow(.)) %>% 
+  group_by(site_id) %>% 
+  mutate(p_value_site = sum(higher_f >0)/max(row_number())) %>% 
+  group_by(sample_id) %>% 
+  mutate(p_value_sample = sum(higher_f >0)/max(row_number())) %>% 
+  ungroup
 
-bayesian_p_gm = as.character(round(sum(t_stat_summary$higher_f > 0)/nrow(t_stat_summary), 2))
 
 t_stat_summary %>% 
   ggplot(aes(x = gm, y = gm_raw)) + 
@@ -157,7 +162,8 @@ t_stat_summary %>%
   geom_abline() + 
   scale_y_log10() + 
   scale_x_log10() +
-  annotate(geom = "text", x = 0.02, y = 10, label = paste("Bayesian P = ", bayesian_p_gm)) +
+  annotate(geom = "text", x = 0.02, y = 10, label = paste("Bayesian P = ", 
+                                                          round(unique(t_stat_summary$p_value_overall),2))) +
   coord_cartesian(ylim = c(0.005, 10),
                   xlim = c(0.005, 10)) + 
   labs(x = "Predicted",
@@ -186,3 +192,46 @@ t_stat_summary %>%
   group_by(sample_id) %>% 
   reframe(bayes_p = sum(higher_f)/length(row_number())) %>% 
   filter(bayes_p <= 0.025 | bayes_p >= 0.975)
+
+t_stat_summary %>% ungroup() %>% distinct(sample_id, site_id, 
+                                          p_value_sample, p_value_overall,
+                                          p_value_site) %>% 
+  pivot_longer(cols = c(p_value_sample, p_value_site)) %>% 
+  mutate(level = str_sub(name, 9, 20),
+         higher = case_when(value > 0.975 | value < 0.025 ~ "no", 
+                            T ~ "yes"),
+         site_no = as.integer(as.factor(site_id)),
+         unique = case_when(level == "sample" ~ sample_id,
+                            TRUE ~ site_no)) %>% 
+  distinct(unique, level, p_value_overall, value, higher) %>% 
+  ggplot(aes(x = level, y = value, color = higher)) + 
+  geom_jitter(height = 0, width = 0.05) + 
+  scale_color_colorblind() + 
+  geom_hline(aes(yintercept = p_value_overall),
+             linetype = "dotted") + 
+  labs(y = "Bayesian p-value",
+       color = "Good fit") +
+  geom_hline(aes(yintercept = 0.025)) +
+  geom_hline(aes(yintercept = 0.975)) +
+  annotate(geom = "text", x = 2.4, y = 0.6, label = "Overall p-value") +
+  annotate(geom = "text", x = 2.4, y = 0.95, label = "0.975") +
+  annotate(geom = "text", x = 2.4, y = 0.05, label = "0.025")
+  
+
+
+# among sites -------------------------------------------------------------
+
+t_stat_summary %>% 
+  ggplot(aes(x = gm, y = gm_raw)) + 
+  geom_point(aes(color = higher_gm), size = 0.2, shape = 21) + 
+  ggthemes::scale_color_colorblind() +
+  geom_abline() + 
+  scale_y_log10() + 
+  scale_x_log10() +
+  # annotate(geom = "text", x = 0.02, y = 10, label = paste("Bayesian P = ", bayesian_p_gm)) +
+  # coord_cartesian(ylim = c(0.005, 10),
+                  # xlim = c(0.005, 10)) + 
+  labs(x = "Predicted",
+       y = "Observed") +
+  theme_default() +
+  facet_wrap(~site_id, scales = "free")
