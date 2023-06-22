@@ -85,7 +85,7 @@ posts_raw_p = posts_sample_lambdas %>%
              relationship = "many-to-many") 
 
 # 5) sample posterior preds
-n_samples = 500
+n_samples = 1000
 posts_raw_preds = posts_raw_p %>% 
   # filter(.draw <= 4) %>%
   group_by(sample_id) %>% 
@@ -235,3 +235,57 @@ t_stat_summary %>%
        y = "Observed") +
   theme_default() +
   facet_wrap(~site_id, scales = "free")
+
+# r2 ----------------------------------------------------------------------
+# from: Gelman, A., Goodrich, B., Gabry, J., & Vehtari, A. (2019). R-squared for Bayesian regression models. The American Statistician.
+posts_raw_p = posts_sample_lambdas %>% 
+  # filter(sample_id %in% id) %>% 
+  filter(.draw <= 100) %>% 
+  select(lambda, sample_id, .draw) %>% 
+  right_join(dat_resampled %>% distinct(sample_id, dw, no_m2, xmin, xmax, site_id), 
+             by = "sample_id", multiple = "all",
+             relationship = "many-to-many") 
+
+# 5) sample posterior preds
+n_samples = 500
+posts_raw_preds = posts_raw_p %>% 
+  # filter(.draw <= 4) %>%
+  group_by(sample_id) %>% 
+  mutate(xmin = min(dw),
+         xmax = max(dw)) %>% 
+  ungroup %>% 
+  mutate(u = runif(nrow(.), 0, 1)) %>% # uniform draw
+  mutate(x = (u*xmax^(lambda+1) +  (1-u) * xmin^(lambda+1) ) ^ (1/(lambda+1))) %>% 
+  mutate(data = "y_rep") %>% 
+  # mutate(x = round(x,2)) %>% 
+  rename(sim = x) %>% 
+  group_by(sample_id, .draw) %>% 
+  sample_n(n_samples, weight = no_m2, replace = T) %>% 
+  ungroup
+
+posts_raw_preds %>% 
+  group_by(.draw) %>% 
+  reframe(v_fit = var(sim),
+          v_pred = var(dw - sim)) %>% 
+  mutate(r2 = v_fit/(v_fit + v_pred)) %>% 
+  mean_qi(r2)
+
+
+# confirm r2 --------------------------------------------------------------
+
+# mod_test = brm(mpg ~ hp, data = mtcars,
+#                family = "Gaussian")
+
+# as_tibble(t(fitted(mod_test, summary = F))) %>% 
+#   mutate(y = mod_test$data$mpg) %>% 
+#   pivot_longer(cols = -y) %>% 
+#   mutate(.draw = parse_number(name)) %>% 
+#   group_by(.draw) %>% 
+#   reframe(v_fit = var(value),
+#           v_pred = var(y - value)) %>% 
+#   mutate(r2 = v_fit/(v_fit + v_pred)) %>% 
+#   mean_qi(r2)
+# 
+# bayes_R2(mod_test)
+
+

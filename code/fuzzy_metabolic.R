@@ -1,9 +1,13 @@
+library(tidyverse)
+
 E = -0.65 # From West, Brown, Enquist - "WBE", units are eV (electron volts)
 k = 8.62*10^-5 # Boltzmann's constant
 temp_c = 15
 temp_k = temp_c + 273.15   # convert celsius to kelvin by adding 273.15 to the temp in celsius
 M = 2 # mean body size (I think, via Brown et al. 2004)
 r0 = 100 # resource supply rate (perhaps like GPP g/c/m2/y?)
+
+theme_set(brms::theme_default())
 
 Btot = r0*exp(E/(k*temp_k))*M^0.25
 
@@ -37,6 +41,7 @@ btot_sims %>%
   facet_wrap(~r0) +
   scale_y_log10()
 
+dat_all = readRDS("data/derived_data/dat_all.rds")
 
 mte_mass_preds = dat_all %>% 
   group_by(site_id, temp_mean, gpp, mean_om) %>% 
@@ -75,15 +80,20 @@ mte_mass_preds %>%
 
 # isd ---------------------------------------------------------------------
 n = 1000
-lambda_sims = tibble(a = runif(n, 0.1, 0.2),
-       b = runif(n, 10e0, 10e8),
-       scaling = runif(n, 0.8, 1),
+lambda_sims = tibble(a = rbeta(n, 1, 5),
+       b = rlnorm(n, log(10), 0.5),   # from Perkins et al. 2018
+       scaling = rnorm(n, 0.66, 0.3), # from Glazier 2005 (estimated to mimic figure 1 for non-pelagic)
        loga = log10(a),
-       logb = log10(b)) %>% 
+       logb = log10(b),
+       subsidy_effect = runif(n, 0.2, 0.5)) %>% # from Perkins et al. 2018 Fig 3a and Hocking (0.2-0.3 effect)
   # filter(a > 0) %>% 
-  mutate(lambda = (loga/logb) - scaling - 1)
+  mutate(lambda = (loga/logb) - scaling - 1,
+         lambda_subsidies = lambda + subsidy_effect)
 
 lambda_sims %>% 
-  ggplot(aes(x = lambda)) + 
-  geom_histogram()
+  pivot_longer(cols = c(lambda, lambda_subsidies)) %>% 
+  ggplot(aes(x = value, fill = name)) + 
+  geom_histogram() +
+  geom_vline(xintercept = c(-2,-1.22))
+
 
