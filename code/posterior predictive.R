@@ -21,7 +21,7 @@ posts_sample_lambdas = dat %>%
   ungroup()
 
 # 4) merge posts and raw data
-n_samples = 500
+n_samples = 5000
 
 dat_resampled = dat %>% 
   group_by(sample_id) %>% 

@@ -4,7 +4,7 @@ library(tidybayes)
 library(ggview)
 library(janitor)
 source("code/custom-functions/get_sample_lambdas.R") # automates wrangling of sample-specific posterior lambdas
-
+source("code/sandbox/paretocounts.R")
 # get data
 # neon_sizes_2016_2021 = readRDS(file = "data/derived_data/fish_inverts_dw-allyears.rds") %>%
 #   filter(year >= 2016 & year <= 2021) %>%
@@ -50,12 +50,17 @@ post_lines = as_tibble(conds$mat_s %>% mutate(name = "mat_s", x = mat_s)) %>%
   mutate(x_raw = (x*sd) + mean,
          x_raw = case_when(name == "mat_s" ~ x_raw,
                            TRUE ~ exp(x_raw)))
+
+saveRDS(post_lines, file = "models/posteriors/post_lines.rds")
+
 # samples
 post_sample_lambdas = dat_all %>% 
   distinct(sample_id, .keep_all = T) %>%
   as_tibble() %>% 
   select(-dw) %>% 
   add_epred_draws(fit_pareto, re_formula = NULL)
+
+saveRDS(post_sample_lambdas, file = "models/posteriors/post_sample_lambdas.rds")
 
 post_sample_lambdas_medians = post_sample_lambdas %>%
   group_by(sample_id) %>% 

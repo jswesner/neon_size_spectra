@@ -63,7 +63,7 @@ lit_plot_scaled = lit %>%
               alpha = 0.7,
               fill = "orange") +
   ylim(-0.4, 0.4) +
-  labs(y = "Change in \u03bb (scaled)",
+  labs(y = "\u03bb (scaled)",
        x = "Temperature (scaled)")
 
 lit_plot_scaled_noribbon = lit %>% 
@@ -165,3 +165,17 @@ ggsave(lit_plot_boxplot+ guides(color = "none",
                                 fill = "none"), file = "plots/lit_plot_boxplot.jpg", 
        width = 5, height = 5)
 
+
+
+
+
+# effect size plot --------------------------------------------------------
+fit_pareto
+
+lit %>% 
+  filter(Driver == "Temperature") %>% 
+  filter(Author != "Gjoni et al. 2023") %>%
+  mutate(temp_range = temp_high - temp_low) %>% 
+  ggplot(aes(x = temp_range, y = direction, size = size_magnitude)) +
+  geom_point()
+#

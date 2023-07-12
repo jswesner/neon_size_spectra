@@ -109,176 +109,221 @@ trophic_plot = trophic_dots %>%
   
 ggsave(trophic_plot, file = "plots/trophic_plot.jpg", width = 4, height = 4, dpi = 300)
 
-# isd plot ----------------------------------------------------------------
-library(viridis)
+# isd plot --------------------------------------------
+
+library(rstan)
+library(tidyverse)
+library(janitor)
+library(tidybayes)
+library(brms)
+library(ggthemes)
 source("code/sandbox/paretocounts.R")
+theme_set(brms::theme_default())
 
-n = 8000
-xmin = 1
-xmax = 1000
+# 1) load models
+fishinvertmod = readRDS("models/fit_pareto.rds")
 
-isd_plot_data = tibble(lambda = c(-2, -1.75, -1.5, -1.2),
-                       .lower = c(-2.05,-1.8, -1.55, -1.25),
-                       .upper = c(-1.95,-1.7, -1.45, -1.15)) %>% 
-  expand_grid(individual = 1:n) %>%
-  mutate(xmin = xmin, 
-         xmax = xmax,
-         dw = rparetocounts(n = nrow(.), mu = lambda, vreal2 = 1, vreal3 = 1000)) %>% 
-  arrange(lambda, dw) %>% 
-  group_by(lambda) %>% 
-  mutate(rownumber = row_number(),
-         y_order = 1:max(rownumber),
-         y_order = seq(1, 0, length.out = max(rownumber)))
+# 2) get data
+dat = as_tibble(fishinvertmod$data)
 
-rows_to_slice = as.integer(seq(1,n, length.out = 4000))
+# 3) extract posteriors 
+posts_sample_lambdas_summary = dat %>% 
+  distinct(sample_id, .keep_all = T) %>% 
+  add_epred_draws(fishinvertmod, re_formula = NULL) %>% 
+  rename(lambda = .epred) %>% 
+  group_by(sample_id) %>% 
+  median_qi(lambda)
 
-isd_lines = isd_plot_data %>% 
-  slice(rows_to_slice) %>% 
-  mutate(y_order = (1 - (dw^(lambda + 1) - (xmin^(lambda+1)))/(xmax^(lambda + 1) - (xmin^(lambda+1)))),
-         ymin.PLB = (1 - (dw^(.lower + 1) - (xmin^(.lower+1)))/(xmax^(.lower + 1) - (xmin^(.lower+1)))),
-         ymax.PLB = (1 - (dw^(.upper + 1) - (xmin^(.upper+1)))/(xmax^(.upper + 1) - (xmin^(.upper+1)))))
+# 4) merge posts and raw data
+n_samples = 500
 
-isd_plot_data %>% 
-  # sample_n(size = 100) %>% 
-  ggplot(aes(x = dw, y = y_order, group = lambda)) + 
-  geom_point(aes(size = dw, fill = dw)) +
-  scale_x_log10() + 
+dat_resampled = dat %>% 
+  group_by(sample_id) %>% 
+  sample_n(n_samples, weight = no_m2, replace = T) %>% 
+  # bind_rows(mins, maxs) %>% 
+  select(site_id, year, sample_id, no_m2, dw, xmin, xmax) %>% 
+  group_by(sample_id) %>% 
+  mutate(sample_xmin = min(dw),
+         sample_xmax = max(dw),
+         data = "y_raw") %>% 
+  arrange(sample_id, -dw) %>% 
+  mutate(y_data = (1:n_samples - 1)/n_samples) %>%
+  ungroup %>% 
+  left_join(posts_sample_lambdas_summary) 
+
+# isd's for each sample
+dat_resampled_split = dat_resampled %>% 
+  # group_by(sample_id) %>% 
+  group_split(sample_id, lambda, .lower, .upper, site_id, year, xmin, xmax,
+              sample_xmin, sample_xmax)
+
+sample_sims = NULL
+
+for(i in 1:length(dat_resampled_split)){
+  
+  min = min(dat_resampled_split[[i]]$xmin) 
+  max = max(dat_resampled_split[[i]]$xmax)
+  dw_seq = seq(min, max, length.out = n_samples)
+
+  sample_sims[[i]] = dat_resampled_split[[i]] %>% select(-dw, -no_m2, -y_data) %>% distinct() %>% 
+    expand_grid(x.PLB = dw_seq) %>% 
+    mutate(y.PLB = (1 - (x.PLB^(lambda + 1) - (xmin^(lambda+1)))/(xmax^(lambda + 1) - (xmin^(lambda+1)))),
+           ymin.PLB = (1 - (x.PLB^(.lower + 1) - (xmin^(.lower+1)))/(xmax^(.lower + 1) - (xmin^(.lower+1)))),
+           ymax.PLB = (1 - (x.PLB^(.upper + 1) - (xmin^(.upper+1)))/(xmax^(.upper + 1) - (xmin^(.upper+1))))) 
+}
+
+
+isd_lines = bind_rows(sample_sims) %>%
+  # filter(sample_id == 1) %>%
+  ggplot(aes(x = x.PLB, y = y.PLB, group = sample_id, 
+             color = lambda)) + 
+  geom_line() +
+  scale_x_log10() +
   scale_y_log10() +
-  scale_fill_viridis() +
-  coord_cartesian(ylim = c(0.0001, 1)) +
-  geom_line(data = isd_lines) + 
-  geom_ribbon(data = isd_lines, aes(ymin = ymin.PLB, ymax = ymax.PLB), alpha = 0.5)
+  # geom_point(data = dat_resampled %>%
+  #              filter(sample_id == 1) , aes(x = dw, y = y_data))  +
+  coord_cartesian(ylim = c(1e-04, 1)) +
+  viridis::scale_color_viridis() +
+  # facet_wrap(~site_id) +
+  labs(y = "Number of values \u2265 x",
+       x = "Individual dry mass (mg)",
+       color = "\u03bb") +
+  theme(text = element_text(size = 12),
+        legend.position = c(0.8, 0.85),
+        legend.direction = "horizontal",
+        legend.text = element_text(size = 9),
+        legend.key.height = unit(0.5,"line")) +
+  NULL
 
-set.seed(20202)
+isd_lines
 
-isd_maxmin = isd_plot_data %>% 
-  filter(lambda == -1.75) %>% 
-  filter(dw == min(dw) | dw == max(dw)) %>% 
-  ggplot(aes(x = dw, y = y_order)) +
-  geom_point(shape = 21, aes(fill = dw, size = dw)) +
-  scale_size_continuous(range = c(0.1, 10)) +
+ggsave(isd_lines, file = "plots/ms_plots/isd_lines.jpg", width = 5, height = 5,
+       dpi = 500)
+
+# deviance
+n_samples = 80000
+
+dat_resampled = dat %>% 
+  group_by(sample_id) %>% 
+  sample_n(n_samples, weight = no_m2, replace = T) %>% 
+  # bind_rows(mins, maxs) %>% 
+  select(site_id, year, sample_id, no_m2, dw, xmin, xmax) %>% 
+  group_by(sample_id) %>% 
+  mutate(sample_xmin = min(dw),
+         sample_xmax = max(dw),
+         data = "y_raw") %>% 
+  arrange(sample_id, -dw) %>% 
+  mutate(y_data = (1:n_samples - 1)/n_samples) %>%
+  ungroup %>% 
+  left_join(posts_sample_lambdas_summary) 
+
+# isd's for each sample
+dat_resampled_split = dat_resampled %>% 
+  # group_by(sample_id) %>% 
+  filter(sample_id == 1) %>% 
+  group_split(sample_id, lambda, .lower, .upper, site_id, year, xmin, xmax,
+              sample_xmin, sample_xmax)
+
+sim_dw_yplb = NULL
+
+for(i in 1:length(dat_resampled_split)){
+  
+  min = min(dat_resampled_split[[i]]$xmin) 
+  max = max(dat_resampled_split[[i]]$xmax)
+  dw_seq = dat_resampled_split[[i]]$dw
+  
+  sim_dw_yplb[[i]] = dat_resampled_split[[i]] %>% select(-dw, -no_m2, -y_data) %>% distinct() %>% 
+    expand_grid(x.PLB = dw_seq) %>% 
+    mutate(y.PLB = (1 - (x.PLB^(lambda + 1) - (xmin^(lambda+1)))/(xmax^(lambda + 1) - (xmin^(lambda+1)))),
+           ymin.PLB = (1 - (x.PLB^(.lower + 1) - (xmin^(.lower+1)))/(xmax^(.lower + 1) - (xmin^(.lower+1)))),
+           ymax.PLB = (1 - (x.PLB^(.upper + 1) - (xmin^(.upper+1)))/(xmax^(.upper + 1) - (xmin^(.upper+1))))) 
+}
+
+
+post_sims_tobind = bind_rows(sim_dw_yplb) %>% 
+  filter(sample_id == 1) %>% 
+  arrange(x.PLB) %>% 
+  select(x.PLB, y.PLB) %>% 
+  mutate(order = row_number())
+
+
+dat_raw = dat_resampled %>% 
+  filter(sample_id == 1) %>% 
+  select(y_data, dw, sample_id) %>% 
+  arrange(dw) %>% 
+  mutate(order = row_number())
+
+left_join(post_sims_tobind, dat_raw) %>% 
+  mutate(deviance = y_data/y.PLB) %>%
+  ggplot(aes(x = x.PLB, y = deviance)) + 
+  geom_line() +
+  geom_vline(xintercept = 0.16) +
   # scale_y_log10() +
-  scale_x_log10() +
-  coord_cartesian(ylim = c(0.0001, 1)) +
-  viridis::scale_fill_viridis() +
-  # geom_line(data = post_lines) +
-  # geom_ribbon(data = post_lines,
-  #             aes(ymin = ymin + 0.00, ymax = ymax + 0.00), alpha = 0.5) +
-  # theme_void() +
-  guides(fill = "none",
-         size = "none") +
-  labs(y = "Proportion of individuals \u2265 dw",
-       x = "Mass of individual (dw)") +
-  theme_minimal() +
-  theme(axis.line = element_line(),
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        text = element_text(size = 18))
+  scale_x_log10()
+
+left_join(post_sims_tobind, dat_raw) %>% 
+  mutate(deviance = y_data/y.PLB) %>% 
+  filter(deviance <= 1.1 & deviance >= 0.9)
 
 
-isd_noline = isd_plot_data %>%
-  sample_n(1000) %>%
-  filter(lambda == -1.75) %>% 
-  bind_rows(isd_plot_data %>% filter(dw == min(dw) | dw == max(dw))) %>% 
-  ggplot(aes(x = dw, y = y_order)) +
-  geom_point(shape = 21, aes(fill = dw, size = dw)) +
-  scale_size_continuous(range = c(0.1, 10)) +
-  # scale_y_log10() +
+
+# sample_specific isds ----------------------------------------------------
+
+
+sample_sims_samplexmax = NULL
+
+for(i in 1:length(dat_resampled_split)){
+  
+  min = min(dat_resampled_split[[i]]$sample_xmin) 
+  max = max(dat_resampled_split[[i]]$sample_xmax)
+  dw_seq = seq(min, max, length.out = n_samples)
+  
+  sample_sims_samplexmax[[i]] = dat_resampled_split[[i]] %>% select(-dw, -no_m2, -y_data) %>% distinct() %>% 
+    expand_grid(x.PLB = dw_seq) %>% 
+    mutate(y.PLB = (1 - (x.PLB^(lambda + 1) - (sample_xmin^(lambda+1)))/(sample_xmax^(lambda + 1) - (sample_xmin^(lambda+1)))),
+           ymin.PLB = (1 - (x.PLB^(.lower + 1) - (sample_xmin^(.lower+1)))/(sample_xmax^(.lower + 1) - (sample_xmin^(.lower+1)))),
+           ymax.PLB = (1 - (x.PLB^(.upper + 1) - (sample_xmin^(.upper+1)))/(sample_xmax^(.upper + 1) - (sample_xmin^(.upper+1))))) 
+}
+
+
+bind_rows(sample_sims_samplexmax) %>%
+  # filter(site_id == "ARIK") %>%
+  ggplot(aes(x = x.PLB, y = y.PLB, group = sample_id, 
+             color = lambda)) + 
+  geom_line() +
   scale_x_log10() +
-  viridis::scale_fill_viridis() +
-  # geom_line(data = post_lines) +
-  # geom_ribbon(data = post_lines,
-  #             aes(ymin = ymin + 0.00, ymax = ymax + 0.00), alpha = 0.5) +
+  scale_y_log10() +
+  geom_point(data = dat_resampled, aes(x = dw, y = y_data),
+             size = 0.2)  +
+  coord_cartesian(ylim = c(1e-04, 1)) +
+  viridis::scale_color_viridis() +
+  # facet_wrap(~site_id) +
+  labs(y = "Number of values \u2265 x",
+       x = "Individual dry mass (mg)",
+       color = "\u03bb") +
+  theme(text = element_text(size = 12),
+        legend.position = c(0.8, 0.85),
+        legend.direction = "horizontal",
+        legend.text = element_text(size = 9),
+        legend.key.height = unit(0.5,"line")) +
+  facet_wrap(~sample_id) +
+  guides(color = "none") +
   theme_void() +
-  guides(fill = "none",
-         size = "none") +
-  labs(y = "Proportion of individuals \u2265 dw",
-       x = "Mass of individual (dw)") 
-
-
-isd_withline = isd_plot_data %>% 
-  filter(lambda == -1.75) %>% 
-  # filter(dw == min(dw) | dw == max(dw)) %>% 
-  ggplot(aes(x = dw, y = y_order)) +
-  geom_point(shape = 21) +
-  scale_size_continuous(range = c(0.1, 10)) +
-  scale_y_log10() +
-  scale_x_log10() +
-  coord_cartesian(ylim = c(0.0001, 1)) +
-  viridis::scale_fill_viridis() +
-  geom_line(data = isd_lines %>% 
-              filter(lambda == -1.75) ) +
-  geom_ribbon(data = isd_lines %>% 
-                filter(lambda == -1.75) ,
-              aes(ymin = ymin.PLB, ymax = ymax.PLB), alpha = 0.5) +
-  # theme_void() +
-  guides(fill = "none",
-         size = "none") +
-  labs(y = "Proportion of individuals \u2265 dw",
-       x = "Mass of individual (dw)") +
-  theme_minimal() +
-  theme(axis.line = element_line(),
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        text = element_text(size = 18))
-
-
-isd_onlyline = isd_plot_data %>% 
-  filter(lambda == -1.75) %>% 
-  # filter(dw == min(dw) | dw == max(dw)) %>% 
-  ggplot(aes(x = dw, y = y_order)) +
-  # geom_point(shape = 21) +
-  scale_size_continuous(range = c(0.1, 10)) +
-  scale_y_log10() +
-  scale_x_log10() +
-  coord_cartesian(ylim = c(0.0001, 1)) +
-  viridis::scale_fill_viridis() +
-  geom_line(data = isd_lines %>% 
-              filter(lambda == -1.75) ) +
-  geom_ribbon(data = isd_lines %>% 
-                filter(lambda == -1.75) ,
-              aes(ymin = ymin.PLB, ymax = ymax.PLB), alpha = 0.5) +
-  # theme_void() +
-  guides(fill = "none",
-         size = "none") +
-  labs(y = "Proportion of individuals \u2265 dw",
-       x = "Mass of individual (dw)") +
-  theme_minimal() +
-  theme(axis.line = element_line(),
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        text = element_text(size = 18))
-
-
-isd_onlyline_groups = isd_plot_data %>% 
-  # filter(lambda == -1.75) %>% 
-  # filter(dw == min(dw) | dw == max(dw)) %>% 
-  ggplot(aes(x = dw, y = y_order, group = lambda)) +
-  # geom_point(shape = 21) +
-  # scale_size_continuous(range = c(0.1, 10)) +
-  scale_y_log10() +
-  scale_x_log10() +
-  coord_cartesian(ylim = c(0.0001, 1)) +
-  viridis::scale_fill_viridis() +
-  geom_line(data = isd_lines ) +
-  geom_ribbon(data = isd_lines ,
-              aes(ymin = ymin.PLB, ymax = ymax.PLB), alpha = 0.5) +
-  # theme_void() +
-  guides(fill = "none",
-         size = "none") +
-  labs(y = "Proportion of individuals \u2265 dw",
-       x = "Mass of individual (dw)") +
-  theme_minimal() +
-  theme(axis.line = element_line(),
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        text = element_text(size = 18))
-
-ggsave(isd_maxmin, file = "plots/isd_maxmin.jpg", width = 5, height = 5, dpi = 300)
-ggsave(isd_noline, file = "plots/isd_noline.jpg", width = 5, height = 5, dpi = 300)
-ggsave(isd_withline, file = "plots/isd_withline.jpg", width = 5, height = 5, dpi = 300)
-ggsave(isd_onlyline, file = "plots/isd_onlyline.jpg", width = 5, height = 5, dpi = 300)
-ggsave(isd_onlyline_groups, file = "plots/isd_onlyline_groups.jpg", width = 5, height = 5, dpi = 300)
+  NULL
 
 
 
+# isd and biomass ---------------------------------------------------------
+
+mass_brm = readRDS("models/community_mass_brm.rds")
+conditional_effects(mass_brm)
+
+community_mass = readRDS(file = "data/derived_data/community_mass.rds")
+
+posts_sample_lambdas_summary %>% 
+  left_join(community_mass %>% distinct(sample_id, total_g_dwm2, year)) %>% 
+  ggplot(aes(x = total_g_dwm2, y = lambda)) + 
+  geom_pointrange(aes(ymin = .lower, ymax = .upper)) +
+  scale_x_log10() + 
+  geom_smooth(method = "lm") +
+  facet_wrap(~year)
