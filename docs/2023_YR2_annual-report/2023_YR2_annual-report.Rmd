@@ -1,0 +1,210 @@
+---
+title: "2022 NSF annual report"
+date: "`r Sys.Date()`"
+includes: \usepackage{includegraphics}
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r global options, include = TRUE, echo = FALSE, warning=FALSE, message=FALSE}
+here::i_am("docs/2022_YR1_annual-report/2022_YR1_annual-report.Rmd")
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)#,fig.path='./docs/2022_YR1_annual-report/figures/')
+library(png)
+library(tidyverse)
+
+
+```
+
+### Accomplishments
+
+#### What are the major goals of this project?
+
+1) To test how body size spectra in streams scale with temperature and resource supply.
+2) To develop an R package automating size spectra analysis in NEON data.
+3) To incorporate NEON data into an undergraduate course.
+
+
+#### What was accomplished under these goals (you must provide information for at least one of the 4 categories below)?
+
+##### Major activities:.
+
+Previously, we developed the workflow and statistical framework to combine the NEON macroinvertebrate and fish assemblage data in comparable units, allowing us to develop multi-trophic size spectra in all streams. This procedure is updated upon new data releases by NEON (approximately semi-annually) and currently represents ~145 community size spectra of macroinvertebrate and fish taxa.
+
+We have also developed models to impute missing stream temperature data using adjacent air temperature sensor data. These models allow us to fill data gaps and incorporate model uncertainty into final analyses.
+
+We completed analyses of stream metabolism across the NEON sites. Previous analyses had identified a number of additional steps required to finalize these models into a usable form. We have developed an ensemble model approach to estimate daily gross primary production across all days with complete data. Using these estimates, we integrated information from all years available at each site to estimate the annual primary production regime across all NEON sites.  
+
+We requested additional benthic samples from the NEON sample repository to quantify organic matter storage in each NEON stream as a measure of allochthonous resource availability. 
+
+We have prepared two manuscripts which are currently in review or revision. The submitted versions are available as pre-prints via pre-print repositories (highlighted below).
+
+Lastly, we made NEON data available to ~XXX undergraduate students in a required course taught by PI Wesner at the University of South Dakota.
+
+##### Specific objectives:
+
+##### Significant results:
+
+To date, we have completed analyses of the relationship between multi-trophic size scaling relationships, i.e. size-abundance scaling relationship (*b*), mean annual water temperature, and resources (i.e.,gross primary production and organic matter storage) across NEON streams. 
+
+These analyses suggest that despite strong environmental variation, complete species turnover, and variation in mean body size, the ISD exponent was invariant to increased temperature and resource supply (i.e., GPP and OM). Across all sites and years, *b* averaged -1.23 ($\pm$ 0.05 SD; range = -1.48 -- -1.12). This consistency contradicts previous results mainly from short-term experimental work exploring the effects of warming on size-abundance scaling. However, it supports our previous findings that the effect size of temperature is small.
+
+Interestingly, the effects of resource supply, as both gross primary production and organic matter storage, appear to also exhibit relatively small effects on the multi-trophic size-abundance scaling relationships. Together, these results suggest relatively small effects of bottom-up mechanisms in driving variation of size-abundance scaling relationships compared to, for example, trophic interactions and top-down effects.
+
+We have also completed analyses of the relationship among community biomass, stream temperature, and resource supply. Theory suggests community biomass should exhibit a negative relationship between standing biomass and temperature due to increased metabolic demands of consumers and also show a positive relationship with basal resource supply because of increased food availability. However, initial analyses suggest a positive relationship between temperature and community biomass. Interactive models show that the effects of temperature are strongest at low to mid levels of primary production, and interestingly, the relationship appears negative at high levels of both primary production and organic matter standing stock.
+
+Resource supply estimates show annual gross primary production across the NEON sites averages ~2100 g C m^-2^ y^-1^ ($\pm$ 2771 SD; median: 945; range: 250 -- 11957). The majority of values fall inside the range of previous meta-analyses, however, the upper values (i.e., 11957 g C m^-2^ y^-1^) fall far outside the bounds of previously reported values. This also represents a data poor site, SYCA, that likely has bias towards dates with high productivity because it is prone to flashy, scouring flows likely to both reduce primary production through biomass removal and make model convergence difficult during these periods of low biomass. Despite the uncertainty in this site, the results appear to be robust when it is removed from the analyses. Standing stock organic matter from the NEON sites average ~31 g AFDM m^-2^ ($\pm$ 78 SD; range: 1 -- 377). 
+
+##### Key outcomes or other acheivements:
+
+#### What opportunities for training and professional development has the project provided?
+
+The project added a team member in September 2022, a postdoctoral scholar (PD), Dr. Vojsava Gjoni. Dr. Gjoni has been working at the University of South Dakota to coordinate the full data analyses, manuscript preparation, and conduct independent experiments with USD mesocosms on questions related to size-abundance scaling in aquatic ecosystems.  
+
+PD Gjoni and PI Junker hosted a special session ,“From Bacteria to Whales: using size spectra to measure global change", at the centenary meeting of the Society for Experimental Biology in Edingburgh, Scotland. This session brought together scholars working on size-abundance scaling from the United States, South America (Brazil), the UK, and Europe (Spain, Portugal, France), including PI Wesner and affiliated researcher Dr. Justin Pomeranz (Colorado Mesa University).
+
+An affiliated researcher, Dr. J. Pomeranz, secured funding to visit the University of South Dakota to outline manuscripts in production and perform sampling for mesocosm experiments designed to test questions related to this grant.
+
+The project has also provided research experience for XXX undergraduate students in the lab of PI Wesner at the University of South Dakota. The students sorted macroinvertebrates from other organic matter in benthic samples to measure allochthonous organic matter standing stocks from NEON repository samples.
+
+#### How have the results been disseminated to communities of interest?
+
+We have published two manuscripts on pre-print servers related to technical/statistical aspects size-abundance scaling. These manuscripts are currently in review or revision at peer-reviewed journals. 
+
+Initial results from the full analyses were presented at the SEB conference in Edinburgh, Scotland in July.
+
+#### What do you plan to do during the next reporting period to accomplish the goals?
+
+During the final reporting period, we will complete submission of the final analyses integrating resource supply and temperature regimes as drivers of multi-trophic size spectra. 
+
+We will meet to finalize a R package that will automate the calculation of size-abundance relationships using the Bayesian hierarchical framework we developed. This will include curated data from NEON datasets to allow easier integration into courses for undergraduates.
+
+### Products
+
+#### Within the Products section, you can list any products resulting from your project during the specified reporting period, such as:
+
+##### Journals:
+
+Wesner, J. S., J.P.F. Pomeranz, J.R. Junker, V. Gjoni."Bayesian hierarchical modeling of size spectra". biorXiv: 2023.02.14.528491. doi: https://doi.org/10.1101/2023.02.14.528491
+
+Pomeranz, J.P.F., J.R. Junker, V. Gjoni, J.S. Wesner. "Detecting differences in Size Spectra". bioRxiv: 2023.03.14.532592. doi: https://doi.org/10.1101/2023.03.14.532592 
+
+##### Books:
+
+##### Book chapters:
+
+##### Thesis/Dissertations:
+
+##### Conference papers and presentations:
+
+##### Other publications:
+
+##### Technologies or techniques:
+
+##### Patents:
+
+##### Inventions:
+
+##### Licenses:
+
+##### Websites:
+
+##### Other products:
+
+### Participants
+
+There are no limits on the number of participants you list for this section; however, you must list participants who have worked one person month or more for the project reporting period. You have the option of selecting “nothing to report” in this section.   For Research Experience for Undergraduates (REU) sites and supplements, specific questions will be listed in this section. The online service will also ask for additional information on participants such as: 
+     
+•	What individuals have worked on the project?
+•	What organizations have been involved as partners?
+•	Have other collaborators or contacts been involved?
+
+#### What individuals have worked on the project?
+
+Name | Most senior project role | Nearest person months worked
+-----| ------------------------ | ----------------------------
+1. Jeff S. Wesner| Principal Investigator |                
+2. James R. Junker |  Co-Principal Investigator | 3 month
+3. Justin P. Z. Pomeranz | Senior personnel | 1 months
+4. Vojsava Gjoni | Postdoctoral Researcher | 8 months
+
+#### What other organizations have been involved as partners?
+
+The online service will also ask you for additional information such as:      
+•	Type of Partner Organization
+•	Name
+•	Location
+•	Partner’s contribution to the project
+
+#### Have other collaborators or contacts been involved? 
+
+- Yes
+
+- No
+
+### Impacts
+
+#### What is the impact on the development of the principal discipline(s) of the project?
+
+We anticipate this work to impact general ecological theory and the ecological sub-disciplines of food web and ecosystem ecology. We currently lack adequate empirical and theoretical research to explain and predict the influence of changing global temperature regimes on ecosystems. The results of this project will provide important data on both the natural, background variability of multi-trophic size spectra and the likely influence of temperature and resource availability on the scaling of abundance with body size and body size distributions in stream ecosystems.
+
+#### What is the impact on other disciplines?
+
+The development of a Bayesian statistical model for analyzing size spectra data is likely to be used in other research fields with similar types of data (i.e., data with likelihoods described by a bounded power law).
+
+#### What is the impact on the development of human resources?
+
+#### What was the impact on teaching and educational experiences?
+
+Using NEON data in an undergraduate class enhances the types of data that undergraduates are exposed to. Previously, the class used data almost exclusively from medical or public-health fields
+
+#### What is the impact on physical resources that form infrastructure?
+
+Nothing to report
+
+#### What is the impact on institutional resources that form infrastructure?
+
+The project will result in an R package that will be freely available to scientists. The package will automate the analysis of size spectra for scientists using NEON stream data.
+
+#### What is the impact on information resources that form infrastructure?
+
+Nothing to report
+
+#### What is the impact on technology transfer?
+
+Nothing to report
+
+#### What is the impact on society beyond science and technology?
+
+Nothing to report
+
+### Changes/Problems
+
+#### Changes in approach and reason for change:
+
+Nothing to report
+
+#### Actual anticipated problems or delays and actions or plans to resolve them:
+
+Nothing to report
+
+#### Changes that have a significant impact on expenditures:
+
+Nothing to report
+
+#### Significant changes in use or care of human subjects:
+
+Nothing to report
+
+#### Significant changes in use or care of vertebrate animals:
+
+Nothing to report
+
+#### Significant changes in use or care of biohazards:
+
+Nothing to report
+
+### Special requirements
+
+This report section is only available when Special Requirements are specifically noted in the solicitation and approved by the Office of Management and Budget.
+
