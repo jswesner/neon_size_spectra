@@ -18,6 +18,7 @@ View(field)
 names(field)
 
 field_selected <- field %>%
+  separate(Elevation, into = c("Elevation", "el_unit")) %>%
   rename(
     siteID = `Site ID`,
     geographical_position_specification = State,
@@ -63,6 +64,8 @@ site_meta <- field_date %>%
     organism_groups,
     trophic_levels,
     sampling_methodology)
+
+site_meta
 
 write_csv(site_meta, 
           "data/derived_data/aqua-sync_data/site_metadata.csv")
