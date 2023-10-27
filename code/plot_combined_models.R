@@ -13,7 +13,7 @@ isd_by_temp = readRDS(file = "plots/isd_by_temp.rds")
 
 points_fish = layer_data(isd_by_temp_fish, 1) %>% mutate(animal_type = "fish")
 points_inverts = layer_data(isd_by_temp_inverts, 1) %>% mutate(animal_type = "inverts")
-points_all = layer_data(isd_by_temp, 1) %>% mutate(animal_type = "inverts + fish")
+points_all = layer_data(isd_by_temp, 1) %>% mutate(animal_type = "inverts + fish", shape = 21)
 
 lines_fish = layer_data(isd_by_temp_fish, 2) %>% mutate(animal_type = "fish")
 lines_inverts = layer_data(isd_by_temp_inverts, 2) %>% mutate(animal_type = "inverts")
@@ -243,6 +243,8 @@ post_lines = readRDS(file = "models/posteriors/post_lines.rds") %>% left_join(fa
 a_heat = readRDS(file = "plots/a_heat.rds")
 b_heat = readRDS(file = "plots/b_heat.rds")
 
+
+
 # 2) get coefs
 coefs_isd_fishinvert = tidy_draws(fishinvertmod) %>% 
   select(starts_with("beta_")) %>% 
@@ -347,12 +349,26 @@ community_mass_facet_plot = posts_mass %>%
   scale_y_continuous(breaks = c(0, 3, 6)) +
   NULL
 
+mass_uni = plot(conditional_effects(community_mass_brm, effects = "mat_s"), points = T)
+  
+b = mass_uni$mat_s$data %>% 
+  ggplot(aes(x = mat_s, y = estimate__)) +
+  geom_line() +
+  geom_ribbon(aes(ymin = lower__, ymax = upper__), alpha = 0.3) +
+  geom_point(data = community_mass_brm$data, aes(y = log_total_g_s),
+             size = 0.2) +
+  labs(y = bquote('ln('*gDM/m^'2'*")"), 
+       x = "Mean Annual Temperature (\u00b0C)") +
+  theme_default() +
+  scale_x_continuous(breaks = c(-1, 0, 1, 2),
+                     labels = c("5", "10", "15", "20"))
+
 
 # 5) Combine plots
 library(patchwork)
-a = isd_by_temp + labs(subtitle = "a)")
-b = community_mass_univariate_plot + labs(subtitle = "b)")
-c = isd_temp_by_gpp + labs(subtitle = "c)")
+a = isd_by_temp + labs(subtitle = "a)") + ylim(-1.6, -1)
+b = b + labs(subtitle = "b)")
+c = isd_temp_by_gpp + labs(subtitle = "c)") + ylim(-1.35, -1.1)
 d = community_mass_facet_plot + labs(subtitle = "d)")
 e = a_heat + labs(subtitle = "e)") + theme(legend.position = "top")
 f = b_heat + labs(subtitle = "f)") + theme(legend.position = "top")
