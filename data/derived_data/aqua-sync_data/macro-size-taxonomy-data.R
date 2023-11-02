@@ -88,9 +88,30 @@ site_date <- short_dat %>%
   select(site, siteID, date, method) %>%
   unique() %>%
   mutate(sampling_year = year(date),
-         sampling_month = month(date))
+         sampling_month = month(date)) %>%
+  rename(sampling_methodology = method)
+
+# site lat long info
+site_meta <- read.csv("data/field_data.csv")
+site_date <- left_join(site_date, site_meta, by = join_by(siteID == Site.ID)) %>%
+  rename(geographical_position_specification = State,
+         geographical_latitude = Latitude,
+         geographical_longitude = Longitude,
+         geographical_altitude = Elevation) %>%
+  mutate(geographical_position = "USA",
+         organism_groups = "Invertebrates + Fish",
+         trophic_levels = ">2",
+         data_owner = "NEON: NAtional Ecological Observatory Network",
+         data_contributors = "Pomeranz, Wesner, Junker, Gjoni",
+         multiple_sampling = "3 per year") %>%
+  select(data_owner, data_contributors, site, geographical_position,
+         geographical_position_specification, geographical_latitude,
+         geographical_longitude, geographical_altitude, 
+         sampling_year, sampling_month, multiple_sampling, organism_groups, 
+         trophic_levels, sampling_methodology)
+
 # save as csv
-write_csv(site_date, "data/derived_data/aqua-sync_data/site_date.csv")
+write_csv(site_date, "data/derived_data/aqua-sync_data/site_data.csv")
 
 
 # template column names:
