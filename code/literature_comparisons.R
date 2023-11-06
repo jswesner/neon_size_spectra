@@ -87,7 +87,7 @@ lit_plot_scaled_noribbon = lit %>%
   labs(y = "\u03bb (scaled)",
        x = "Temperature (scaled)")
 
-lit_plot_unscaled = lit %>% 
+(lit_plot_unscaled = lit %>% 
   filter(Driver == "Temperature") %>% 
   filter(Author != "Gjoni et al. 2023") %>% 
   mutate(low = 0 - 0.5*direction,
@@ -105,12 +105,49 @@ lit_plot_unscaled = lit %>%
                   x = x_raw),
               alpha = 0.7,
               fill = "orange") +
+  geom_text(data = . %>% filter(x == min(x)) %>% distinct(x, Author, value) %>% 
+                             group_by(Author) %>%
+                             mutate(author_code = cur_group_id()), 
+                           aes(label = author_code),
+                           size = 3) +
   labs(y = "\u03bb (scaled)",
-       x = "Temperature (\u00b0C)")
+       x = "Temperature (\u00b0C)"))
 
+(lit_plot_unscaled_raw_b = lit %>% 
+  filter(Driver == "Temperature") %>% 
+  filter(Author != "Gjoni et al. 2023") %>% 
+  mutate(b_low = case_when(is.na(b_low) ~ 0 - 0.5*direction,
+                           TRUE ~ b_low),
+         b_high = case_when(is.na(b_high) ~ 0 + 0.5*direction,
+                            TRUE ~ b_high)) %>% 
+  mutate(low = paste0(temp_low, "_", b_low),
+         high = paste0(temp_high, "_", b_high)) %>% 
+  group_by(Author) %>%
+  mutate(author_code = cur_group_id()) %>% 
+  select(Author, author_code, low, high) %>% 
+  pivot_longer(cols = c(low, high)) %>% 
+  separate(value, into = c("temp", "b"), sep = "_") %>% 
+  mutate(x = parse_number(temp),
+         value = parse_number(b)) %>%
+  group_by(author_code) %>% 
+  mutate(value = scale(value, scale = F)) %>% 
+  ggplot(aes(x = x, y = value)) + 
+  geom_line(aes(group = author_code), alpha = 0.5) +
+  # facet_wrap(~Driver) + 
+  geom_line(data = conds_scaled, aes(x = x_raw)) +
+  geom_ribbon(data = conds_scaled,
+              aes(ymin = .lower,
+                  ymax = .upper,
+                  x = x_raw),
+              alpha = 0.7,
+              fill = "orange") +
+  geom_text(data = . %>% filter(x == min(x)) %>% distinct(x, author_code, value) , 
+            aes(label = author_code),
+            size = 3) +
+  labs(y = "\u03bb (centered by study)",
+       x = "Temperature (\u00b0C)"))
 
-
-lit_plot_otherdrivers = lit %>% 
+(lit_plot_otherdrivers = lit %>% 
   # filter(Driver == "Temperature") %>%
   filter(Author != "Gjoni et al. 2023") %>% 
   mutate(low = 0 - 0.5*direction,
@@ -133,7 +170,7 @@ lit_plot_otherdrivers = lit %>%
               fill = "orange") +
   ylim(-0.4, 0.4) +
   labs(y = "\u03bb (scaled)",
-       x = "Temperature (scaled)")
+       x = "Temperature (scaled)"))
 
 
 lit_plot_boxplot = lit %>% 
@@ -158,14 +195,15 @@ ggsave(lit_plot_scaled_noribbon, file = "plots/lit_plot_scaled_noribbon.jpg",
 ggsave(lit_plot_unscaled, file = "plots/lit_plot_unscaled.jpg", 
        width = 5, height = 5)
 
+ggsave(lit_plot_unscaled_raw_b, file = "plots/lit_plot_unscaled_raw_b.jpg", 
+       width = 5, height = 5)
+
 ggsave(lit_plot_otherdrivers + guides(color = "none"), file = "plots/lit_plot_otherdrivers.jpg", 
        width = 5, height = 5)
 
 ggsave(lit_plot_boxplot+ guides(color = "none",
                                 fill = "none"), file = "plots/lit_plot_boxplot.jpg", 
        width = 5, height = 5)
-
-
 
 
 
