@@ -21,6 +21,48 @@ fit_temp_gpp$preds = "temp*gpp"
 fit_om_gpp$preds = "om*gpp"
 fit_temp_om_gpp$preds = "temp*om*gpp"
 
+# load data
+dat_all = readRDS("data/derived_data/dat_all.rds")
+
+mean_temp = mean(unique(dat_all$temp_mean))
+sd_temp = sd(unique(dat_all$temp_mean))
+mean_om = mean(unique(dat_all$log_om))
+sd_om = sd(unique(dat_all$log_om))
+mean_gpp = mean(unique(dat_all$log_gpp))
+sd_gpp = sd(unique(dat_all$log_gpp))
+
+# labels
+facet_gpp = readRDS(file = "plots/facet_gpp.rds")
+facet_om = readRDS(file = "plots/facet_om.rds")
+
+# interaction_plot ---------------------------------
+log_gpp_s = quantile(fit_temp_om_gpp$data$log_gpp_s, probs = c(0.25, 0.5, 0.75)) %>% 
+  as_tibble() %>% rename(log_gpp_s = value)
+
+int_plot = conditional_effects(fit_temp_om_gpp, effects = "mat_s:log_om_s", conditions = log_gpp_s)
+
+int_plot_data = int_plot$`mat_s:log_om_s` %>% as_tibble() %>% 
+  mutate(mat = (mat_s*sd_temp) + mean_temp,
+         gpp = (log_gpp_s*sd_gpp) + mean_gpp,
+         om = (log_om_s*sd_om) + mean_om) %>% 
+  mutate(quantile_om = case_when(om == min(om) ~ "Low OM",
+                                 om == max(om) ~ "High OM",
+                                 TRUE ~ "Median OM"),
+         quantile_gpp = case_when(gpp == min(gpp) ~ "Low GPP",
+                                 gpp == max(gpp) ~ "High GPP",
+                                 TRUE ~ "Median GPP")) %>% 
+  left_join(facet_gpp) %>% 
+  left_join(facet_om)
+
+
+int_plot_data %>% 
+  ggplot(aes(x = mat, y = estimate__)) + 
+  geom_line() + 
+  geom_ribbon(aes(ymin = lower__, ymax = upper__), alpha = 0.4) +
+  facet_grid(facet_gpp~facet_om, labeller = "label_parsed") +
+  theme_default()
+
+
 
 # get individual lambdas ----------------------------------------
 get_lambdas = function(model = NULL){
