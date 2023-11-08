@@ -66,7 +66,7 @@ metab_plot = cond_posts_metab %>%
   geom_point(data = brm_metab$data, aes(y = log_resp_c), size = 0.2) + 
   labs(y = "log10 Metabolic Rate (centered)",
        x = "log10 dry mass (mg centered)") + 
-  geom_abline(slope = 0.75, linetype = "dotted", linewidth = 1.1) + 
+  geom_abline(slope = 0.75, linewidth = 0.5) + 
   theme_default()
 
 library(patchwork)
@@ -77,7 +77,7 @@ sim_metab_plot = simulation_plot + labs(subtitle = "a) Simulation Study") +
 ggview::ggview(sim_metab_plot, width = 6.5, height = 3, units = "in")
 ggsave(sim_metab_plot, file = "plots/ms_plots/sim_metab_plot.jpg",
        width = 6.5, height = 3, units = "in", dpi = 600)
-
+saveRDS(sim_metab_plot, file = "plots/ms_plots/sim_metab_plot.rds")
 
 # metab slopes
 brm_metab$data %>% 

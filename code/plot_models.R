@@ -55,13 +55,54 @@ int_plot_data = int_plot$`mat_s:log_om_s` %>% as_tibble() %>%
   left_join(facet_om)
 
 
-int_plot_data %>% 
-  ggplot(aes(x = mat, y = estimate__)) + 
+interaction_plot = int_plot_data %>% 
+  ggplot(aes(x = mat, y = estimate__, fill = quantile_om)) + 
   geom_line() + 
   geom_ribbon(aes(ymin = lower__, ymax = upper__), alpha = 0.4) +
   facet_grid(facet_gpp~facet_om, labeller = "label_parsed") +
-  theme_default()
+  theme_default() + 
+  scale_color_colorblind() + 
+  scale_fill_colorblind() +
+  guides(fill = "none",
+         color = "none") + 
+  labs(y = "\u03bb (ISD exponent)",
+       x = "Mean Annual Temperature (\u00b0C)") 
 
+
+ggview::ggview(interaction_plot, width = 4, height = 4)
+ggsave(interaction_plot, width = 4, height = 4,
+       file = "plots/ms_plots/interaction_plot.jpg")
+saveRDS(interaction_plot,  file = "plots/ms_plots/interaction_plot.rds")
+
+
+# univariate plot ---------------------------------------------------------
+
+uni_plot = plot(conditional_effects(fit_temp_om_gpp, effects = "mat_s"))
+
+sample_dots = fit_temp_om_gpp$data %>% 
+  distinct(sample_id, mat_s, log_gpp_s, log_om_s, year, site_id, xmin, xmax) %>%
+  mutate(no_m2 = 1) %>% 
+  add_epred_draws(fit_temp_om_gpp, re_formula = NULL) %>% 
+  mutate(mat = (mat_s*sd_temp) + mean_temp)
+
+
+uni_plot_dots = uni_plot$mat_s$data %>% 
+  mutate(mat = (mat_s*sd_temp) + mean_temp) %>% 
+  ggplot(aes(x = mat, y = estimate__)) +
+  geom_line() +
+  geom_ribbon(aes(ymin = lower__, ymax = upper__), alpha = 0.6) +
+  stat_pointinterval(data = sample_dots, aes(y = .epred, group = sample_id), size = 0.05, shape = 1,
+                     geom = "pointrange", color = "grey30") +
+  theme_default() + 
+  labs(y = "\u03bb (ISD exponent)",
+       x = "Mean Annual Temperature (\u00b0C)")
+
+library(patchwork)
+temp_twopanel = uni_plot_dots / interaction_plot
+
+ggview::ggview(temp_twopanel, width = 4, height = 6.5)
+ggsave(temp_twopanel, width = 4, height = 6.5,
+       file = "plots/ms_plots/fig_3_temp_twopanel.jpg", dpi = 500)
 
 
 # get individual lambdas ----------------------------------------
@@ -194,24 +235,25 @@ all_plots = list(isd_by_temp,
 
 # get dots
 temp_data_list = NULL
-for(i in 1:length(temp_data)){
+
+for(i in 1:length(all_plots)){
   temp_data_list[[i]] = all_plots[[i]]$data %>% 
     mutate(name = paste0(letters[i + 3], ")"))
   all_plot_data = bind_rows(temp_data_list) %>% 
-    mutate(name = case_when(name == "d)" ~ "d) fish + inverts",
-                            name == "e)" ~ "e) inverts",
-                            TRUE ~ "f) fish"))
+    mutate(name = case_when(name == "d)" ~ "a) fish + inverts",
+                            name == "e)" ~ "b) inverts",
+                            TRUE ~ "c) fish"))
 }
 
 # get lines
 temp_lines_list = NULL
-for(i in 1:length(temp_data)){
+for(i in 1:length(all_plots)){
   temp_data_list[[i]] = all_plots[[i]]$layers[[2]]$data %>% 
     mutate(name = paste0(letters[i + 3], ")"))
-  all_plot_lines = bind_rows(temp_data_list) %>% 
-    mutate(name = case_when(name == "d)" ~ "d) fish + inverts",
-                            name == "e)" ~ "e) inverts",
-                            TRUE ~ "f) fish"))
+  all_plot_lines = bind_rows(temp_data_list) %>%  
+    mutate(name = case_when(name == "d)" ~ "a) fish + inverts",
+                            name == "e)" ~ "b) inverts",
+                            TRUE ~ "c) fish"))
 }
 
 all_lambda_plots = all_plot_lines %>% 
@@ -219,12 +261,18 @@ all_lambda_plots = all_plot_lines %>%
   geom_line() + 
   geom_ribbon(alpha = 0.4) +
   facet_wrap(~name) + 
-  geom_pointrange(data = all_plot_data, size = 0.1, linewidth = 0.2, 
-                  alpha = 0.1) + 
+  geom_point(data = all_plot_data, size = 0.002, shape = 1) + 
+  geom_linerange(data = all_plot_data, linewidth = 0.1) +
   theme_default() +
   labs(y = paste0("\u03bb", " (ISD exponent)"),
        x = "Mean Annual Temperature (°C)") +
   theme(strip.text = element_text(hjust = 0))
+
+
+ggview::ggview(all_lambda_plots, width = 6.5, height = 2.5)
+ggsave(all_lambda_plots, width = 6.5, height = 2.5,
+       file = "plots/ms_plots/figs2-all_lambda_plots_isdonly.jpg")
+
 
 
 # standing stock mass
