@@ -86,7 +86,7 @@ post_lines_heat = as_draws_df(fishinvertmod) %>% as_tibble() %>%
           legend.key.width= unit(0.4, 'cm')))
 
 # community mass ----------------------------------------------------------
-d = readRDS("data/derived_data/fish_inverts_dw-allyears.rds") %>% 
+d = readRDS("data/derived_data/dat_all.rds") %>% 
   filter(year >= 2016 & year <= 2021)
 
 water = d %>% ungroup() %>% distinct(site_id, mean)
@@ -166,5 +166,9 @@ ggview::ggview(heat_map_plot, width = 6.5, height = 4.5, units = "in")
 ggsave(heat_map_plot, file = "plots/ms_plots/heat_map_plot.jpg",width = 6.5, height = 4.5, units = "in",
        dpi = 500)
 saveRDS(heat_map_plot, file = "plots/ms_plots/heat_map_plot.rds")
-saveRDS(a_heat, file = "plots/a_heat.rds")
-saveRDS(b_heat, file = "plots/b_heat.rds")
+saveRDS(a_heat + labs(subtitle = ""), file = "plots/a_heat.rds")
+saveRDS(b_heat + labs(subtitle = ""), file = "plots/b_heat.rds")
+
+ggview::ggview(a_heat + labs(subtitle = ""), width = 6.5, height = 2.5)
+ggsave(a_heat+ labs(subtitle = ""), width = 6.5, height = 2.5,
+       file = "plots/ms_plots/fig5_heatmap.jpg", dpi = 500)

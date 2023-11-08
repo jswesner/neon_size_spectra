@@ -1,7 +1,8 @@
 library(tidyverse)
 library(packcircles)
 library(viridis)
-source("code/sandbox/paretocounts.R")
+library(isdbayes)
+library(ggthemes)
 
 # make pareto sizes
 n = 8000
@@ -327,3 +328,36 @@ posts_sample_lambdas_summary %>%
   scale_x_log10() + 
   geom_smooth(method = "lm") +
   facet_wrap(~year)
+
+# fish mass plot
+fish_dw_taxa <- readRDS("data/derived_data/fish_dw_taxa.rds") %>% mutate(animal_type = "fish") %>% 
+  rename(taxon = taxon_id) %>% distinct(dw, taxon, animal_type)
+
+invertebrate_taxonomy <- read_csv("data/derived_data/aqua-sync_data/invertebrate-taxonomy.csv") %>% 
+  rename(taxon = scientificName) %>% distinct(taxon, order)
+
+invertebrate_size_data <- read_csv("data/derived_data/aqua-sync_data/invertebrate-size-data.csv") %>% 
+  left_join(invertebrate_taxonomy) %>% 
+  mutate(animal_type = "inverts") %>% 
+  rename(dw = body_mass) %>% 
+  distinct(dw, order, animal_type) %>% 
+  rename(taxon = order)
+
+dat_size = bind_rows(invertebrate_size_data, fish_dw_taxa) %>% 
+  group_by(taxon) %>% 
+  mutate(max = max(dw))
+
+taxon_size_plot = dat_size %>%
+  ggplot(aes(x = dw, y = reorder(taxon, max), color = animal_type)) +
+  geom_point(alpha = 0.4, size = 0.1) +
+  scale_color_colorblind() +
+  brms::theme_default() + 
+  labs(color = "",
+       x = "mgDM Individual",
+       y = "Taxon (ranked by dw)") +
+  theme(axis.text.y = element_blank(),
+        text = element_text(size = 16)) + 
+  guides(color = guide_legend(override.aes = list(size = 2, alpha = 1))) 
+
+saveRDS(taxon_size_plot, file = "plots/ms_plots/taxon_size_plot.rds")  
+

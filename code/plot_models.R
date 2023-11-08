@@ -275,6 +275,7 @@ ggsave(all_lambda_plots, width = 6.5, height = 2.5,
 
 
 
+
 # standing stock mass
 fish_mass_brm = readRDS(file = "models/fish_mass_brm.rds")
 invert_mass_brm = readRDS(file = "models/invert_mass_brm.rds")
