@@ -66,7 +66,8 @@ size_dat <- size_dat %>%
   ungroup() %>%
   select(siteID, sampleID, method,
          collectDate, benthicArea,
-         organism_group, scientificName, dw, sizeClass, n)
+         organism_group, scientificName,
+         dw, sizeClass, n)
 names(size_dat)
 
 
