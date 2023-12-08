@@ -26,9 +26,11 @@ dat <- dat %>%
 names(dat)
 
 # make a table of taxonomic information
+# `scientificName` = `taxon` in size data
 dat %>%
   select(scientificName, taxonRank:specificEpithet) %>%
   unique() %>%
+  rename(taxon = scientificName,) %>%
   write_csv("data/derived_data/aqua-sync_data/invertebrate-taxonomy.csv")
 
 
@@ -66,7 +68,8 @@ size_dat <- size_dat %>%
   ungroup() %>%
   select(siteID, sampleID, method,
          collectDate, benthicArea,
-         organism_group, scientificName, dw, sizeClass, n)
+         organism_group, scientificName,
+         dw, sizeClass, n)
 names(size_dat)
 
 
@@ -77,7 +80,7 @@ short_dat <- size_dat %>%
          body_length_units = "mm") %>%
   tidyr::unite("site", c(siteID, date), remove = FALSE) %>%
   rename(sampling_area = benthicArea,
-         taxon = scientificName,
+         taxon = scientificName, 
          body_mass = dw,
          body_length = sizeClass) %>%
   select(-collectDate)
