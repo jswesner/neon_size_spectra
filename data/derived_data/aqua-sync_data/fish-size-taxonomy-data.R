@@ -104,3 +104,14 @@ check_invert_dates = invertebrate_size_data %>%
 
 # this should be 0, which indicates that all of the fish dates are also included in the invert dates
 setdiff(check_fish_dates, check_invert_dates)
+
+check_fish_sites = fish_size_data %>% 
+  distinct(site) %>% 
+  pull()
+
+check_invert_sites = invertebrate_size_data %>% 
+  distinct(site) %>% 
+  pull()
+
+# this should be 0, which indicates that all of the fish sites are also included in the invert sites
+setdiff(check_fish_sites, check_invert_sites)
