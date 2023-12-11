@@ -13,6 +13,8 @@ library(lubridate)
 fish <- readRDS("data/raw_data/fish/fish_stacked.rds")
 fish_taxa = read_csv("data/raw_data/fish/neon_fish-taxa.csv") %>% clean_names()
 
+invertebrate_size_data = read_csv("data/derived_data/aqua-sync_data/invertebrate-size-data.csv")
+
 write_csv(fish_taxa, file = "data/derived_data/aqua-sync_data/fish-taxonomy.csv")
 
 # Get sampling_method
@@ -84,3 +86,21 @@ fish_size_data = fish_size_data_all %>%
   filter(body_mass >= mean_cutoff)
 
 write_csv(fish_size_data, file = "data/derived_data/aqua-sync_data/fish_size_data.csv")
+
+
+# sanity checks
+# do dates match?
+
+check_fish_dates = fish_size_data %>% 
+  separate(site, into = c("site_id", "date"), sep = "_") %>% 
+  distinct(date) %>% 
+  pull()
+
+check_invert_dates = invertebrate_size_data %>%
+  distinct(site) %>% 
+  separate(site, into = c("site_id", "date"), sep = "_") %>% 
+  distinct(date) %>% 
+  pull()
+
+# this should be 0, which indicates that all of the fish dates are also included in the invert dates
+setdiff(check_fish_dates, check_invert_dates)
