@@ -90,6 +90,7 @@ fish <- readRDS("data/raw_data/fish/fish_stacked.rds")
 reach_lengths_widths = three_pass_data_wide %>% 
   distinct(reach_id, site_int, mean_wetted_width_m, measured_reach_length)
 
+
 species_population = three_pass_data_species %>% 
   group_by(reach_id, taxon_id) %>% 
   summarize(n = sum(total_fish)) %>% 
@@ -147,10 +148,10 @@ size_and_totals = individual_dw %>%
 # are weighted by the population size of a given species
 
 dw_sims = size_and_totals %>% 
-  group_by(reach_taxon_id) %>% 
+  group_by(reach_taxon_id, area_m2) %>% 
   filter(!is.na(dw)) %>% 
   sample_n(size = fish_per10000m2[1], replace = T) %>% 
-  group_by(dw, reach_taxon_id, year, month) %>% 
+  group_by(dw, reach_taxon_id, year, month, area_m2) %>% 
   dplyr::count(name = "no_10000m2") %>% 
   mutate(no_m2 = no_10000m2/10000,
          animal_type = "fish") 
@@ -163,7 +164,7 @@ fish_dw_taxa = dw_sims %>%
   mutate(date = ymd(date),
          julian = julian(date),
          year_month = paste(year, month, sep = "_")) %>% 
-  group_by(dw,reach_id, site_id, year, month, julian, animal_type, year_month, taxon_id) %>% # Sum body size abundance regardless of fish taxon
+  group_by(dw,reach_id, site_id, year, month, julian, animal_type, year_month, taxon_id, area_m2) %>% # Sum body size abundance regardless of fish taxon
   summarize(no_m2 = sum(no_m2)) %>% 
   mutate(event_id = paste(site_id, year_month, animal_type, sep = "_"),
          dw = dw*1000,

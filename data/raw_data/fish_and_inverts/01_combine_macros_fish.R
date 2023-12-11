@@ -55,7 +55,7 @@ events_to_keep = fish_collections %>%
   filter(date_diff <= 30) %>%  # only samples that are within 30 days of each other
   group_by(fish_event_id) %>% 
   add_tally() %>%         
-  filter(date_diff == min(date_diff)) %>% # if more than one sample is within 30 days of the other, keep the closest two samples
+  filter(date_diff == min(date_diff)) %>% # if more than one sample is within 30 days of the other, keep the closest sampls
   ungroup %>% 
   select(-n) %>%
   group_by(macro_event_id) %>% 
@@ -143,6 +143,8 @@ cutoffs = bind_rows(seg_cutoffs) %>%
   mutate(exp_cutoff = exp(cutoff))
 
 mean_cutoffs = exp(mean(cutoffs$cutoff))
+
+saveRDS(mean_cutoffs, file = "data/derived_data/fish_mean_cutoff.rds")
 
 fish_dw_wrangled = fish_dw_all %>% 
   left_join(cutoffs) %>% 
