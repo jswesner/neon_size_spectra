@@ -4,7 +4,7 @@
 # format for the aquasync project on assessing changes to size 
 # spectra across landuse gradients, led by Dr. Dan Perkins. 
 
-# written by Jeff Wesner, December 2023
+# written by Jeff Wesner, December 2023, Updated Januaray 2024
 
 library(tidyverse)
 library(lubridate)
