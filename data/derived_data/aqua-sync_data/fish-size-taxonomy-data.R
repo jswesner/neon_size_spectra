@@ -8,6 +8,7 @@
 
 library(tidyverse)
 library(lubridate)
+library(janitor)
 
 # Full NEON fish data
 fish <- readRDS("data/raw_data/fish/fish_stacked.rds")
@@ -54,7 +55,7 @@ invert_dates = invertebrate_size_data %>%
   mutate(date = as.Date(date),
          julian = julian(date))
 
-fish_dates = fish_size_data %>% 
+fish_dates = fish_size_data_all %>% 
   distinct(site, sample) %>% 
   separate(site, into = c("site_id", "date"), sep = "_") %>% 
   mutate(date = as.Date(date),
@@ -82,10 +83,20 @@ mean_cutoff = readRDS("data/derived_data/fish_mean_cutoff.rds")
 fish_size_data = fish_size_data_all %>% 
   right_join(fish_samples_to_keep) %>% 
   select(-site) %>% 
-  rename(site = site_invert) %>% 
-  filter(body_mass >= mean_cutoff)
+  filter(body_mass >= mean_cutoff) %>% 
+  rename(site = site_invert) 
 
 write_csv(fish_size_data, file = "data/derived_data/aqua-sync_data/fish_size_data.csv")
+
+# save full data (without a size cutoff)
+fish_size_data_full = fish_size_data_all %>% 
+  right_join(fish_samples_to_keep) %>% 
+  select(-site) %>% 
+  # filter(body_mass >= mean_cutoff) %>% 
+  rename(site = site_invert) 
+
+write_csv(fish_size_data_full, file = "data/derived_data/aqua-sync_data/fish_size_data_full.csv")
+
 
 
 # sanity checks
@@ -115,3 +126,5 @@ check_invert_sites = invertebrate_size_data %>%
 
 # this should be 0, which indicates that all of the fish sites are also included in the invert sites
 setdiff(check_fish_sites, check_invert_sites)
+
+
