@@ -94,6 +94,13 @@ site_date <- short_dat %>%
          sampling_month = month(date)) %>%
   rename(sampling_methodology = method)
 
+# combine different sampling methods by site
+site_date %>%
+  # group_by(across(c(-sampling_methodology))) %>%
+  pivot_wider(values_from = sampling_methodology,
+              values_fill = NA,
+              names_from = site)
+
 # site lat long info
 site_meta <- read.csv("data/field_data.csv")
 site_date <- left_join(site_date, site_meta, by = join_by(siteID == Site.ID)) %>%
