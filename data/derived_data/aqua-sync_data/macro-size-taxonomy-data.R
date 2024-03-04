@@ -109,7 +109,7 @@ site_date <- left_join(site_date, site_meta, by = join_by(siteID == Site.ID)) %>
          geographical_longitude = Longitude,
          geographical_altitude = Elevation) %>%
   mutate(geographical_position = "USA",
-         organism_groups = "Invertebrates + Fish",
+         # organism_groups = "Invertebrates + Fish", # update in combine_data.R to have "Invertebrates" OR "Invertebrates + Fish" based on sample date
          trophic_levels = ">2",
          data_owner = "NEON: NAtional Ecological Observatory Network",
          data_contributors = "Pomeranz, Wesner, Junker, Gjoni",
@@ -117,8 +117,32 @@ site_date <- left_join(site_date, site_meta, by = join_by(siteID == Site.ID)) %>
   select(data_owner, data_contributors, site, geographical_position,
          geographical_position_specification, geographical_latitude,
          geographical_longitude, geographical_altitude, 
-         sampling_year, sampling_month, multiple_sampling, organism_groups, 
+         sampling_year, sampling_month, multiple_sampling,
+         #organism_groups, 
          trophic_levels, sampling_methodology)
+
+
+# add fish or invertebrates based on sample date
+# fish dates match macro dates, and are Fish + invertebrates by default
+# dates in macro that don't have a corresponding date in fish are macro only
+# t1 <- fish %>% select(site) %>% unique() %>% sample_n(10)
+# t2 <- fish %>% select(site) %>% unique() %>% sample_n(10)
+# t1$org <- "Fish"
+# t3 <- full_join(t1, t2)
+# t3 %>% mutate(org = case_when(is.na(org) ~ "Macro",
+# !is.na(org) ~ org))
+fish <- read_csv("data/derived_data/aqua-sync_data/fish_size_data.csv")
+
+fish_dates <- fish %>% select(site) %>% unique()
+fish_dates$organism_groups <- "Invertebrates + Fish"
+
+site_date <- full_join(site_date, fish_dates) %>% 
+  mutate(organism_groups = case_when(
+    is.na(organism_groups) ~ "Invertebrates",
+    !is.na(organism_groups) ~ organism_groups))
+
+
+
 
 # save as csv
 write_csv(site_date, "data/derived_data/aqua-sync_data/site_data.csv")
