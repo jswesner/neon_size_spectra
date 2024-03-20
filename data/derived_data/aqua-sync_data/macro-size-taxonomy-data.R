@@ -27,11 +27,11 @@ names(dat)
 
 # make a table of taxonomic information
 # `scientificName` = `taxon` in size data
-dat %>%
-  select(scientificName, taxonRank:specificEpithet) %>%
-  unique() %>%
-  rename(taxon = scientificName,) %>%
-  write_csv("data/derived_data/aqua-sync_data/invertebrate-taxonomy.csv")
+# dat %>%
+#   select(scientificName, taxonRank:specificEpithet) %>%
+#   unique() %>%
+#   rename(taxon = scientificName,) %>%
+#   write_csv("data/derived_data/aqua-sync_data/invertebrate-taxonomy.csv")
 
 
 # From Wesner ####
