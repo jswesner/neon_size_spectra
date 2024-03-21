@@ -3,7 +3,7 @@ library(janitor)
 library(lubridate)
 library(hydroTSM)
 library(here)
-# library(segmented) This package needs to be installed, but not loaded since it overlaps with tidyvers in function.
+# library(segmented) This package needs to be installed, but not loaded since it overlaps with tidyverse in function.
 # It is called by :: later just once
 
 # load data
@@ -98,7 +98,8 @@ fish_dw_all = fish_dw_filtered %>%
   rename(fish_event_id = event_id) %>% 
   left_join(events_to_keep %>% distinct(fish_event_id, sample_id, macro_julian)) %>% # macro date not fish date so all are the same
   group_by(dw, site_id, sample_id, macro_julian) %>% 
-  summarize(no_m2 = sum(no_m2)) %>% 
+  # summarize(no_m2 = sum(no_m2)) %>% # this was wrong in an earlier version. it should be a mean, not a sum. 
+  summarize(no_m2 = mean(no_m2)) %>% 
   ungroup() %>% 
   mutate(xmin = min(dw)) %>% 
   group_by(site_id) %>% 
@@ -120,13 +121,13 @@ fish_dw_all = fish_dw_filtered %>%
   add_tally()  
 
 
-# estimate fish cutoffs for undersamlpling small fish with piecewise regression
-fish_dw_all_split = fish_dw_all %>% 
+# # estimate fish cutoffs for undersampling small fish with piecewise regression
+fish_dw_all_split = fish_dw_all %>%
   mutate(log_n = log(n),
-         log_dw = log(dw)) %>% 
-  group_by(site_id) %>% 
-  mutate(maxn = max(n)) %>% 
-  filter(maxn > 1) %>% 
+         log_dw = log(dw)) %>%
+  group_by(site_id) %>%
+  mutate(maxn = max(n)) %>%
+  filter(maxn > 1) %>%
   group_split()
 
 seg_cutoffs = list()
@@ -134,17 +135,18 @@ seg_cutoffs = list()
 for(i in 1:length(fish_dw_all_split)) {
   lm_fish_all = lm(log_n ~ log_dw, data = fish_dw_all_split[[i]])
   seg_all = segmented::segmented(lm_fish_all)
-  
+
   seg_cutoffs[[i]] = tibble(site_id = unique(fish_dw_all_split[[i]]$site_id),
                             cutoff = seg_all$psi[2])
 }
 
-cutoffs = bind_rows(seg_cutoffs) %>% 
+cutoffs = bind_rows(seg_cutoffs) %>%
   mutate(exp_cutoff = exp(cutoff))
 
 mean_cutoffs = exp(mean(cutoffs$cutoff))
 
 saveRDS(mean_cutoffs, file = "data/derived_data/fish_mean_cutoff.rds")
+
 
 fish_dw_wrangled = fish_dw_all %>% 
   left_join(cutoffs) %>% 
@@ -154,7 +156,7 @@ macro_dw_wrangled = macro_dw_filtered %>%
   rename(macro_event_id = event_id) %>% 
   left_join(events_to_keep %>% distinct(macro_event_id, sample_id, macro_julian)) %>% 
   group_by(dw, site_id, sample_id, macro_julian) %>% 
-  summarize(no_m2 = sum(no_m2)) %>% 
+  summarize(no_m2 = mean(no_m2)) %>% 
   ungroup() %>% 
   mutate(xmin = min(dw)) %>% 
   group_by(site_id) %>% 
@@ -198,6 +200,7 @@ macro_fish_dw = bind_rows(fish_dw_wrangled %>%
 saveRDS(fish_dw_wrangled, file = "data/derived_data/fish_dw-wrangled.rds")
 saveRDS(macro_dw_wrangled, file = "data/derived_data/macro_dw-wrangled.rds")
 saveRDS(macro_fish_dw, file = "data/derived_data/fish_inverts_dw-allyears.rds")
+saveRDS(macro_fish_dw %>% filter(!is.na(mean_om)) %>% filter(year < 2022), file = "data/derived_data/dat_all.rds")
 
 # sanity check ------------------------------------------------------------
 
