@@ -1,6 +1,6 @@
 # Data for aqua sync project
 
-# This file organizes the full data set to be in the template
+# This file organizes the full macroinvertebrate data to be in the template
 # format for the aquasync project on assessing changes to size 
 # spectra across landuse gradients, led by Dr. Dan Perkins. 
 
@@ -27,11 +27,11 @@ names(dat)
 
 # make a table of taxonomic information
 # `scientificName` = `taxon` in size data
-dat %>%
-  select(scientificName, taxonRank:specificEpithet) %>%
-  unique() %>%
-  rename(taxon = scientificName,) %>%
-  write_csv("data/derived_data/aqua-sync_data/invertebrate-taxonomy.csv")
+# dat %>%
+#   select(scientificName, taxonRank:specificEpithet) %>%
+#   unique() %>%
+#   rename(taxon = scientificName,) %>%
+#   write_csv("data/derived_data/aqua-sync_data/invertebrate-taxonomy.csv")
 
 
 # From Wesner ####
@@ -61,7 +61,7 @@ size_dat <- sampler_dat %>%
     # this is based on the % subsample in the original processing
     n = sum(estimatedTotalCount, na.rm = TRUE))%>%
   filter(!is.na(dw)) %>%
-  mutate(organism_group = "macroinvertebrate") 
+  mutate(organism_group = "Invertebrate") 
 
 # select columns necessary for formatting
 size_dat <- size_dat %>%
@@ -76,46 +76,17 @@ names(size_dat)
 # rename existing columns and add new ones to match aquaSync format
 short_dat <- size_dat %>%
   mutate(date = as_date(collectDate),
+         year = year(date),
+         month = month(date),
          body_weight_units = "mg",
          body_length_units = "mm") %>%
-  tidyr::unite("site", c(siteID, date), remove = FALSE) %>%
+  tidyr::unite("site_date", c(siteID, date), remove = FALSE) %>%
   rename(sampling_area = benthicArea,
          taxon = scientificName, 
          body_mass = dw,
-         body_length = sizeClass) %>%
+         body_length = sizeClass,
+         site = siteID) %>%
   select(-collectDate)
-
-# extract info on site-date combo
-# use this to construct site metadate
-site_date <- short_dat %>%
-  select(site, siteID, date, method) %>%
-  unique() %>%
-  mutate(sampling_year = year(date),
-         sampling_month = month(date)) %>%
-  rename(sampling_methodology = method)
-
-# site lat long info
-site_meta <- read.csv("data/field_data.csv")
-site_date <- left_join(site_date, site_meta, by = join_by(siteID == Site.ID)) %>%
-  rename(geographical_position_specification = State,
-         geographical_latitude = Latitude,
-         geographical_longitude = Longitude,
-         geographical_altitude = Elevation) %>%
-  mutate(geographical_position = "USA",
-         organism_groups = "Invertebrates + Fish",
-         trophic_levels = ">2",
-         data_owner = "NEON: NAtional Ecological Observatory Network",
-         data_contributors = "Pomeranz, Wesner, Junker, Gjoni",
-         multiple_sampling = "3 per year") %>%
-  select(data_owner, data_contributors, site, geographical_position,
-         geographical_position_specification, geographical_latitude,
-         geographical_longitude, geographical_altitude, 
-         sampling_year, sampling_month, multiple_sampling, organism_groups, 
-         trophic_levels, sampling_methodology)
-
-# save as csv
-write_csv(site_date, "data/derived_data/aqua-sync_data/site_data.csv")
-
 
 # template column names:
 # site = site name, code
@@ -138,11 +109,14 @@ size_dat_formatted <- short_dat %>%
   uncount(n, ) %>%
   mutate(count = 1,
          multiplier = 1 / sampling_area) %>%
-  select(-siteID) %>%
+  #select(-siteID) %>%
   rename(sample = sampleID,
          sampling_method = method) %>%
-  select(site, sampling_method, sample, sampling_area,
-         organism_group, taxon, body_mass, body_length, body_weight_units,
+  select(site, year, month, site_date, 
+         sampling_method,
+         sample, sampling_area,
+         organism_group, taxon, body_mass, 
+         body_length, body_weight_units,
          body_length_units, count,  multiplier)
 
 names(size_dat_formatted)

@@ -1,13 +1,22 @@
 # combine fish and macros for aquasync
 
-library(readr)
-library(dplyr)
-library(tidyr)
-library(stringr)
+library(tidyverse)
 
-
-fish <- read_csv("data/derived_data/aqua-sync_data/fish_size_data.csv")
+# fish <- read_csv("data/derived_data/aqua-sync_data/fish_size_data.csv")
+# change to "full" size data
+fish <- read_csv("data/derived_data/aqua-sync_data/fish_size_data_full.csv")
 macro <- read_csv("data/derived_data/aqua-sync_data/invertebrate-size-data.csv")
+
+setdiff(names(macro), names(fish))
+# need to make year, month, site_date columns in fish
+# change site in fish to just be site code, not site_date
+
+fish <- fish %>%
+  mutate(
+    year = year(date_invert),
+    month = month(date_invert)) %>%
+  rename(site_date = site) %>%
+  separate_wider_delim(site_date, delim = "_", names = c("site", "date"), cols_remove = FALSE) 
 
 
 
@@ -29,12 +38,20 @@ macro <- macro %>%
   filter(!str_detect(sample, 'DNA')) %>%
   mutate(sample = as.numeric(str_sub(sample, -1)))
 
-all_size <- bind_rows(fish, macro)
+fish_dates <- fish %>% pull(site_date) %>% unique()
+
+macro_small <- macro %>%
+  filter(site_date %in% fish_dates)
+
+all_size <- bind_rows(fish, macro_small)
 
 # match columns in template
 all_size <- all_size %>%
   select(-date_invert) %>%
   select(site,
+         year, 
+         month,
+         site_date,
          sampling_method,
          sample,
          sampling_area,
