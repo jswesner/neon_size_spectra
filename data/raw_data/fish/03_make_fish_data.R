@@ -146,7 +146,7 @@ size_and_totals = individual_dw %>%
 
 # sample individual dry weight with replacement. Sample sizes for individual weights
 # are weighted by the population size of a given species
-
+set.seed(2234234)
 dw_sims = size_and_totals %>% 
   group_by(reach_taxon_id, area_m2) %>% 
   filter(!is.na(dw)) %>% 
@@ -164,7 +164,7 @@ fish_dw_taxa = dw_sims %>%
   mutate(date = ymd(date),
          julian = julian(date),
          year_month = paste(year, month, sep = "_")) %>% 
-  group_by(dw,reach_id, site_id, year, month, julian, animal_type, year_month, taxon_id, area_m2) %>% # Sum body size abundance regardless of fish taxon
+  group_by(dw,reach_id, site_id, year, month, julian, animal_type, year_month, taxon_id, area_m2) %>% 
   summarize(no_m2 = sum(no_m2)) %>% 
   mutate(event_id = paste(site_id, year_month, animal_type, sep = "_"),
          dw = dw*1000,

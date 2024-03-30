@@ -88,7 +88,8 @@ MN.no.damage.taxa <- left_join(MN.lw.x, field, by = c("siteID", "sampleID")) %>%
 saveRDS(MN.no.damage.taxa, file = "data/derived_data/MN.no.damage.taxa.rds")
 
 MN.no.damage <- MN.no.damage.taxa %>% 
-  group_by(dw, siteID, collectDate) %>% 
+  mutate(date = ymd(as.Date(collectDate))) %>% 
+  group_by(dw, siteID, date) %>% 
   summarize(n = sum(estimatedTotalCount),
             benthicArea = sum(benthicArea),
             no_m2 = n/benthicArea)
@@ -105,11 +106,10 @@ MN.no.damage.nona <- MN.no.damage %>%
 
 # make unique group index for siteID:collectDate combo
 MN.no.damage.unique <- MN.no.damage.nona %>%  
-  mutate(year = year(collectDate),
-         month = month(collectDate)) %>%
+  mutate(year = year(date),
+         month = month(date)) %>%
   mutate(event_id = 
            paste(siteID, year, month, sep = "_"),
-         date = ymd(as.Date(collectDate)),
          animal_type = "macroinvertebrates") %>%
   arrange(event_id) %>%
   select(-year, -month) %>% 

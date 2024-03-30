@@ -4,7 +4,7 @@
 # format for the aquasync project on assessing changes to size 
 # spectra across landuse gradients, led by Dr. Dan Perkins. 
 
-# written by Jeff Wesner, December 2023, Updated Januaray 2024
+# written by Jeff Wesner, December 2023, Updated January 2024
 
 library(tidyverse)
 library(lubridate)
@@ -38,7 +38,7 @@ fish_size_data_all = fish_dw_taxa %>%
   rename(sampling_area = area_m2,
          body_mass = dw,
          count = no_m2) %>% 
-  mutate(multiplier = 1/sampling_area) %>% 
+  mutate(multiplier = 1) %>% 
   left_join(fish_taxa %>% 
               distinct(taxon_id, scientific_name)) %>% 
   select(site, sampling_method, sample, sampling_area,
