@@ -22,6 +22,10 @@ fish <- fish %>%
 
 # fish
 # change sample to be an integer
+# get rid of this and just make all sample = 1
+# count is already in no_m2, so multiplier = 1
+# mutate(sample = 1)
+# double check that sum(no_m2) in fish is fine
 fish <- fish %>%
   separate(
     sample, 
