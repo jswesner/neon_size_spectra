@@ -121,6 +121,6 @@ size_dat_formatted <- short_dat %>%
 
 names(size_dat_formatted)
 
-View(size_dat_formatted)
+#View(size_dat_formatted)
 
 write_csv(size_dat_formatted, "data/derived_data/aqua-sync_data/invertebrate-size-data.csv")

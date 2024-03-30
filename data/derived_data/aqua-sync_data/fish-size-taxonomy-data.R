@@ -50,8 +50,8 @@ fish_size_data_all = fish_dw_taxa %>%
 # invert date, merge them so that only the most recent fish sample is included
 
 invert_dates = invertebrate_size_data %>% 
-  distinct(site) %>% 
-  separate(site, into = c("site_id", "date"), sep = "_") %>% 
+  distinct(site_date) %>% 
+  separate(site_date, into = c("site_id", "date"), sep = "_") %>% 
   mutate(date = as.Date(date),
          julian = julian(date))
 
@@ -108,8 +108,8 @@ check_fish_dates = fish_size_data %>%
   pull()
 
 check_invert_dates = invertebrate_size_data %>%
-  distinct(site) %>% 
-  separate(site, into = c("site_id", "date"), sep = "_") %>% 
+  distinct(site_date) %>% 
+  separate(site_date, into = c("site_id", "date"), sep = "_") %>% 
   distinct(date) %>% 
   pull()
 
@@ -121,7 +121,7 @@ check_fish_sites = fish_size_data %>%
   pull()
 
 check_invert_sites = invertebrate_size_data %>% 
-  distinct(site) %>% 
+  distinct(site_date) %>% 
   pull()
 
 # this should be 0, which indicates that all of the fish sites are also included in the invert sites

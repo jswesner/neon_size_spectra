@@ -2,8 +2,6 @@
 
 library(tidyverse)
 
-# fish <- read_csv("data/derived_data/aqua-sync_data/fish_size_data.csv")
-# change to "full" size data
 fish <- read_csv("data/derived_data/aqua-sync_data/fish_size_data_full.csv")
 macro <- read_csv("data/derived_data/aqua-sync_data/invertebrate-size-data.csv")
 
@@ -21,18 +19,17 @@ fish <- fish %>%
 
 
 # fish
+fish$sample %>% unique()
 # change sample to be an integer
 # get rid of this and just make all sample = 1
-# count is already in no_m2, so multiplier = 1
 # mutate(sample = 1)
 # double check that sum(no_m2) in fish is fine
-fish <- fish %>%
-  separate(
-    sample, 
-    into = c("delete_1", "delete_2", "sample", "delete_3")) %>%
-  select(-starts_with("delete")) %>%
-  mutate(sample = as.numeric(sample))
 
+fish <- fish %>%
+  mutate(sample = 1)
+
+fish$multiplier %>% unique()
+# count is already in no_m2, so multiplier = 1
 
 
 # macroinvertebrates
@@ -44,14 +41,21 @@ macro <- macro %>%
 
 fish_dates <- fish %>% pull(site_date) %>% unique()
 
+macro %>% pull(site_date) %>% unique()
+# 330 total samples
+
 macro_small <- macro %>%
   filter(site_date %in% fish_dates)
+macro_small %>% pull(site_date) %>% unique()
+# 129 samples, after matching with fish samples
 
 all_size <- bind_rows(fish, macro_small)
+all_size %>% pull(site_date) %>% unique()
+# still 129 samples
 
 # match columns in template
+names(all_size)
 all_size <- all_size %>%
-  select(-date_invert) %>%
   select(site,
          year, 
          month,
@@ -70,7 +74,10 @@ all_size <- all_size %>%
 
 # # read_excel doesn't like NAS (WTF????)
 # # replace NA with empty string
-# all_size <- all_size %>%
-#   mutate(across(everything(), ~ replace(.x, is.na(.x), "")))
+all_size <- all_size %>%
+   mutate(across(everything(), ~ replace(.x, is.na(.x), "")))
+all_size %>%
+  filter(organism_group == "Invertebrate") %>%
+  pull(count) %>% unique()
 
 write_csv(all_size, "data/derived_data/aqua-sync_data/all-size-aqua-sync.csv")
